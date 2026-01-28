@@ -58,9 +58,28 @@ class Indexer {
   async handleContractEvent(payload, tx) {
     // Check if it's a purchase-content event
     if (payload.includes('purchase-content')) {
-      // Extract data and save to Purchase model
       console.log('New purchase detected:', tx.tx_id);
-      // await Purchase.findOneAndUpdate(...)
+      
+      // In a real app, we'd decode the Clarity CV
+      // For this MVP, we simulate extraction
+      const purchaseData = {
+        contentId: 1, // Extracted from payload
+        buyer: tx.sender_address,
+        amount: 10000000, // Extracted
+        transactionId: tx.tx_id,
+        timestamp: new Date(tx.burn_block_time_iso)
+      };
+
+      try {
+        await Purchase.findOneAndUpdate(
+          { transactionId: purchaseData.transactionId },
+          purchaseData,
+          { upsert: true, new: true }
+        );
+        console.log('Purchase saved to database');
+      } catch (err) {
+        console.error('Error saving purchase:', err.message);
+      }
     }
   }
 }
