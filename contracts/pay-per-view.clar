@@ -36,6 +36,17 @@
     ))
 )
 
+(define-public (update-content-price (content-id uint) (new-price uint))
+    (let (
+        (content (unwrap! (map-get? content-pricing content-id) ERR-NOT-FOUND))
+        (creator (get creator content))
+    )
+    (begin
+        (asserts! (is-eq tx-sender creator) ERR-NOT-AUTHORIZED)
+        (ok (map-set content-pricing content-id { price: new-price, creator: creator }))
+    ))
+)
+
 ;; Read-only functions
 (define-read-only (has-access (content-id uint) (user principal))
     (default-to false (map-get? content-access { content-id: content-id, user: user }))
