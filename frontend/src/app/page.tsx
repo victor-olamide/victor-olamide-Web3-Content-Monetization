@@ -1,8 +1,11 @@
 'use client';
 
 import ConnectWallet from "@/components/ConnectWallet";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Home() {
+  const { isLoggedIn, userData } = useAuth();
+
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-24 bg-gray-50">
       <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm flex mb-12">
@@ -17,6 +20,16 @@ export default function Home() {
         <p className="text-xl text-gray-600 mb-8">
           Unlock exclusive content using Bitcoin-secured smart contracts.
         </p>
+
+        {isLoggedIn && (
+          <div className="bg-white p-8 rounded-xl shadow-md mt-8">
+            <h2 className="text-2xl font-bold mb-4 text-orange-600">Your Profile</h2>
+            <div className="text-left space-y-2">
+              <p><strong>Mainnet Address:</strong> {userData.profile.stxAddress.mainnet}</p>
+              <p><strong>Testnet Address:</strong> {userData.profile.stxAddress.testnet}</p>
+            </div>
+          </div>
+        )}
       </div>
     </main>
   );
