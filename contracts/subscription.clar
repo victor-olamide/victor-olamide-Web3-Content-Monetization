@@ -10,3 +10,9 @@
 (define-constant ERR-NOT-FOUND (err u102))
 (define-constant ERR-INVALID-TIER (err u103))
 (define-constant ERR-EXPIRED (err u104))
+
+;; Data maps
+(define-map subscription-tiers 
+    { creator: principal, tier-id: uint } 
+    { price: uint, duration: uint, active: bool }
+)
