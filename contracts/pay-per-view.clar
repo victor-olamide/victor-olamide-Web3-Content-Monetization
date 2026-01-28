@@ -21,3 +21,17 @@
         (ok (map-set content-pricing content-id { price: price, creator: tx-sender }))
     )
 )
+
+(define-public (purchase-content (content-id uint))
+    (let (
+        (content (unwrap! (map-get? content-pricing content-id) ERR-NOT-FOUND))
+        (price (get price content))
+        (creator (get creator content))
+    )
+    (begin
+        (asserts! (is-none (map-get? content-access { content-id: content-id, user: tx-sender })) ERR-ALREADY-PURCHASED)
+        (try! (stx-transfer? price tx-sender creator))
+        (map-set content-access { content-id: content-id, user: tx-sender } true)
+        (ok true)
+    ))
+)
