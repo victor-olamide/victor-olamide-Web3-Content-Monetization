@@ -4,6 +4,9 @@ import React from 'react';
 import ConnectWallet from './ConnectWallet';
 import Link from 'next/link';
 
+/**
+ * Layout wrapper for the dashboard pages including sidebar and header
+ */
 const DashboardShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
     <div className="min-h-screen bg-gray-50 flex">
