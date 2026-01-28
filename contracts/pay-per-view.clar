@@ -28,6 +28,7 @@
     )
 )
 
+;; Purchase access to content
 (define-public (purchase-content (content-id uint))
     (let (
         (content (unwrap! (map-get? content-pricing content-id) ERR-NOT-FOUND))
