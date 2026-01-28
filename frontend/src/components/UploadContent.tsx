@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { Upload } from 'lucide-react';
 
 const UploadContent: React.FC = () => {
   const [title, setTitle] = useState('');
@@ -70,8 +71,9 @@ const UploadContent: React.FC = () => {
         </div>
         <button
           type="submit"
-          className="w-full bg-orange-500 text-white font-bold py-2 px-4 rounded hover:bg-orange-600 transition"
+          className="w-full bg-orange-500 text-white font-bold py-2 px-4 rounded hover:bg-orange-600 transition flex items-center justify-center gap-2"
         >
+          <Upload size={20} />
           Publish Content
         </button>
       </form>
