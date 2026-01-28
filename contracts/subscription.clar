@@ -68,3 +68,13 @@
         ))
     ))
 )
+
+(define-public (update-tier (tier-id uint) (new-price uint) (new-duration uint) (is-active bool))
+    (begin
+        (asserts! (is-some (map-get? subscription-tiers { creator: tx-sender, tier-id: tier-id })) ERR-NOT-FOUND)
+        (ok (map-set subscription-tiers 
+            { creator: tx-sender, tier-id: tier-id } 
+            { price: new-price, duration: new-duration, active: is-active }
+        ))
+    )
+)
