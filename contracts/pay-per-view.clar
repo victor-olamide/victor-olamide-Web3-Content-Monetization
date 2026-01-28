@@ -43,6 +43,7 @@
     ))
 )
 
+;; Update the price of an existing content piece
 (define-public (update-content-price (content-id uint) (new-price uint))
     (let (
         (content (unwrap! (map-get? content-pricing content-id) ERR-NOT-FOUND))
