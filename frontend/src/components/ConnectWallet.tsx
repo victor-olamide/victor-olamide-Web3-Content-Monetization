@@ -3,6 +3,9 @@
 import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
+/**
+ * Component to trigger Stacks wallet authentication
+ */
 const ConnectWallet: React.FC = () => {
   const { authenticate, logout, isLoggedIn, userData } = useAuth();
 
