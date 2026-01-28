@@ -22,9 +22,11 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/stacks_mo
 // Routes
 const contentRoutes = require('./routes/contentRoutes');
 const purchaseRoutes = require('./routes/purchaseRoutes');
+const subscriptionRoutes = require('./routes/subscriptionRoutes');
 
 app.use('/api/content', contentRoutes);
 app.use('/api/purchases', purchaseRoutes);
+app.use('/api/subscriptions', subscriptionRoutes);
 
 // Start Indexer
 const indexer = require('./services/indexer');
