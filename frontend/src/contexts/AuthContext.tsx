@@ -15,6 +15,8 @@ interface AuthContextType {
 const appConfig = new AppConfig(['store_write', 'publish_data']);
 const userSession = new UserSession({ appConfig });
 
+const APP_NAME = 'Stacks Content Monetization';
+
 /**
  * Context to manage Stacks wallet authentication state
  */
@@ -36,7 +38,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const authenticate = () => {
     showConnect({
       appDetails: {
-        name: 'Stacks Content Monetization',
+        name: APP_NAME,
         icon: window.location.origin + '/logo.png',
       },
       redirectTo: '/',
