@@ -2,6 +2,7 @@
 
 import ConnectWallet from "@/components/ConnectWallet";
 import { useAuth } from "@/contexts/AuthContext";
+import Link from "next/link";
 
 export default function Home() {
   const { isLoggedIn, userData } = useAuth();
@@ -12,7 +13,17 @@ export default function Home() {
         <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4">
           Stacks Content Monetization
         </p>
-        <ConnectWallet />
+        <div className="flex items-center gap-4">
+          {isLoggedIn && (
+            <Link 
+              href="/dashboard"
+              className="text-orange-600 hover:text-orange-700 font-medium"
+            >
+              Dashboard
+            </Link>
+          )}
+          <ConnectWallet />
+        </div>
       </div>
 
       <div className="text-center">
