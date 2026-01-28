@@ -12,3 +12,4 @@
 
 ;; Data maps
 (define-map content-pricing uint { price: uint, creator: principal })
+(define-map content-access { content-id: uint, user: principal } bool)
