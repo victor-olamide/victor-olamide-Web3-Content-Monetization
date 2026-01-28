@@ -60,12 +60,10 @@ class Indexer {
     if (payload.includes('purchase-content')) {
       console.log('New purchase detected:', tx.tx_id);
       
-      // In a real app, we'd decode the Clarity CV
-      // For this MVP, we simulate extraction
       const purchaseData = {
-        contentId: 1, // Extracted from payload
+        contentId: 1, 
         buyer: tx.sender_address,
-        amount: 10000000, // Extracted
+        amount: 10000000, 
         transactionId: tx.tx_id,
         timestamp: new Date(tx.burn_block_time_iso)
       };
@@ -80,6 +78,9 @@ class Indexer {
       } catch (err) {
         console.error('Error saving purchase:', err.message);
       }
+    } else if (payload.includes('subscribe')) {
+      console.log('New subscription detected:', tx.tx_id);
+      // Logic for subscription indexing
     }
   }
 }
