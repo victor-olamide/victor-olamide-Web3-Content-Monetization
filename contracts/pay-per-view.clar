@@ -1,6 +1,7 @@
 ;; Pay-Per-View Contract
 ;; Allows creators to monetize content through one-time STX payments
 
+;; Constants
 (define-constant contract-owner tx-sender)
 
 ;; Error codes
