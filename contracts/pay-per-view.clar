@@ -19,6 +19,8 @@
 (define-map content-access { content-id: uint, user: principal } bool)
 
 ;; Public functions
+
+;; Register new content with a specific price
 (define-public (add-content (content-id uint) (price uint))
     (begin
         (asserts! (is-none (map-get? content-pricing content-id)) ERR-ALREADY-EXISTS)
