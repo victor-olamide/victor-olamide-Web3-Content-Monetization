@@ -78,3 +78,14 @@
         ))
     )
 )
+
+;; Read-only functions
+(define-read-only (is-subscribed (user principal) (creator principal) (tier-id uint))
+    (let (
+        (sub (map-get? active-subscriptions { user: user, creator: creator, tier-id: tier-id }))
+    )
+    (match sub
+        details (>= (get expiry details) block-height)
+        false
+    ))
+)
