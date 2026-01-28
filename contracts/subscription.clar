@@ -89,3 +89,7 @@
         false
     ))
 )
+
+(define-read-only (get-tier-info (creator principal) (tier-id uint))
+    (map-get? subscription-tiers { creator: creator, tier-id: tier-id })
+)
