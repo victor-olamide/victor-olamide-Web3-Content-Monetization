@@ -4,8 +4,8 @@ import React from 'react';
 
 const ContentList: React.FC = () => {
   const contentItems = [
-    { id: 1, title: 'Getting Started with Stacks', price: 5, purchases: 12 },
-    { id: 2, title: 'Clarity Deep Dive', price: 15, purchases: 8 },
+    { id: 1, title: 'Getting Started with Stacks', type: 'Video', price: 5, purchases: 12 },
+    { id: 2, title: 'Clarity Deep Dive', type: 'Article', price: 15, purchases: 8 },
   ];
 
   return (
@@ -16,6 +16,7 @@ const ContentList: React.FC = () => {
           <thead>
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Purchases</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
@@ -25,6 +26,7 @@ const ContentList: React.FC = () => {
             {contentItems.map((item) => (
               <tr key={item.id}>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.title}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.type}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.price} STX</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.purchases}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
