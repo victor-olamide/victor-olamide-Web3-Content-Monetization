@@ -29,8 +29,9 @@ const ContentList: React.FC = () => {
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.type}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.price} STX</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.purchases}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-3">
                   <button className="text-orange-600 hover:text-orange-900">Edit</button>
+                  <button className="text-red-600 hover:text-red-900">Delete</button>
                 </td>
               </tr>
             ))}
