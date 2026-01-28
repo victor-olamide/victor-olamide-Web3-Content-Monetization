@@ -26,6 +26,10 @@ const purchaseRoutes = require('./routes/purchaseRoutes');
 app.use('/api/content', contentRoutes);
 app.use('/api/purchases', purchaseRoutes);
 
+// Start Indexer
+const indexer = require('./services/indexer');
+indexer.start();
+
 app.get('/', (req, res) => {
   res.send('Stacks Content Monetization API');
 });
