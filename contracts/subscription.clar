@@ -57,6 +57,7 @@
     ))
 )
 
+;; Renew an existing or expired subscription
 (define-public (renew-subscription (creator principal) (tier-id uint))
     (let (
         (tier (unwrap! (map-get? subscription-tiers { creator: creator, tier-id: tier-id }) ERR-NOT-FOUND))
