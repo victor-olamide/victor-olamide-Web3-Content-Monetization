@@ -13,3 +13,11 @@
 ;; Data maps
 (define-map content-pricing uint { price: uint, creator: principal })
 (define-map content-access { content-id: uint, user: principal } bool)
+
+;; Public functions
+(define-public (add-content (content-id uint) (price uint))
+    (begin
+        (asserts! (is-none (map-get? content-pricing content-id)) ERR-ALREADY-EXISTS)
+        (ok (map-set content-pricing content-id { price: price, creator: tx-sender }))
+    )
+)
