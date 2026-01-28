@@ -32,3 +32,20 @@
         ))
     )
 )
+
+(define-public (subscribe (creator principal) (tier-id uint))
+    (let (
+        (tier (unwrap! (map-get? subscription-tiers { creator: creator, tier-id: tier-id }) ERR-NOT-FOUND))
+        (price (get price tier))
+        (duration (get duration tier))
+        (active (get active tier))
+    )
+    (begin
+        (asserts! active ERR-INVALID-TIER)
+        (try! (stx-transfer? price tx-sender creator))
+        (ok (map-set active-subscriptions 
+            { user: tx-sender, creator: creator, tier-id: tier-id } 
+            { expiry: (+ block-height (* duration day-in-blocks)) }
+        ))
+    ))
+)
