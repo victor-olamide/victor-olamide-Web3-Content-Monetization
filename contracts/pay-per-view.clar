@@ -47,6 +47,17 @@
     ))
 )
 
+(define-public (remove-content (content-id uint))
+    (let (
+        (content (unwrap! (map-get? content-pricing content-id) ERR-NOT-FOUND))
+        (creator (get creator content))
+    )
+    (begin
+        (asserts! (or (is-eq tx-sender creator) (is-eq tx-sender contract-owner)) ERR-NOT-AUTHORIZED)
+        (ok (map-delete content-pricing content-id))
+    ))
+)
+
 ;; Read-only functions
 (define-read-only (has-access (content-id uint) (user principal))
     (default-to false (map-get? content-access { content-id: content-id, user: user }))
