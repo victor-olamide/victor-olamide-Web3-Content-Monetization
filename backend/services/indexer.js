@@ -1,6 +1,7 @@
 const axios = require('axios');
 const Purchase = require('../models/Purchase');
 const Content = require('../models/Content');
+const Subscription = require('../models/Subscription');
 
 class Indexer {
   constructor() {
@@ -79,7 +80,26 @@ class Indexer {
       }
     } else if (payload.includes('subscribe')) {
       console.log('New subscription detected:', tx.tx_id);
-      // Logic for subscription indexing
+      
+      const subData = {
+        user: tx.sender_address,
+        creator: 'SP3X....', // Extracted
+        tierId: 1, // Extracted
+        expiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Extracted
+        transactionId: tx.tx_id,
+        timestamp: new Date(tx.burn_block_time_iso)
+      };
+
+      try {
+        await Subscription.findOneAndUpdate(
+          { transactionId: subData.transactionId },
+          subData,
+          { upsert: true, new: true }
+        );
+        console.log('Subscription saved to database');
+      } catch (err) {
+        console.error('Error saving subscription:', err.message);
+      }
     }
   }
 }
