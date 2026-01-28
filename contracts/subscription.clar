@@ -27,6 +27,8 @@
 )
 
 ;; Public functions
+
+;; Creators can define a new subscription tier
 (define-public (create-tier (tier-id uint) (price uint) (duration uint))
     (begin
         (asserts! (is-none (map-get? subscription-tiers { creator: tx-sender, tier-id: tier-id })) ERR-ALREADY-EXISTS)
