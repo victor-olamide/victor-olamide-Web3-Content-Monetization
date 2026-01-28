@@ -16,3 +16,8 @@
     { creator: principal, tier-id: uint } 
     { price: uint, duration: uint, active: bool }
 )
+
+(define-map active-subscriptions 
+    { user: principal, creator: principal, tier-id: uint } 
+    { expiry: uint }
+)
