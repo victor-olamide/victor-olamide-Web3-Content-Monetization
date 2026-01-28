@@ -21,3 +21,14 @@
     { user: principal, creator: principal, tier-id: uint } 
     { expiry: uint }
 )
+
+;; Public functions
+(define-public (create-tier (tier-id uint) (price uint) (duration uint))
+    (begin
+        (asserts! (is-none (map-get? subscription-tiers { creator: tx-sender, tier-id: tier-id })) ERR-ALREADY-EXISTS)
+        (ok (map-set subscription-tiers 
+            { creator: tx-sender, tier-id: tier-id } 
+            { price: price, duration: duration, active: true }
+        ))
+    )
+)
