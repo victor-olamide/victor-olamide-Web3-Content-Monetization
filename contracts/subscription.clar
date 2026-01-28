@@ -79,6 +79,16 @@
     )
 )
 
+(define-public (deactivate-tier (tier-id uint))
+    (let (
+        (tier (unwrap! (map-get? subscription-tiers { creator: tx-sender, tier-id: tier-id }) ERR-NOT-FOUND))
+    )
+    (ok (map-set subscription-tiers 
+        { creator: tx-sender, tier-id: tier-id } 
+        (merge tier { active: false })
+    )))
+)
+
 ;; Read-only functions
 (define-read-only (is-subscribed (user principal) (creator principal) (tier-id uint))
     (let (
