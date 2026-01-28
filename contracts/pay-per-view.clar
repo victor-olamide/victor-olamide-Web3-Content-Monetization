@@ -12,7 +12,10 @@
 (define-constant ERR-ALREADY-PURCHASED (err u104))
 
 ;; Data maps
+;; Mapping of content ID to its price and creator
 (define-map content-pricing uint { price: uint, creator: principal })
+
+;; Mapping of content ID and user principal to access status
 (define-map content-access { content-id: uint, user: principal } bool)
 
 ;; Public functions
