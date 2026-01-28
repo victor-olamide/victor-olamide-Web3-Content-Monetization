@@ -24,6 +24,7 @@
 (define-public (add-content (content-id uint) (price uint))
     (begin
         (asserts! (is-none (map-get? content-pricing content-id)) ERR-ALREADY-EXISTS)
+        (print { event: "add-content", content-id: content-id, price: price, creator: tx-sender })
         (ok (map-set content-pricing content-id { price: price, creator: tx-sender }))
     )
 )
@@ -39,6 +40,7 @@
         (asserts! (is-none (map-get? content-access { content-id: content-id, user: tx-sender })) ERR-ALREADY-PURCHASED)
         (try! (stx-transfer? price tx-sender creator))
         (map-set content-access { content-id: content-id, user: tx-sender } true)
+        (print { event: "purchase-content", content-id: content-id, user: tx-sender, price: price, creator: creator })
         (ok true)
     ))
 )
