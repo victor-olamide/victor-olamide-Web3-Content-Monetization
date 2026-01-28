@@ -22,13 +22,12 @@ class Indexer {
 
   async pollEvents() {
     if (!this.contractAddress) {
-      // console.warn('CONTRACT_ADDRESS not set, skipping indexing');
+      console.warn('CONTRACT_ADDRESS not set, skipping indexing. Please set it in .env');
       return;
     }
 
     try {
-      // In a real scenario, we would fetch contract events
-      // GET /extended/v1/address/{address}/transactions
+      console.log(`Polling for events from ${this.contractAddress}...`);
       const response = await axios.get(`${this.apiUrl}/extended/v1/address/${this.contractAddress}/transactions?limit=20`);
       const transactions = response.data.results;
 
