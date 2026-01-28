@@ -12,6 +12,7 @@ class Indexer {
 
   async start() {
     console.log('Starting Stacks event indexer...');
+    this.status = 'running';
     // Initial fetch
     await this.pollEvents();
     
@@ -19,6 +20,14 @@ class Indexer {
     setInterval(async () => {
       await this.pollEvents();
     }, 30000); // Every 30 seconds
+  }
+
+  getStatus() {
+    return {
+      status: this.status,
+      lastProcessedBlock: this.lastProcessedBlock,
+      contractAddress: this.contractAddress
+    };
   }
 
   async pollEvents() {
