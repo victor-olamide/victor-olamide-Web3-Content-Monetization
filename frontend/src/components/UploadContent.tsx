@@ -4,12 +4,13 @@ import React, { useState } from 'react';
 
 const UploadContent: React.FC = () => {
   const [title, setTitle] = useState('');
+  const [contentId, setContentId] = useState('');
   const [price, setPrice] = useState('');
   const [contentType, setContentType] = useState('video');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log({ title, price, contentType });
+    console.log({ title, contentId, price, contentType });
     // Handle upload logic
   };
 
@@ -30,6 +31,19 @@ const UploadContent: React.FC = () => {
             />
           </div>
           <div>
+            <label className="block text-sm font-medium text-gray-700">Numeric ID (for Contract)</label>
+            <input
+              type="number"
+              value={contentId}
+              onChange={(e) => setContentId(e.target.value)}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-orange-500 focus:border-orange-500"
+              placeholder="1"
+              required
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
             <label className="block text-sm font-medium text-gray-700">Content Type</label>
             <select
               value={contentType}
@@ -42,17 +56,17 @@ const UploadContent: React.FC = () => {
               <option value="music">Music</option>
             </select>
           </div>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Price (STX)</label>
-          <input
-            type="number"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-orange-500 focus:border-orange-500"
-            placeholder="10"
-            required
-          />
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Price (STX)</label>
+            <input
+              type="number"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-orange-500 focus:border-orange-500"
+              placeholder="10"
+              required
+            />
+          </div>
         </div>
         <button
           type="submit"
