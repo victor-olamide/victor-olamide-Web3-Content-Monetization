@@ -13,11 +13,14 @@
 (define-constant ERR-EXPIRED (err u104))
 
 ;; Data maps
+
+;; Stores subscription tier details for each creator
 (define-map subscription-tiers 
     { creator: principal, tier-id: uint } 
     { price: uint, duration: uint, active: bool }
 )
 
+;; Stores active subscription expiry for users
 (define-map active-subscriptions 
     { user: principal, creator: principal, tier-id: uint } 
     { expiry: uint }
