@@ -9,3 +9,6 @@
 (define-constant ERR-NOT-FOUND (err u102))
 (define-constant ERR-INSUFFICIENT-FUNDS (err u103))
 (define-constant ERR-ALREADY-PURCHASED (err u104))
+
+;; Data maps
+(define-map content-pricing uint { price: uint, creator: principal })
