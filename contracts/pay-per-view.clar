@@ -40,3 +40,7 @@
 (define-read-only (has-access (content-id uint) (user principal))
     (default-to false (map-get? content-access { content-id: content-id, user: user }))
 )
+
+(define-read-only (get-content-info (content-id uint))
+    (map-get? content-pricing content-id)
+)
