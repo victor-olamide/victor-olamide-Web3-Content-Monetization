@@ -32,6 +32,13 @@ app.use('/api/subscriptions', subscriptionRoutes);
 const indexer = require('./services/indexer');
 indexer.start();
 
+app.get('/api/status', (req, res) => {
+  res.json({
+    server: 'up',
+    indexer: indexer.getStatus()
+  });
+});
+
 app.get('/', (req, res) => {
   res.send('Stacks Content Monetization API');
 });
