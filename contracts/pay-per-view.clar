@@ -55,6 +55,7 @@
     ))
 )
 
+;; Remove content from the platform
 (define-public (remove-content (content-id uint))
     (let (
         (content (unwrap! (map-get? content-pricing content-id) ERR-NOT-FOUND))
