@@ -6,6 +6,8 @@
 
 ;; Constants
 (define-constant contract-owner tx-sender)
+(define-constant GATING-TYPE-FT u0)
+(define-constant GATING-TYPE-NFT u1)
 
 ;; Error codes
 (define-constant ERR-NOT-AUTHORIZED (err u100))
