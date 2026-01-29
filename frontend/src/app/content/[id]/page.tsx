@@ -1,57 +1,15 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardShell from "@/components/DashboardShell";
 import { Lock, Unlock, PlayCircle, ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
+import { useContentAccess } from '@/hooks/useContentAccess';
 
 export default function ContentView({ params }: { params: { id: string } }) {
-  const { isLoggedIn, userData } = useAuth();
-  const [content, setContent] = useState<any>(null);
-  const [hasAccess, setHasAccess] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Simulate fetching content and checking access
-    const fetchContent = async () => {
-      setLoading(true);
-      try {
-        // In a real app: const res = await fetch(`/api/content/${params.id}`);
-        // Mock content data
-        const mockContent = {
-          id: params.id,
-          title: "Introduction to Clarity Smart Contracts",
-          description: "Learn how to build secure apps on Stacks.",
-          price: "10 STX",
-          creator: "SP3X...creator",
-          type: "video",
-          gating: {
-            tokenSymbol: "MOCK",
-            threshold: "1000"
-          }
-        };
-        
-        if (params.id === '999') {
-          setContent(null);
-        } else {
-          setContent(mockContent);
-        }
-
-        // Simulate access check (e.g. check backend/contract)
-        setTimeout(() => {
-          const isCreator = userData?.profile?.stxAddress?.mainnet === mockContent.creator;
-          setHasAccess(isCreator); // Creators have automatic access
-          setLoading(false);
-        }, 1500);
-      } catch (err) {
-        console.error("Error fetching content:", err);
-        setLoading(false);
-      }
-    };
-
-    fetchContent();
-  }, [params.id]);
+  const { isLoggedIn } = useAuth();
+  const { content, hasAccess, loading } = useContentAccess(params.id);
 
   if (loading) {
     return (
