@@ -139,6 +139,9 @@ class Indexer {
       } catch (err) {
         console.error('Error deleting gating rule:', err.message);
       }
+    } else if (payload.includes('verify-access-success')) {
+      console.log('Access verification success detected:', tx.tx_id);
+      // In a real app, we might update a local cache of authorized users
     }
   }
 }
