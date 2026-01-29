@@ -69,9 +69,8 @@
     )
 )
 
-;; Verification function
+;; Verification function for FT
 ;; Returns (ok true) if user has access, error otherwise
-;; This function is used by the frontend to check if a user meets the token requirements
 (define-public (verify-access (content-id uint) (token-trait <sip-010-trait>))
     (let
         (
@@ -79,6 +78,9 @@
             (user tx-sender)
             (contract-principal (contract-of token-trait))
         )
+        ;; Verify it's an FT rule
+        (asserts! (is-eq (get gating-type rule) GATING-TYPE-FT) ERR-INVALID-GATING-TYPE)
+        
         ;; Verify the passed token trait matches the rule
         (asserts! (is-eq contract-principal (get token-contract rule)) ERR-WRONG-TOKEN)
         
@@ -88,7 +90,34 @@
                 (balance (unwrap! (contract-call? token-trait get-balance user) (err u500)))
             )
             (asserts! (>= balance (get threshold rule)) ERR-INSUFFICIENT-BALANCE)
-            (print { event: "verify-access-success", content-id: content-id, user: user, token: contract-principal })
+            (print { event: "verify-access-success", content-id: content-id, user: user, token: contract-principal, type: "FT" })
+            (ok true)
+        )
+    )
+)
+
+;; Verification function for NFT
+;; Returns (ok true) if user owns the specified NFT from the required collection
+(define-public (verify-nft-access (content-id uint) (nft-trait <sip-009-trait>) (token-id uint))
+    (let
+        (
+            (rule (unwrap! (map-get? gating-rules content-id) ERR-NOT-FOUND))
+            (user tx-sender)
+            (contract-principal (contract-of nft-trait))
+        )
+        ;; Verify it's an NFT rule
+        (asserts! (is-eq (get gating-type rule) GATING-TYPE-NFT) ERR-INVALID-GATING-TYPE)
+        
+        ;; Verify the passed NFT trait matches the rule
+        (asserts! (is-eq contract-principal (get token-contract rule)) ERR-WRONG-TOKEN)
+        
+        ;; Check ownership of the specific token-id
+        (let
+            (
+                (owner (unwrap! (unwrap! (contract-call? nft-trait get-owner token-id) (err u501)) ERR-NOT-FOUND))
+            )
+            (asserts! (is-eq (some user) owner) ERR-NOT-NFT-OWNER)
+            (print { event: "verify-access-success", content-id: content-id, user: user, token: contract-principal, token-id: token-id, type: "NFT" })
             (ok true)
         )
     )
