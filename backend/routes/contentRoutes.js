@@ -20,17 +20,25 @@ const upload = multer({
 });
 
 // Upload content to IPFS
-router.post('/upload', upload.single('file'), async (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ message: 'No file uploaded' });
-  }
+router.post('/upload', (req, res) => {
+  upload.single('file')(req, res, async (err) => {
+    if (err instanceof multer.MulterError) {
+      return res.status(400).json({ message: 'Multer error', error: err.message });
+    } else if (err) {
+      return res.status(400).json({ message: 'Upload error', error: err.message });
+    }
 
-  try {
-    const ipfsUrl = await uploadToIPFS(req.file.buffer, req.file.originalname);
-    res.json({ url: ipfsUrl });
-  } catch (err) {
-    res.status(500).json({ message: 'Failed to upload to IPFS', error: err.message });
-  }
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    try {
+      const ipfsUrl = await uploadToIPFS(req.file.buffer, req.file.originalname);
+      res.json({ url: ipfsUrl });
+    } catch (err) {
+      res.status(500).json({ message: 'Failed to upload to IPFS', error: err.message });
+    }
+  });
 });
 
 // Get all content metadata
