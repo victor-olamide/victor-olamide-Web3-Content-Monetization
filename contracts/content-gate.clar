@@ -139,3 +139,10 @@
         ERR-NOT-FOUND
     )
 )
+
+(define-read-only (get-required-token (content-id uint))
+    (match (map-get? gating-rules content-id)
+        rule (ok (get token-contract rule))
+        ERR-NOT-FOUND
+    )
+)
