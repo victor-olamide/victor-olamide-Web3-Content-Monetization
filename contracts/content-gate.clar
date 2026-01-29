@@ -41,6 +41,10 @@
     )
 )
 
+(define-private (is-contract-owner)
+    (is-eq tx-sender contract-owner)
+)
+
 ;; Management functions
 
 ;; Set a gating rule for a specific content
