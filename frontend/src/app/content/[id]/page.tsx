@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardShell from "@/components/DashboardShell";
-import { Lock, Unlock, PlayCircle } from 'lucide-react';
+import { Lock, Unlock, PlayCircle, ChevronLeft } from 'lucide-react';
+import Link from 'next/link';
 
 export default function ContentView({ params }: { params: { id: string } }) {
   const { isLoggedIn, userData } = useAuth();
@@ -53,6 +54,13 @@ export default function ContentView({ params }: { params: { id: string } }) {
   return (
     <DashboardShell>
       <div className="p-8 max-w-4xl mx-auto">
+        <Link 
+          href="/dashboard" 
+          className="flex items-center gap-1 text-gray-500 hover:text-gray-700 mb-6 transition"
+        >
+          <ChevronLeft size={20} />
+          Back to Dashboard
+        </Link>
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
           <div className="p-8">
             <h1 className="text-3xl font-bold mb-4">{content?.title}</h1>
