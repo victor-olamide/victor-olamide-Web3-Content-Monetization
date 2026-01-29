@@ -29,6 +29,18 @@
     }
 )
 
+;; Private functions
+
+(define-private (is-creator (content-id uint) (user principal))
+    (let
+        (
+            (content-info (unwrap! (contract-call? .pay-per-view get-content-info content-id) false))
+            (creator (get creator content-info))
+        )
+        (is-eq user creator)
+    )
+)
+
 ;; Management functions
 
 ;; Set a gating rule for a specific content
