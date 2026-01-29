@@ -15,7 +15,9 @@
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
     "axios": "^1.6.2",
-    "form-data": "^4.0.0"
+    "form-data": "^4.0.0",
+    "@stacks/transactions": "^6.9.0",
+    "@stacks/network": "^6.9.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
