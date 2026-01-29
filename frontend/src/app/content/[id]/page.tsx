@@ -75,10 +75,16 @@ export default function ContentView({ params }: { params: { id: string } }) {
                   This content requires a one-time payment of {content?.price} or a subscription.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <button className="bg-orange-500 text-white font-bold py-3 px-8 rounded-lg hover:bg-orange-600 transition">
+                  <button 
+                    onClick={() => alert('Initiating STX purchase...')}
+                    className="bg-orange-500 text-white font-bold py-3 px-8 rounded-lg hover:bg-orange-600 transition"
+                  >
                     Purchase Access
                   </button>
-                  <button className="bg-gray-800 text-white font-bold py-3 px-8 rounded-lg hover:bg-gray-900 transition">
+                  <button 
+                    onClick={() => alert('Initiating subscription...')}
+                    className="bg-gray-800 text-white font-bold py-3 px-8 rounded-lg hover:bg-gray-900 transition"
+                  >
                     Subscribe to Creator
                   </button>
                 </div>
