@@ -60,6 +60,7 @@
 
 ;; Verification function
 ;; Returns (ok true) if user has access, error otherwise
+;; This function is used by the frontend to check if a user meets the token requirements
 (define-public (verify-access (content-id uint) (token-trait <sip-010-trait>))
     (let
         (
