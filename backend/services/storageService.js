@@ -20,6 +20,13 @@ const uploadToIPFS = async (fileBuffer, fileName) => {
   return `ipfs://${response.data.IpfsHash}`;
 };
 
+const getGatewayUrl = (ipfsUrl) => {
+  if (!ipfsUrl) return '';
+  const hash = ipfsUrl.replace('ipfs://', '');
+  return `https://gateway.pinata.cloud/ipfs/${hash}`;
+};
+
 module.exports = {
   uploadToIPFS,
+  getGatewayUrl,
 };
