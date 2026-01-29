@@ -83,8 +83,16 @@ export default function ContentView({ params }: { params: { id: string } }) {
                 </div>
               </div>
             ) : (
-              <div className="bg-black aspect-video rounded-xl flex items-center justify-center">
-                <PlayCircle size={64} className="text-white opacity-80 cursor-pointer hover:opacity-100 transition" />
+              <div className="rounded-xl overflow-hidden">
+                {content?.type === 'video' ? (
+                  <div className="bg-black aspect-video flex items-center justify-center">
+                    <PlayCircle size={64} className="text-white opacity-80 cursor-pointer hover:opacity-100 transition" />
+                  </div>
+                ) : (
+                  <div className="prose max-w-none bg-gray-50 p-8 border border-gray-100 rounded-xl">
+                    <p>Exclusive article content revealed here...</p>
+                  </div>
+                )}
               </div>
             )}
           </div>
