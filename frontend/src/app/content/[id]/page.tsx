@@ -76,6 +76,18 @@ export default function ContentView({ params }: { params: { id: string } }) {
     );
   }
 
+  if (!isLoggedIn) {
+    return (
+      <DashboardShell>
+        <div className="p-8 max-w-4xl mx-auto text-center">
+          <Lock size={48} className="mx-auto text-gray-400 mb-4" />
+          <h1 className="text-3xl font-bold mb-4">Authentication Required</h1>
+          <p className="text-gray-600 mb-8">Please connect your wallet to view this content and check your access rights.</p>
+        </div>
+      </DashboardShell>
+    );
+  }
+
   return (
     <DashboardShell>
       <div className="p-8 max-w-4xl mx-auto">
