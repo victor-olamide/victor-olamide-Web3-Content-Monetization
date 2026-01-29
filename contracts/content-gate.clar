@@ -15,6 +15,8 @@
 (define-constant ERR-WRONG-TOKEN (err u101))
 (define-constant ERR-INSUFFICIENT-BALANCE (err u102))
 (define-constant ERR-CONTENT-NOT-FOUND (err u103))
+(define-constant ERR-INVALID-GATING-TYPE (err u104))
+(define-constant ERR-NOT-NFT-OWNER (err u105))
 
 ;; Map to store gating rules
 ;; content-id -> { token-contract: principal, threshold: uint, gating-type: uint }
@@ -42,7 +44,7 @@
         (asserts! (is-eq tx-sender creator) ERR-NOT-AUTHORIZED)
         
         ;; Validate gating type
-        (asserts! (or (is-eq gating-type GATING-TYPE-FT) (is-eq gating-type GATING-TYPE-NFT)) (err u104))
+        (asserts! (or (is-eq gating-type GATING-TYPE-FT) (is-eq gating-type GATING-TYPE-NFT)) ERR-INVALID-GATING-TYPE)
         
         (print { event: "set-gating-rule", content-id: content-id, token-contract: token-contract, threshold: threshold, gating-type: gating-type, creator: tx-sender })
         (ok (map-set gating-rules content-id {
