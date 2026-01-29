@@ -40,7 +40,8 @@ export default function ContentView({ params }: { params: { id: string } }) {
 
         // Simulate access check (e.g. check backend/contract)
         setTimeout(() => {
-          setHasAccess(false); // Default to no access for now
+          const isCreator = userData?.profile?.stxAddress?.mainnet === mockContent.creator;
+          setHasAccess(isCreator); // Creators have automatic access
           setLoading(false);
         }, 1500);
       } catch (err) {
