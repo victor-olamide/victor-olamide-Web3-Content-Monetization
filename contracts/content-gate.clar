@@ -47,13 +47,9 @@
 ;; Only the creator of the content (defined in pay-per-view) can set the rule
 ;; The threshold is the minimum amount of tokens required to gain access
 (define-public (set-gating-rule (content-id uint) (token-contract principal) (threshold uint) (gating-type uint))
-    (let
-        (
-            (content-info (unwrap! (contract-call? .pay-per-view get-content-info content-id) ERR-CONTENT-NOT-FOUND))
-            (creator (get creator content-info))
-        )
+    (begin
         ;; Check if tx-sender is the creator
-        (asserts! (is-eq tx-sender creator) ERR-NOT-AUTHORIZED)
+        (asserts! (is-creator content-id tx-sender) ERR-NOT-AUTHORIZED)
         
         ;; Validate gating type
         (asserts! (or (is-eq gating-type GATING-TYPE-FT) (is-eq gating-type GATING-TYPE-NFT)) ERR-INVALID-GATING-TYPE)
