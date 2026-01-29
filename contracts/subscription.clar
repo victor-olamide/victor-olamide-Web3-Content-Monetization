@@ -32,6 +32,7 @@
 (define-public (create-tier (tier-id uint) (price uint) (duration uint))
     (begin
         (asserts! (is-none (map-get? subscription-tiers { creator: tx-sender, tier-id: tier-id })) ERR-ALREADY-EXISTS)
+        (print { event: "create-tier", creator: tx-sender, tier-id: tier-id, price: price, duration: duration })
         (ok (map-set subscription-tiers 
             { creator: tx-sender, tier-id: tier-id } 
             { price: price, duration: duration, active: true }
@@ -46,13 +47,15 @@
         (price (get price tier))
         (duration (get duration tier))
         (active (get active tier))
+        (expiry (+ block-height (* duration day-in-blocks)))
     )
     (begin
         (asserts! active ERR-INVALID-TIER)
         (try! (stx-transfer? price tx-sender creator))
+        (print { event: "subscribe", user: tx-sender, creator: creator, tier-id: tier-id, expiry: expiry, price: price })
         (ok (map-set active-subscriptions 
             { user: tx-sender, creator: creator, tier-id: tier-id } 
-            { expiry: (+ block-height (* duration day-in-blocks)) }
+            { expiry: expiry }
         ))
     ))
 )
