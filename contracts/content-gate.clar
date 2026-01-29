@@ -64,13 +64,9 @@
 )
 
 (define-public (delete-gating-rule (content-id uint))
-    (let
-        (
-            (content-info (unwrap! (contract-call? .pay-per-view get-content-info content-id) ERR-CONTENT-NOT-FOUND))
-            (creator (get creator content-info))
-        )
+    (begin
         ;; Check if tx-sender is the creator or contract owner
-        (asserts! (or (is-eq tx-sender creator) (is-eq tx-sender contract-owner)) ERR-NOT-AUTHORIZED)
+        (asserts! (or (is-creator content-id tx-sender) (is-eq tx-sender contract-owner)) ERR-NOT-AUTHORIZED)
         
         (print { event: "delete-gating-rule", content-id: content-id, creator: tx-sender })
         (ok (map-delete gating-rules content-id))
