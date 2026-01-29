@@ -17,12 +17,13 @@
 (define-constant ERR-CONTENT-NOT-FOUND (err u103))
 
 ;; Map to store gating rules
-;; content-id -> { token-contract: principal, threshold: uint }
+;; content-id -> { token-contract: principal, threshold: uint, gating-type: uint }
 (define-map gating-rules
     uint
     {
         token-contract: principal,
-        threshold: uint
+        threshold: uint,
+        gating-type: uint
     }
 )
 
