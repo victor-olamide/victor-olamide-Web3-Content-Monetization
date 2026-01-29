@@ -116,6 +116,8 @@ class Indexer {
       const gatingData = {
         contentId: 1, // Extracted from payload
         tokenContract: 'SP...mock-token', // Extracted
+        tokenSymbol: 'MOCK', // Extracted
+        tokenDecimals: 6, // Extracted
         threshold: '1000', // Extracted
         creator: tx.sender_address,
       };
