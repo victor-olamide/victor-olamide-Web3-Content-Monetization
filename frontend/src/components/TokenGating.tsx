@@ -48,7 +48,7 @@ const TokenGating: React.FC = () => {
             value={tokenAddress}
             onChange={(e) => setTokenAddress(e.target.value)}
             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-            placeholder="SP3X...token-name"
+            placeholder="e.g. SP3X...mock-token"
             required
           />
         </div>
