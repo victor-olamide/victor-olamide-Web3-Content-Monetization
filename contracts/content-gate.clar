@@ -27,6 +27,7 @@
 
 ;; Set a gating rule for a specific content
 ;; Only the creator of the content (defined in pay-per-view) can set the rule
+;; The threshold is the minimum amount of tokens required to gain access
 (define-public (set-gating-rule (content-id uint) (token-contract principal) (threshold uint))
     (let
         (
