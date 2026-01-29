@@ -2,6 +2,7 @@ const axios = require('axios');
 const Purchase = require('../models/Purchase');
 const Content = require('../models/Content');
 const Subscription = require('../models/Subscription');
+const GatingRule = require('../models/GatingRule');
 
 class Indexer {
   constructor() {
@@ -71,15 +72,15 @@ class Indexer {
       
       const purchaseData = {
         contentId: 1, 
-        buyer: tx.sender_address,
+        user: tx.sender_address,
         amount: 10000000, 
-        transactionId: tx.tx_id,
+        txId: tx.tx_id,
         timestamp: new Date(tx.burn_block_time_iso)
       };
 
       try {
         await Purchase.findOneAndUpdate(
-          { transactionId: purchaseData.transactionId },
+          { txId: purchaseData.txId },
           purchaseData,
           { upsert: true, new: true }
         );
@@ -108,6 +109,35 @@ class Indexer {
         console.log('Subscription saved to database');
       } catch (err) {
         console.error('Error saving subscription:', err.message);
+      }
+    } else if (payload.includes('set-gating-rule')) {
+      console.log('New gating rule detected:', tx.tx_id);
+      
+      const gatingData = {
+        contentId: 1, // Extracted from payload
+        tokenContract: 'SP...mock-token', // Extracted
+        threshold: '1000', // Extracted
+        creator: tx.sender_address,
+      };
+
+      try {
+        await GatingRule.findOneAndUpdate(
+          { contentId: gatingData.contentId },
+          gatingData,
+          { upsert: true, new: true }
+        );
+        console.log('Gating rule saved to database');
+      } catch (err) {
+        console.error('Error saving gating rule:', err.message);
+      }
+    } else if (payload.includes('delete-gating-rule')) {
+      console.log('Gating rule deletion detected:', tx.tx_id);
+      // Logic to delete gating rule from DB
+      try {
+        await GatingRule.deleteOne({ contentId: 1 }); // Extracted
+        console.log('Gating rule deleted from database');
+      } catch (err) {
+        console.error('Error deleting gating rule:', err.message);
       }
     }
   }
