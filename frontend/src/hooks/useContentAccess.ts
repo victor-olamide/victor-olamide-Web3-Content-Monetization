@@ -6,11 +6,19 @@ export const useContentAccess = (contentId: string) => {
   const [content, setContent] = useState<any>(null);
   const [hasAccess, setHasAccess] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const checkAccess = async () => {
       setLoading(true);
+      setError(null);
       try {
+        // ... (mocking fetch)
+        if (contentId === '999') {
+          setError('Content not found');
+          setLoading(false);
+          return;
+        }
         // Mock content data
         const mockContent = {
           id: contentId,
@@ -42,5 +50,5 @@ export const useContentAccess = (contentId: string) => {
     if (contentId) checkAccess();
   }, [contentId, userData]);
 
-  return { content, hasAccess, loading };
+  return { content, hasAccess, loading, error };
 };
