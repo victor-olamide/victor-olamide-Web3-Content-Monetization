@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const Content = require('../models/Content');
 const { uploadToIPFS } = require('../services/storageService');
+const { addContentToContract } = require('../services/contractService');
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -37,6 +38,48 @@ router.post('/upload', (req, res) => {
       res.json({ url: ipfsUrl });
     } catch (err) {
       res.status(500).json({ message: 'Failed to upload to IPFS', error: err.message });
+    }
+  });
+});
+
+// Upload and register to Clarity contract
+router.post('/upload-and-register', (req, res) => {
+  upload.single('file')(req, res, async (err) => {
+    if (err) return res.status(400).json({ message: 'Upload error', error: err.message });
+    if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+
+    try {
+      // 1. Upload to IPFS
+      const ipfsUrl = await uploadToIPFS(req.file.buffer, req.file.originalname);
+      
+      // 2. Register on Smart Contract
+      const { contentId, price } = req.body;
+      const txResult = await addContentToContract(
+        parseInt(contentId), 
+        parseInt(price), 
+        process.env.CREATOR_PRIVATE_KEY
+      );
+
+      // 3. Save metadata to DB
+      const content = new Content({
+        contentId,
+        title: req.body.title,
+        description: req.body.description,
+        contentType: req.body.contentType,
+        price,
+        creator: req.body.creator,
+        url: ipfsUrl,
+        storageType: 'ipfs'
+      });
+      const newContent = await content.save();
+
+      res.status(201).json({
+        message: 'Content uploaded and registered successfully',
+        content: newContent,
+        transactionId: txResult.txid
+      });
+    } catch (err) {
+      res.status(500).json({ message: 'Integration failed', error: err.message });
     }
   });
 });
