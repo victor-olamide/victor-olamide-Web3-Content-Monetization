@@ -32,12 +32,15 @@ app.use('/api/gating', gatingRoutes);
 
 // Start Indexer
 const indexer = require('./services/indexer');
+const { checkStorageHealth } = require('./services/storageService');
 indexer.start();
 
-app.get('/api/status', (req, res) => {
+app.get('/api/status', async (req, res) => {
+  const storageHealthy = await checkStorageHealth();
   res.json({
     server: 'up',
-    indexer: indexer.getStatus()
+    indexer: indexer.getStatus(),
+    storage: storageHealthy ? 'connected' : 'disconnected'
   });
 });
 
