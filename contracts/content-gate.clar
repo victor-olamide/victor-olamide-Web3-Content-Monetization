@@ -150,3 +150,10 @@
         ERR-NOT-FOUND
     )
 )
+
+(define-read-only (get-gating-threshold (content-id uint))
+    (match (map-get? gating-rules content-id)
+        rule (ok (get threshold rule))
+        ERR-NOT-FOUND
+    )
+)
