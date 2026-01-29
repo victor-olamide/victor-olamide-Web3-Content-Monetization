@@ -16,26 +16,37 @@ export default function ContentView({ params }: { params: { id: string } }) {
     // Simulate fetching content and checking access
     const fetchContent = async () => {
       setLoading(true);
-      // Mock content data
-      const mockContent = {
-        id: params.id,
-        title: "Introduction to Clarity Smart Contracts",
-        description: "Learn how to build secure apps on Stacks.",
-        price: "10 STX",
-        creator: "SP3X...creator",
-        type: "video",
-        gating: {
-          tokenSymbol: "MOCK",
-          threshold: "1000"
+      try {
+        // In a real app: const res = await fetch(`/api/content/${params.id}`);
+        // Mock content data
+        const mockContent = {
+          id: params.id,
+          title: "Introduction to Clarity Smart Contracts",
+          description: "Learn how to build secure apps on Stacks.",
+          price: "10 STX",
+          creator: "SP3X...creator",
+          type: "video",
+          gating: {
+            tokenSymbol: "MOCK",
+            threshold: "1000"
+          }
+        };
+        
+        if (params.id === '999') {
+          setContent(null);
+        } else {
+          setContent(mockContent);
         }
-      };
-      
-      setContent(mockContent);
-      // Simulate access check (e.g. check backend/contract)
-      setTimeout(() => {
-        setHasAccess(false); // Default to no access for now
+
+        // Simulate access check (e.g. check backend/contract)
+        setTimeout(() => {
+          setHasAccess(false); // Default to no access for now
+          setLoading(false);
+        }, 1500);
+      } catch (err) {
+        console.error("Error fetching content:", err);
         setLoading(false);
-      }, 1500);
+      }
     };
 
     fetchContent();
@@ -44,8 +55,22 @@ export default function ContentView({ params }: { params: { id: string } }) {
   if (loading) {
     return (
       <DashboardShell>
-        <div className="flex items-center justify-center min-h-screen">
+        <div className="flex items-center justify-center min-h-[60vh]">
           <p className="text-xl animate-pulse">Checking access...</p>
+        </div>
+      </DashboardShell>
+    );
+  }
+
+  if (!content) {
+    return (
+      <DashboardShell>
+        <div className="p-8 max-w-4xl mx-auto text-center">
+          <h1 className="text-3xl font-bold mb-4">Content Not Found</h1>
+          <p className="text-gray-600 mb-8">The content you are looking for does not exist or has been removed.</p>
+          <Link href="/dashboard" className="text-orange-600 font-bold hover:underline">
+            Return to Dashboard
+          </Link>
         </div>
       </DashboardShell>
     );
