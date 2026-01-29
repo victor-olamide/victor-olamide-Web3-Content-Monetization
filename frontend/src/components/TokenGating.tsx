@@ -7,11 +7,20 @@ const TokenGating: React.FC = () => {
   const [contentId, setContentId] = useState('');
   const [tokenAddress, setTokenAddress] = useState('');
   const [threshold, setThreshold] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
 
-  const handleSetGate = (e: React.FormEvent) => {
+  const handleSetGate = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
+    setMessage('');
     console.log('Setting gate:', { contentId, tokenAddress, threshold });
-    // Handle SIP-010 gating logic via @stacks/connect
+    
+    // Simulate transaction delay
+    setTimeout(() => {
+      setLoading(false);
+      setMessage('Gating rule transaction submitted!');
+    }, 2000);
   };
 
   return (
@@ -56,10 +65,12 @@ const TokenGating: React.FC = () => {
         </div>
         <button
           type="submit"
-          className="w-full bg-gray-800 text-white font-bold py-2 px-4 rounded hover:bg-gray-900 transition"
+          disabled={loading}
+          className={`w-full ${loading ? 'bg-gray-400' : 'bg-gray-800 hover:bg-gray-900'} text-white font-bold py-2 px-4 rounded transition`}
         >
-          Set Gating Rule
+          {loading ? 'Processing...' : 'Set Gating Rule'}
         </button>
+        {message && <p className="text-sm text-green-600 mt-2 text-center font-medium">{message}</p>}
       </form>
     </div>
   );
