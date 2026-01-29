@@ -2,6 +2,7 @@
 ;; Contract to handle SIP-010 token gating for content
 
 (use-trait sip-010-trait .sip-010-trait.sip-010-trait)
+(use-trait sip-009-trait .sip-009-trait.sip-009-trait)
 
 ;; Constants
 (define-constant contract-owner tx-sender)
