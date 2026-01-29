@@ -8,6 +8,7 @@ const contentSchema = new mongoose.Schema({
   price: { type: Number, required: true },
   creator: { type: String, required: true },
   url: { type: String, required: true }, // IPFS or Gaia URL
+  storageType: { type: String, enum: ['ipfs', 'gaia'], default: 'ipfs' },
   createdAt: { type: Date, default: Date.now }
 });
 
