@@ -26,7 +26,23 @@ const getGatewayUrl = (ipfsUrl) => {
   return `https://gateway.pinata.cloud/ipfs/${hash}`;
 };
 
+const checkStorageHealth = async () => {
+  try {
+    const url = `https://api.pinata.cloud/data/testAuthentication`;
+    await axios.get(url, {
+      headers: {
+        pinata_api_key: process.env.PINATA_API_KEY,
+        pinata_secret_api_key: process.env.PINATA_SECRET_API_KEY,
+      },
+    });
+    return true;
+  } catch (err) {
+    return false;
+  }
+};
+
 module.exports = {
   uploadToIPFS,
   getGatewayUrl,
+  checkStorageHealth,
 };
