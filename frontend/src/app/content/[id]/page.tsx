@@ -69,6 +69,12 @@ export default function ContentView({ params }: { params: { id: string } }) {
                     Subscribe to Creator
                   </button>
                 </div>
+                <div className="mt-6 pt-6 border-t border-gray-100">
+                  <p className="text-sm text-gray-500 mb-4">OR hold at least 1000 MOCK tokens</p>
+                  <button className="text-gray-700 font-semibold py-2 px-6 rounded-lg border border-gray-300 hover:bg-gray-50 transition">
+                    Verify Token Balance
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="bg-black aspect-video rounded-xl flex items-center justify-center">
