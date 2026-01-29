@@ -132,3 +132,10 @@
 (define-read-only (get-gating-rule (content-id uint))
     (map-get? gating-rules content-id)
 )
+
+(define-read-only (get-gating-type (content-id uint))
+    (match (map-get? gating-rules content-id)
+        rule (ok (get gating-type rule))
+        ERR-NOT-FOUND
+    )
+)
