@@ -22,7 +22,11 @@ export default function ContentView({ params }: { params: { id: string } }) {
         description: "Learn how to build secure apps on Stacks.",
         price: "10 STX",
         creator: "SP3X...creator",
-        type: "video"
+        type: "video",
+        gating: {
+          tokenSymbol: "MOCK",
+          threshold: "1000"
+        }
       };
       
       setContent(mockContent);
@@ -70,7 +74,9 @@ export default function ContentView({ params }: { params: { id: string } }) {
                   </button>
                 </div>
                 <div className="mt-6 pt-6 border-t border-gray-100">
-                  <p className="text-sm text-gray-500 mb-4">OR hold at least 1000 MOCK tokens</p>
+                  <p className="text-sm text-gray-500 mb-4">
+                    OR hold at least {content?.gating?.threshold} {content?.gating?.tokenSymbol} tokens
+                  </p>
                   <button className="text-gray-700 font-semibold py-2 px-6 rounded-lg border border-gray-300 hover:bg-gray-50 transition">
                     Verify Token Balance
                   </button>
