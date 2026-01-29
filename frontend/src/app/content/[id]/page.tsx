@@ -101,6 +101,11 @@ export default function ContentView({ params }: { params: { id: string } }) {
         </Link>
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
           <div className="p-8">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs font-bold rounded uppercase tracking-wider">
+                {content?.type}
+              </span>
+            </div>
             <h1 className="text-3xl font-bold mb-4">{content?.title}</h1>
             <p className="text-gray-600 mb-6">{content?.description}</p>
             
