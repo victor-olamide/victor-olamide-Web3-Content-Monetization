@@ -9,7 +9,7 @@ import { useContentAccess } from '@/hooks/useContentAccess';
 
 export default function ContentView({ params }: { params: { id: string } }) {
   const { isLoggedIn } = useAuth();
-  const { content, hasAccess, loading } = useContentAccess(params.id);
+  const { content, hasAccess, loading, error } = useContentAccess(params.id);
 
   if (loading) {
     return (
@@ -21,11 +21,11 @@ export default function ContentView({ params }: { params: { id: string } }) {
     );
   }
 
-  if (!content) {
+  if (error || !content) {
     return (
       <DashboardShell>
         <div className="p-8 max-w-4xl mx-auto text-center">
-          <h1 className="text-3xl font-bold mb-4">Content Not Found</h1>
+          <h1 className="text-3xl font-bold mb-4">{error || 'Content Not Found'}</h1>
           <p className="text-gray-600 mb-8">The content you are looking for does not exist or has been removed.</p>
           <Link href="/dashboard" className="text-orange-600 font-bold hover:underline">
             Return to Dashboard
