@@ -11,6 +11,10 @@
 (define-constant ERR-NOT-FOUND (err u404))
 (define-constant ERR-INVALID-TIER (err u400))
 (define-constant ERR-EXPIRED (err u403))
+(define-constant ERR-INVALID-FEE (err u405))
+
+;; Data vars
+(define-data-var platform-fee uint u250) ;; 2.5% in basis points
 
 ;; Data maps
 
