@@ -1,26 +1,25 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { Storage } from '@stacks/storage';
 
 export const useStorage = () => {
-  const { userData } = useAuth();
+  const { userSession } = useAuth();
   const [uploading, setUploading] = useState(false);
   const [lastUploadedUrl, setLastUploadedUrl] = useState<string | null>(null);
 
   const uploadToGaia = async (file: File) => {
     setUploading(true);
     try {
-      // In a real Stacks app:
-      // const storage = new Storage({ userSession });
-      // const url = await storage.putFile(file.name, file);
+      const storage = new Storage({ userSession });
+      const fileName = `${Date.now()}-${file.name}`;
+      const url = await storage.putFile(fileName, file, {
+        encrypt: false,
+        contentType: file.type
+      });
       
-      // Simulate Gaia upload
-      console.log(`Uploading ${file.name} to Gaia...`);
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      const mockUrl = `https://gaia.stacks.co/${userData?.profile?.stxAddress?.mainnet}/${file.name}`;
-      setLastUploadedUrl(mockUrl);
+      setLastUploadedUrl(url);
       setUploading(false);
-      return mockUrl;
+      return url;
     } catch (err) {
       console.error("Gaia upload failed:", err);
       setUploading(false);
