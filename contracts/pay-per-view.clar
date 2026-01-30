@@ -90,3 +90,7 @@
 (define-read-only (get-content-info (content-id uint))
     (map-get? content-pricing content-id)
 )
+
+(define-read-only (is-owner (user principal))
+    (is-eq user contract-owner)
+)
