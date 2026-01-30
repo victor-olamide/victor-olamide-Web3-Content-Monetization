@@ -36,6 +36,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const authenticate = () => {
+    console.log('Initiating Stacks authentication...');
     showConnect({
       appDetails: {
         name: APP_NAME,
