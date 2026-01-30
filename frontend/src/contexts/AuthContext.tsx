@@ -11,10 +11,12 @@ interface AuthContextType {
   logout: () => void;
   isLoggedIn: boolean;
   stxAddress: string | null;
+  network: StacksMainnet;
 }
 
 const appConfig = new AppConfig(['store_write', 'publish_data']);
 const userSession = new UserSession({ appConfig });
+const network = new StacksMainnet();
 
 const APP_NAME = 'Stacks Content Monetization';
 const APP_ICON = '/logo.png';
@@ -71,6 +73,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         isLoggedIn: !!userData,
         stxAddress,
+        network,
       }}
     >
       {children}
