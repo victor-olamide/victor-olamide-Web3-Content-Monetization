@@ -6,7 +6,8 @@
 (define-fungible-token mock-token)
 
 (define-constant contract-owner tx-sender)
-(define-constant ERR-NOT-AUTHORIZED (err u100))
+(define-constant ERR-NOT-AUTHORIZED (err u401))
+(define-constant ERR-INVALID-AMOUNT (err u400))
 
 (define-public (transfer (amount uint) (sender principal) (recipient principal) (memo (optional (buff 34))))
     (begin
