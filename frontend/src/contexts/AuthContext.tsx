@@ -10,6 +10,7 @@ interface AuthContextType {
   authenticate: () => void;
   logout: () => void;
   isLoggedIn: boolean;
+  stxAddress: string | null;
 }
 
 const appConfig = new AppConfig(['store_write', 'publish_data']);
@@ -58,6 +59,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUserData(null);
   };
 
+  const stxAddress = userData?.profile?.stxAddress?.mainnet || userData?.profile?.stxAddress?.testnet || null;
+
   return (
     <AuthContext.Provider
       value={{
@@ -66,6 +69,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         authenticate,
         logout,
         isLoggedIn: !!userData,
+        stxAddress,
       }}
     >
       {children}
