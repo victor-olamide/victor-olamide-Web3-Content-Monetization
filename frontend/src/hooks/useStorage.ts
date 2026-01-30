@@ -30,15 +30,21 @@ export const useStorage = () => {
   const uploadToIPFS = async (file: File) => {
     setUploading(true);
     try {
-      // Simulate IPFS upload
-      console.log(`Uploading ${file.name} to IPFS...`);
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // In a real app, you would send to your backend which uploads to IPFS
+      const formData = new FormData();
+      formData.append('file', file);
       
-      const mockCid = "QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco";
-      const mockUrl = `ipfs://${mockCid}`;
-      setLastUploadedUrl(mockUrl);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/content/upload-ipfs`, {
+        method: 'POST',
+        body: formData,
+      });
+      
+      const data = await response.json();
+      const url = data.ipfsUrl;
+      
+      setLastUploadedUrl(url);
       setUploading(false);
-      return mockUrl;
+      return url;
     } catch (err) {
       console.error("IPFS upload failed:", err);
       setUploading(false);
@@ -46,5 +52,16 @@ export const useStorage = () => {
     }
   };
 
-  return { uploadToGaia, uploadToIPFS, uploading, lastUploadedUrl };
+  const uploadMetadata = async (metadata: any, type: 'gaia' | 'ipfs' = 'gaia') => {
+    const blob = new Blob([JSON.stringify(metadata)], { type: 'application/json' });
+    const file = new File([blob], `metadata-${metadata.contentId}.json`, { type: 'application/json' });
+    
+    if (type === 'gaia') {
+      return uploadToGaia(file);
+    } else {
+      return uploadToIPFS(file);
+    }
+  };
+
+  return { uploadToGaia, uploadToIPFS, uploadMetadata, uploading, lastUploadedUrl };
 };
