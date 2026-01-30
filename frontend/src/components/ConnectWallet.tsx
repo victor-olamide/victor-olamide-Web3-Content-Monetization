@@ -4,7 +4,19 @@ import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
 const ConnectWallet: React.FC = () => {
-  const { authenticate, logout, isLoggedIn, stxAddress } = useAuth();
+  const { authenticate, logout, isLoggedIn, stxAddress, isAuthenticating } = useAuth();
+
+  if (isAuthenticating) {
+    return (
+      <button
+        disabled
+        className="px-6 py-2 text-sm font-medium text-white bg-orange-400 rounded-md cursor-not-allowed flex items-center gap-2"
+      >
+        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+        Authenticating...
+      </button>
+    );
+  }
 
   if (isLoggedIn) {
     return (
