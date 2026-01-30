@@ -10,6 +10,7 @@ interface AuthContextType {
   authenticate: () => void;
   logout: () => void;
   isLoggedIn: boolean;
+  isAuthenticating: boolean;
   stxAddress: string | null;
   network: StacksMainnet;
 }
@@ -28,13 +29,17 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [userData, setUserData] = useState<any>(null);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
 
   useEffect(() => {
     if (userSession.isSignInPending()) {
+      setIsAuthenticating(true);
       userSession.handlePendingSignIn().then((data) => {
         setUserData(data);
       }).catch(err => {
         console.error('Failed to handle pending sign-in:', err);
+      }).finally(() => {
+        setIsAuthenticating(false);
       });
     } else if (userSession.isUserSignedIn()) {
       setUserData(userSession.loadUserData());
@@ -74,6 +79,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         authenticate,
         logout,
         isLoggedIn: !!userData,
+        isAuthenticating,
         stxAddress,
         network,
       }}
