@@ -30,8 +30,10 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [userData, setUserData] = useState<any>(null);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     if (userSession.isSignInPending()) {
       setIsAuthenticating(true);
       userSession.handlePendingSignIn().then((data) => {
@@ -70,6 +72,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const stxAddress = userData?.profile?.stxAddress?.mainnet || userData?.profile?.stxAddress?.testnet || null;
+
+  if (!mounted) return null;
 
   return (
     <AuthContext.Provider
