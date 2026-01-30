@@ -33,6 +33,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (userSession.isSignInPending()) {
       userSession.handlePendingSignIn().then((data) => {
         setUserData(data);
+      }).catch(err => {
+        console.error('Failed to handle pending sign-in:', err);
       });
     } else if (userSession.isUserSignedIn()) {
       setUserData(userSession.loadUserData());
