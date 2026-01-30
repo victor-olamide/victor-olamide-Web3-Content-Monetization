@@ -8,6 +8,8 @@
 (define-constant ERR-NOT-AUTHORIZED (err u401))
 (define-constant ERR-NOT-OWNER (err u403))
 
+(define-constant contract-owner tx-sender)
+
 (define-read-only (get-last-token-id)
     (ok (var-get last-token-id))
 )
