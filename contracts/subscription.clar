@@ -104,6 +104,15 @@
     )))
 )
 
+;; Admin functions
+(define-public (set-platform-fee (new-fee uint))
+    (begin
+        (asserts! (is-eq tx-sender contract-owner) ERR-NOT-AUTHORIZED)
+        (asserts! (<= new-fee u1000) ERR-INVALID-FEE)
+        (ok (var-set platform-fee new-fee))
+    )
+)
+
 ;; Read-only functions
 (define-read-only (is-subscribed (user principal) (creator principal) (tier-id uint))
     (let (
