@@ -46,6 +46,7 @@
 (define-public (mint (amount uint) (recipient principal))
     (begin
         (asserts! (is-eq tx-sender contract-owner) ERR-NOT-AUTHORIZED)
+        (asserts! (> amount u0) ERR-INVALID-AMOUNT)
         (ft-mint? mock-token amount recipient)
     )
 )
