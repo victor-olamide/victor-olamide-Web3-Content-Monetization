@@ -9,9 +9,20 @@ contract CoreMonetization is BaseSubscription, ContentManager, IBaseMonetization
     address public owner;
     uint256 public platformFeeBps; // Base points (e.g., 250 = 2.5%)
 
+    mapping(address => bool) public admins;
+
     modifier onlyOwner() {
         require(msg.sender == owner, "Not owner");
         _;
+    }
+
+    modifier onlyAdmin() {
+        require(admins[msg.sender] || msg.sender == owner, "Not admin");
+        _;
+    }
+
+    function setAdmin(address admin, bool status) external onlyOwner {
+        admins[admin] = status;
     }
 
     constructor(uint256 _feeBps) {
