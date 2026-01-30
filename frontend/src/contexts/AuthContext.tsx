@@ -16,7 +16,7 @@ interface AuthContextType {
 }
 
 const appConfig = new AppConfig(['store_write', 'publish_data']);
-const userSession = new UserSession({ appConfig });
+export const userSession = new UserSession({ appConfig });
 const network = new StacksMainnet();
 
 const APP_NAME = 'Stacks Content Monetization';
