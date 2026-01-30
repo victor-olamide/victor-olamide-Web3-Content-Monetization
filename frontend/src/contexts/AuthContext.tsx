@@ -17,6 +17,7 @@ const appConfig = new AppConfig(['store_write', 'publish_data']);
 const userSession = new UserSession({ appConfig });
 
 const APP_NAME = 'Stacks Content Monetization';
+const APP_ICON = '/logo.png';
 
 /**
  * Context to manage Stacks wallet authentication state
@@ -41,7 +42,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     showConnect({
       appDetails: {
         name: APP_NAME,
-        icon: window.location.origin + '/logo.png',
+        icon: typeof window !== 'undefined' ? window.location.origin + APP_ICON : APP_ICON,
       },
       redirectTo: '/',
       onFinish: () => {
