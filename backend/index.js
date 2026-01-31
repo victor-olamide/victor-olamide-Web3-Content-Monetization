@@ -24,11 +24,13 @@ const contentRoutes = require('./routes/contentRoutes');
 const purchaseRoutes = require('./routes/purchaseRoutes');
 const subscriptionRoutes = require('./routes/subscriptionRoutes');
 const gatingRoutes = require('./routes/gatingRoutes');
+const accessRoutes = require('./routes/accessRoutes');
 
 app.use('/api/content', contentRoutes);
 app.use('/api/purchases', purchaseRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/gating', gatingRoutes);
+app.use('/api/access', accessRoutes);
 
 // Start Indexer
 const indexer = require('./services/indexer');
