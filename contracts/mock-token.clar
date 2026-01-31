@@ -6,7 +6,8 @@
 (define-fungible-token mock-token)
 
 (define-constant contract-owner tx-sender)
-(define-constant ERR-NOT-AUTHORIZED (err u100))
+(define-constant ERR-NOT-AUTHORIZED (err u401))
+(define-constant ERR-INVALID-AMOUNT (err u400))
 
 (define-public (transfer (amount uint) (sender principal) (recipient principal) (memo (optional (buff 34))))
     (begin
@@ -45,6 +46,7 @@
 (define-public (mint (amount uint) (recipient principal))
     (begin
         (asserts! (is-eq tx-sender contract-owner) ERR-NOT-AUTHORIZED)
+        (asserts! (> amount u0) ERR-INVALID-AMOUNT)
         (ft-mint? mock-token amount recipient)
     )
 )
