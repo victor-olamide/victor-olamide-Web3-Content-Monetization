@@ -145,7 +145,7 @@ export default function ContentView({ params }: { params: { id: string } }) {
                 <Lock size={48} className="mx-auto text-orange-500 mb-4" />
                 <h2 className="text-2xl font-bold mb-2">Content Locked</h2>
                 <p className="text-gray-600 mb-8">
-                  This content requires a one-time payment of {content?.price} or a subscription.
+                  This content requires a one-time payment of {content?.price || 'some'} STX or a subscription.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <button 
