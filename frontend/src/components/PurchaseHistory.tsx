@@ -56,6 +56,11 @@ const PurchaseHistory: React.FC = () => {
               </div>
             </div>
           ))}
+          {purchases.length > 5 && (
+            <button className="w-full text-center text-xs text-gray-400 hover:text-orange-500 transition">
+              View all purchases
+            </button>
+          )}
         </div>
       )}
     </div>
