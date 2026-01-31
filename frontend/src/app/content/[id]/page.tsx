@@ -36,6 +36,23 @@ export default function ContentView({ params }: { params: { id: string } }) {
         content.creator
       );
       setTxId(result as string);
+      
+      // Notify backend about the purchase
+      try {
+        await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/purchases`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contentId: parseInt(params.id),
+            user: stxAddress,
+            txId: result,
+            amount: content.price
+          })
+        });
+      } catch (backendErr) {
+        console.warn("Failed to notify backend:", backendErr);
+      }
+
       // Wait for some time and refresh access
       setTimeout(refreshAccess, 10000);
     } catch (err: any) {
