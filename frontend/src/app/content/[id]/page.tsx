@@ -13,6 +13,7 @@ export default function ContentView({ params }: { params: { id: string } }) {
   const { content, hasAccess, loading, error, refreshAccess } = useContentAccess(params.id);
   const { purchaseContent } = usePayPerView();
   const [purchasing, setPurchasing] = useState(false);
+  const [verifying, setVerifying] = useState(false);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
   const [txId, setTxId] = useState<string | null>(null);
   const [txStatus, setTxStatus] = useState<'pending' | 'success' | 'failed' | null>(null);
@@ -35,6 +36,12 @@ export default function ContentView({ params }: { params: { id: string } }) {
         console.error("Polling error:", err);
       }
     }, 10000);
+  };
+
+  const handleVerifyAccess = async () => {
+    setVerifying(true);
+    await refreshAccess();
+    setVerifying(false);
   };
 
   const handlePurchase = async () => {
@@ -207,14 +214,27 @@ export default function ContentView({ params }: { params: { id: string } }) {
                     )}
                   </div>
                 )}
-                <div className="mt-6 pt-6 border-t border-gray-100">
-                  <p className="text-sm text-gray-500 mb-4">
-                    OR hold at least {content?.gating?.threshold} {content?.gating?.tokenSymbol} tokens
-                  </p>
-                  <button className="text-gray-700 font-semibold py-2 px-6 rounded-lg border border-gray-300 hover:bg-gray-50 transition">
-                    Verify Token Balance
-                  </button>
-                </div>
+
+                {content?.tokenGating?.enabled && (
+                  <div className="mt-6 pt-6 border-t border-gray-100">
+                    <p className="text-sm text-gray-500 mb-4">
+                      OR hold at least <strong>{content.tokenGating.minBalance}</strong> 
+                      {content.tokenGating.tokenType === 'sip-009' ? ' NFT(s)' : ' tokens'} from:
+                      <br />
+                      <span className="font-mono text-[10px] bg-gray-100 p-1 rounded inline-block mt-1">
+                        {content.tokenGating.tokenContract}
+                      </span>
+                    </p>
+                    <button 
+                      onClick={handleVerifyAccess}
+                      disabled={verifying}
+                      className="text-gray-700 font-semibold py-2 px-6 rounded-lg border border-gray-300 hover:bg-gray-50 transition flex items-center gap-2 mx-auto"
+                    >
+                      {verifying ? <Loader2 className="animate-spin" size={16} /> : null}
+                      {verifying ? 'Verifying...' : 'Verify Token Ownership'}
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="rounded-xl overflow-hidden">
