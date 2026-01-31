@@ -1,3 +1,5 @@
+;; SIP-009 NFT Trait Implementation
+;; Version: 1.0.0
 (define-trait sip-009-trait
   (
     ;; Last token ID, limited to uint range
