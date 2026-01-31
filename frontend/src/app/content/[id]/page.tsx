@@ -15,6 +15,27 @@ export default function ContentView({ params }: { params: { id: string } }) {
   const [purchasing, setPurchasing] = useState(false);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
   const [txId, setTxId] = useState<string | null>(null);
+  const [txStatus, setTxStatus] = useState<'pending' | 'success' | 'failed' | null>(null);
+
+  const pollTransaction = async (id: string) => {
+    setTxStatus('pending');
+    const interval = setInterval(async () => {
+      try {
+        const response = await fetch(`https://stacks-node-api.testnet.stacks.co/extended/v1/tx/${id}`);
+        const data = await response.json();
+        if (data.tx_status === 'success') {
+          setTxStatus('success');
+          clearInterval(interval);
+          refreshAccess();
+        } else if (data.tx_status === 'abort' || data.tx_status === 'failed') {
+          setTxStatus('failed');
+          clearInterval(interval);
+        }
+      } catch (err) {
+        console.error("Polling error:", err);
+      }
+    }, 10000);
+  };
 
   const handlePurchase = async () => {
     if (!content || !stxAddress) return;
@@ -53,8 +74,7 @@ export default function ContentView({ params }: { params: { id: string } }) {
         console.warn("Failed to notify backend:", backendErr);
       }
 
-      // Wait for some time and refresh access
-      setTimeout(refreshAccess, 10000);
+      pollTransaction(result as string);
     } catch (err: any) {
       console.error(err);
       setPurchaseError(err.message || "Purchase failed");
@@ -151,8 +171,19 @@ export default function ContentView({ params }: { params: { id: string } }) {
                 )}
 
                 {txId && (
-                  <div className="mt-4 p-4 bg-blue-50 text-blue-700 rounded-lg flex flex-col items-center gap-2">
-                    <p className="font-medium text-sm">Transaction broadcasted!</p>
+                  <div className={`mt-4 p-4 rounded-lg flex flex-col items-center gap-2 ${
+                    txStatus === 'success' ? 'bg-green-50 text-green-700' : 
+                    txStatus === 'failed' ? 'bg-red-50 text-red-700' : 
+                    'bg-blue-50 text-blue-700'
+                  }`}>
+                    <p className="font-medium text-sm flex items-center gap-2">
+                      {txStatus === 'pending' && <Loader2 className="animate-spin" size={16} />}
+                      {txStatus === 'success' && <Unlock size={16} />}
+                      {txStatus === 'failed' && <Lock size={16} />}
+                      {txStatus === 'pending' ? 'Transaction pending...' : 
+                       txStatus === 'success' ? 'Purchase confirmed!' : 
+                       'Transaction failed'}
+                    </p>
                     <a 
                       href={`https://explorer.stacks.co/txid/${txId}?chain=testnet`} 
                       target="_blank" 
@@ -161,7 +192,9 @@ export default function ContentView({ params }: { params: { id: string } }) {
                     >
                       View on Explorer <ExternalLink size={12} />
                     </a>
-                    <p className="text-[10px] text-blue-500 mt-1">Access will be granted once the transaction is confirmed.</p>
+                    {txStatus === 'pending' && (
+                      <p className="text-[10px] text-blue-500 mt-1">Access will be granted once the transaction is confirmed.</p>
+                    )}
                   </div>
                 )}
                 <div className="mt-6 pt-6 border-t border-gray-100">
