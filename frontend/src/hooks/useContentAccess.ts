@@ -13,36 +13,20 @@ export const useContentAccess = (contentId: string) => {
       setLoading(true);
       setError(null);
       try {
-        // ... (mocking fetch)
-        if (contentId === '999') {
-          setError('Content not found');
-          setLoading(false);
-          return;
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/content/${contentId}`);
+        if (!response.ok) {
+          throw new Error('Content not found');
         }
-        // Mock content data
-        const mockContent = {
-          id: contentId,
-          title: "Introduction to Clarity Smart Contracts",
-          description: "Learn how to build secure apps on Stacks.",
-          price: "10 STX",
-          creator: "SP3X...creator",
-          type: "video",
-          gating: {
-            tokenSymbol: "MOCK",
-            threshold: "1000"
-          }
-        };
-
-        setContent(mockContent);
+        const data = await response.json();
+        setContent(data);
         
         // Simulate access check logic
-        setTimeout(() => {
-          const isCreator = userData?.profile?.stxAddress?.mainnet === mockContent.creator;
-          setHasAccess(isCreator);
-          setLoading(false);
-        }, 1000);
-      } catch (err) {
+        const isCreator = userData?.profile?.stxAddress?.mainnet === data.creator;
+        setHasAccess(isCreator);
+        setLoading(false);
+      } catch (err: any) {
         console.error(err);
+        setError(err.message);
         setLoading(false);
       }
     };
