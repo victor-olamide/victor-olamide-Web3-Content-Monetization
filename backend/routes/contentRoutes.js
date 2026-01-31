@@ -57,6 +57,7 @@ router.post('/upload-and-register', (req, res) => {
       const txResult = await addContentToContract(
         parseInt(contentId), 
         parseInt(price), 
+        ipfsUrl,
         process.env.CREATOR_PRIVATE_KEY
       );
 
