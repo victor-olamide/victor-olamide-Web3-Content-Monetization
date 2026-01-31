@@ -10,12 +10,17 @@ interface AuthContextType {
   authenticate: () => void;
   logout: () => void;
   isLoggedIn: boolean;
+  isAuthenticating: boolean;
+  stxAddress: string | null;
+  network: StacksMainnet;
 }
 
 const appConfig = new AppConfig(['store_write', 'publish_data']);
-const userSession = new UserSession({ appConfig });
+export const userSession = new UserSession({ appConfig });
+const network = new StacksMainnet();
 
 const APP_NAME = 'Stacks Content Monetization';
+const APP_ICON = '/logo.png';
 
 /**
  * Context to manage Stacks wallet authentication state
@@ -24,11 +29,19 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [userData, setUserData] = useState<any>(null);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     if (userSession.isSignInPending()) {
+      setIsAuthenticating(true);
       userSession.handlePendingSignIn().then((data) => {
         setUserData(data);
+      }).catch(err => {
+        console.error('Failed to handle pending sign-in:', err);
+      }).finally(() => {
+        setIsAuthenticating(false);
       });
     } else if (userSession.isUserSignedIn()) {
       setUserData(userSession.loadUserData());
@@ -36,23 +49,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const authenticate = () => {
+    console.log('Initiating Stacks authentication...');
     showConnect({
       appDetails: {
         name: APP_NAME,
-        icon: window.location.origin + '/logo.png',
+        icon: typeof window !== 'undefined' ? window.location.origin + APP_ICON : APP_ICON,
       },
       redirectTo: '/',
       onFinish: () => {
-        setUserData(userSession.loadUserData());
+        const data = userSession.loadUserData();
+        setUserData(data);
+        console.log('Authentication successful for:', data.profile?.stxAddress?.mainnet || data.profile?.stxAddress?.testnet);
+      },
+      onCancel: () => {
+        console.log('User cancelled authentication');
       },
       userSession,
     });
   };
 
   const logout = () => {
+    console.log('Logging out...');
     userSession.signUserOut();
     setUserData(null);
   };
+
+  const stxAddress = userData?.profile?.stxAddress?.mainnet || userData?.profile?.stxAddress?.testnet || null;
+
+  if (!mounted) return null;
 
   return (
     <AuthContext.Provider
@@ -62,6 +86,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         authenticate,
         logout,
         isLoggedIn: !!userData,
+        isAuthenticating,
+        stxAddress,
+        network,
       }}
     >
       {children}
