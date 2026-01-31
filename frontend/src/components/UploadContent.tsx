@@ -13,6 +13,7 @@ const UploadContent: React.FC = () => {
   const [contentId, setContentId] = useState('');
   const [price, setPrice] = useState('');
   const [contentType, setContentType] = useState('video');
+  const [tags, setTags] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [storageType, setStorageType] = useState('gaia');
   const { uploadToGaia, uploadToIPFS, uploadMetadata, uploading: storageUploading } = useStorage();
@@ -56,6 +57,7 @@ const UploadContent: React.FC = () => {
         title,
         description,
         contentType,
+        tags: tags.split(',').map(t => t.trim()),
         contentUrl,
         createdAt: Date.now(),
         creator: stxAddress,
@@ -76,6 +78,7 @@ const UploadContent: React.FC = () => {
       setDescription('');
       setContentId('');
       setPrice('');
+      setTags('');
       setFile(null);
     } catch (err) {
       console.error(err);
@@ -146,6 +149,16 @@ const UploadContent: React.FC = () => {
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-orange-500 focus:border-orange-500"
               placeholder="10"
               required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Tags (comma separated)</label>
+            <input
+              type="text"
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-orange-500 focus:border-orange-500"
+              placeholder="crypto, web3, tutorial"
             />
           </div>
         </div>
