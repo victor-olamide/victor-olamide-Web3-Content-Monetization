@@ -21,6 +21,7 @@ const UploadContent: React.FC = () => {
   const { stxAddress } = useAuth();
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploadStep, setUploadStep] = useState<'idle' | 'storage' | 'metadata' | 'contract'>('idle');
   const [contractPending, setContractPending] = useState(false);
 
   const uploading = storageUploading || contractPending;
@@ -47,10 +48,12 @@ const UploadContent: React.FC = () => {
     try {
       setSuccess(false);
       setError(null);
+      setUploadStep('storage');
       
       // Preliminary check
       if (!title || !contentId || !price) {
         setError("Please fill in all required fields");
+        setUploadStep('idle');
         return;
       }
 
@@ -61,6 +64,7 @@ const UploadContent: React.FC = () => {
         contentUrl = await uploadToIPFS(file);
       }
       
+      setUploadStep('metadata');
       const metadata = {
         title,
         description,
@@ -76,9 +80,11 @@ const UploadContent: React.FC = () => {
       console.log("Metadata uploaded:", metadataUrl);
 
       // Call contract to register content
+      setUploadStep('contract');
       setContractPending(true);
       await addContent(parseInt(contentId), parseInt(price), metadataUrl);
       setContractPending(false);
+      setUploadStep('idle');
       
       setSuccess(true);
       // Reset form
@@ -200,6 +206,23 @@ const UploadContent: React.FC = () => {
           {uploading ? <Loader2 className="animate-spin" size={20} /> : <Upload size={20} />}
           {uploading ? 'Publishing...' : 'Publish Content'}
         </button>
+
+        {uploading && (
+          <div className="bg-orange-50 p-4 rounded-md space-y-2">
+            <div className="flex items-center gap-2 text-sm text-orange-800">
+              <div className={`w-3 h-3 rounded-full ${uploadStep === 'storage' ? 'bg-orange-500 animate-pulse' : 'bg-green-500'}`} />
+              <span>Uploading content to {storageType.toUpperCase()}...</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-orange-800">
+              <div className={`w-3 h-3 rounded-full ${uploadStep === 'metadata' ? 'bg-orange-500 animate-pulse' : (uploadStep === 'contract' ? 'bg-green-500' : 'bg-gray-300')}`} />
+              <span>Saving metadata...</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-orange-800">
+              <div className={`w-3 h-3 rounded-full ${uploadStep === 'contract' ? 'bg-orange-500 animate-pulse' : 'bg-gray-300'}`} />
+              <span>Waiting for blockchain confirmation...</span>
+            </div>
+          </div>
+        )}
         
         {success && (
           <div className="flex items-center gap-2 text-green-600 font-medium justify-center mt-2">
