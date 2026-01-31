@@ -26,8 +26,8 @@ export const useContentAccess = (contentId: string) => {
       if (isCreator) {
         setHasAccess(true);
       } else if (userAddress) {
-        // Check purchase status from backend
-        const checkResp = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/purchases/check/${userAddress}/${contentId}`);
+        // Check access from unified backend endpoint (PPV + Token Gating)
+        const checkResp = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/access/verify/${userAddress}/${contentId}`);
         const checkData = await checkResp.json();
         setHasAccess(checkData.hasAccess);
       } else {
