@@ -6,11 +6,15 @@
 (define-constant day-in-blocks u144) ;; Roughly 144 blocks per day
 
 ;; Error codes
-(define-constant ERR-NOT-AUTHORIZED (err u100))
-(define-constant ERR-ALREADY-EXISTS (err u101))
-(define-constant ERR-NOT-FOUND (err u102))
-(define-constant ERR-INVALID-TIER (err u103))
-(define-constant ERR-EXPIRED (err u104))
+(define-constant ERR-NOT-AUTHORIZED (err u401))
+(define-constant ERR-ALREADY-EXISTS (err u409))
+(define-constant ERR-NOT-FOUND (err u404))
+(define-constant ERR-INVALID-TIER (err u400))
+(define-constant ERR-EXPIRED (err u403))
+(define-constant ERR-INVALID-FEE (err u405))
+
+;; Data vars
+(define-data-var platform-fee uint u250) ;; 2.5% in basis points
 
 ;; Data maps
 
@@ -98,6 +102,15 @@
         { creator: tx-sender, tier-id: tier-id } 
         (merge tier { active: false })
     )))
+)
+
+;; Admin functions
+(define-public (set-platform-fee (new-fee uint))
+    (begin
+        (asserts! (is-eq tx-sender contract-owner) ERR-NOT-AUTHORIZED)
+        (asserts! (<= new-fee u1000) ERR-INVALID-FEE)
+        (ok (var-set platform-fee new-fee))
+    )
 )
 
 ;; Read-only functions

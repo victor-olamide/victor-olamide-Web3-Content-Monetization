@@ -10,13 +10,13 @@
 (define-constant GATING-TYPE-NFT u1)
 
 ;; Error codes
-(define-constant ERR-NOT-AUTHORIZED (err u100))
+(define-constant ERR-NOT-AUTHORIZED (err u401))
 (define-constant ERR-NOT-FOUND (err u404))
-(define-constant ERR-WRONG-TOKEN (err u101))
-(define-constant ERR-INSUFFICIENT-BALANCE (err u102))
-(define-constant ERR-CONTENT-NOT-FOUND (err u103))
-(define-constant ERR-INVALID-GATING-TYPE (err u104))
-(define-constant ERR-NOT-NFT-OWNER (err u105))
+(define-constant ERR-WRONG-TOKEN (err u400))
+(define-constant ERR-INSUFFICIENT-BALANCE (err u403))
+(define-constant ERR-CONTENT-NOT-FOUND (err u404))
+(define-constant ERR-INVALID-GATING-TYPE (err u400))
+(define-constant ERR-NOT-NFT-OWNER (err u403))
 
 ;; Map to store gating rules
 ;; content-id -> { token-contract: principal, threshold: uint, gating-type: uint }
@@ -52,6 +52,9 @@
 ;; The threshold is the minimum amount of tokens required to gain access
 (define-public (set-gating-rule (content-id uint) (token-contract principal) (threshold uint) (gating-type uint))
     (begin
+        ;; Check if content exists
+        (asserts! (is-some (contract-call? .pay-per-view get-content-info content-id)) ERR-CONTENT-NOT-FOUND)
+        
         ;; Check if tx-sender is the creator
         (asserts! (is-creator content-id tx-sender) ERR-NOT-AUTHORIZED)
         
