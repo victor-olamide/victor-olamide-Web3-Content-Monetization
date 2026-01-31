@@ -18,13 +18,20 @@ async function hasAccess(content, userAddress) {
   // 2. Check Token-Gating if enabled
   if (content.tokenGating && content.tokenGating.enabled) {
     const { tokenType, tokenContract, minBalance } = content.tokenGating;
+    console.log(`Checking token-gating for ${userAddress}: ${tokenType} ${tokenContract}`);
     
     if (tokenType === 'sip-010') {
       const hasTokens = await verifyFTBalance(userAddress, tokenContract, minBalance);
-      if (hasTokens) return true;
+      if (hasTokens) {
+        console.log(`Access granted via FT ownership`);
+        return true;
+      }
     } else if (tokenType === 'sip-009') {
       const ownsNFT = await verifyNFTOwnership(userAddress, tokenContract, minBalance);
-      if (ownsNFT) return true;
+      if (ownsNFT) {
+        console.log(`Access granted via NFT ownership`);
+        return true;
+      }
     }
   }
 
