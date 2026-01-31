@@ -34,13 +34,13 @@ export const useStorage = () => {
       const formData = new FormData();
       formData.append('file', file);
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/content/upload-ipfs`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/content/upload`, {
         method: 'POST',
         body: formData,
       });
       
       const data = await response.json();
-      const url = data.ipfsUrl;
+      const url = data.url;
       
       setLastUploadedUrl(url);
       setUploading(false);
