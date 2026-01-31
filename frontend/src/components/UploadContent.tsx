@@ -65,10 +65,21 @@ const UploadContent: React.FC = () => {
       const metadataUrl = await uploadMetadata(metadata, storageType as any);
       console.log("Metadata uploaded:", metadataUrl);
 
-      // TODO: Call contract to register content
+      // Call contract to register content
+      setContractPending(true);
+      await addContent(parseInt(contentId), parseInt(price), metadataUrl);
+      setContractPending(false);
+      
       setSuccess(true);
+      // Reset form
+      setTitle('');
+      setDescription('');
+      setContentId('');
+      setPrice('');
+      setFile(null);
     } catch (err) {
       console.error(err);
+      setContractPending(false);
       alert("Upload failed");
     }
   };
