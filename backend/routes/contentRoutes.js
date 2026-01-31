@@ -48,6 +48,12 @@ router.post('/upload-and-register', (req, res) => {
     if (err) return res.status(400).json({ message: 'Upload error', error: err.message });
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
 
+    const { contentId, price, title, description, contentType, creator } = req.body;
+    
+    if (!contentId || !price || !title || !creator) {
+      return res.status(400).json({ message: 'Missing required fields: contentId, price, title, creator' });
+    }
+
     try {
       // 1. Upload to IPFS
       const ipfsUrl = await uploadToIPFS(req.file.buffer, req.file.originalname);
@@ -57,6 +63,7 @@ router.post('/upload-and-register', (req, res) => {
       const txResult = await addContentToContract(
         parseInt(contentId), 
         parseInt(price), 
+        ipfsUrl,
         process.env.CREATOR_PRIVATE_KEY
       );
 
@@ -84,6 +91,17 @@ router.post('/upload-and-register', (req, res) => {
   });
 });
 
+// Get single content metadata by contentId
+router.get('/:contentId', async (req, res) => {
+  try {
+    const content = await Content.findOne({ contentId: req.params.contentId });
+    if (!content) return res.status(404).json({ message: 'Content not found' });
+    res.json(content);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // Get all content metadata
 router.get('/', async (req, res) => {
   try {
@@ -103,7 +121,8 @@ router.post('/', async (req, res) => {
     contentType: req.body.contentType,
     price: req.body.price,
     creator: req.body.creator,
-    url: req.body.url
+    url: req.body.url,
+    tokenGating: req.body.tokenGating || { enabled: false }
   });
 
   try {
