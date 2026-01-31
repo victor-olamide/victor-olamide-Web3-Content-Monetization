@@ -181,9 +181,17 @@ export default function ContentView({ params }: { params: { id: string } }) {
                       {txStatus === 'success' && <Unlock size={16} />}
                       {txStatus === 'failed' && <Lock size={16} />}
                       {txStatus === 'pending' ? 'Transaction pending...' : 
-                       txStatus === 'success' ? 'Purchase confirmed!' : 
+                       txStatus === 'success' ? 'Purchase confirmed! Access Granted' : 
                        'Transaction failed'}
                     </p>
+                    {txStatus === 'success' && (
+                      <button 
+                        onClick={() => window.location.reload()}
+                        className="text-xs font-bold text-green-800 underline mt-1"
+                      >
+                        Refresh Content
+                      </button>
+                    )}
                     <a 
                       href={`https://explorer.stacks.co/txid/${txId}?chain=testnet`} 
                       target="_blank" 
