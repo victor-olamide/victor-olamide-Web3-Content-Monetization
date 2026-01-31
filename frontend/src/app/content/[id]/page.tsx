@@ -18,6 +18,14 @@ export default function ContentView({ params }: { params: { id: string } }) {
   const handlePurchase = async () => {
     if (!content || !stxAddress) return;
     
+    // Simple balance check (mock)
+    // In a real app, you would fetch the balance from the API/Contract
+    const mockBalance = 1000; 
+    if (mockBalance < content.price) {
+      alert("Insufficient STX balance");
+      return;
+    }
+    
     setPurchasing(true);
     try {
       const result = await purchaseContent(
