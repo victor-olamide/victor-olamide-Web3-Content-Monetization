@@ -48,6 +48,12 @@ router.post('/upload-and-register', (req, res) => {
     if (err) return res.status(400).json({ message: 'Upload error', error: err.message });
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
 
+    const { contentId, price, title, description, contentType, creator } = req.body;
+    
+    if (!contentId || !price || !title || !creator) {
+      return res.status(400).json({ message: 'Missing required fields: contentId, price, title, creator' });
+    }
+
     try {
       // 1. Upload to IPFS
       const ipfsUrl = await uploadToIPFS(req.file.buffer, req.file.originalname);
