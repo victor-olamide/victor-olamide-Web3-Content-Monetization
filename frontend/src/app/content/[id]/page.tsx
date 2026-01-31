@@ -1,15 +1,40 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardShell from "@/components/DashboardShell";
-import { Lock, Unlock, PlayCircle, ChevronLeft } from 'lucide-react';
+import { Lock, Unlock, PlayCircle, ChevronLeft, Loader2, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { useContentAccess } from '@/hooks/useContentAccess';
+import { usePayPerView } from '@/hooks/usePayPerView';
 
 export default function ContentView({ params }: { params: { id: string } }) {
-  const { isLoggedIn } = useAuth();
-  const { content, hasAccess, loading, error } = useContentAccess(params.id);
+  const { isLoggedIn, stxAddress } = useAuth();
+  const { content, hasAccess, loading, error, refreshAccess } = useContentAccess(params.id);
+  const { purchaseContent } = usePayPerView();
+  const [purchasing, setPurchasing] = useState(false);
+  const [txId, setTxId] = useState<string | null>(null);
+
+  const handlePurchase = async () => {
+    if (!content || !stxAddress) return;
+    
+    setPurchasing(true);
+    try {
+      const result = await purchaseContent(
+        parseInt(params.id), 
+        content.price, 
+        content.creator
+      );
+      setTxId(result as string);
+      // Wait for some time and refresh access
+      setTimeout(refreshAccess, 10000);
+    } catch (err) {
+      console.error(err);
+      alert("Purchase failed");
+    } finally {
+      setPurchasing(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -76,18 +101,36 @@ export default function ContentView({ params }: { params: { id: string } }) {
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <button 
-                    onClick={() => alert('Initiating STX purchase...')}
-                    className="bg-orange-500 text-white font-bold py-3 px-8 rounded-lg hover:bg-orange-600 transition"
+                    onClick={handlePurchase}
+                    disabled={purchasing}
+                    className={`bg-orange-500 text-white font-bold py-3 px-8 rounded-lg ${purchasing ? 'opacity-50 cursor-not-allowed' : 'hover:bg-orange-600'} transition flex items-center gap-2`}
                   >
-                    Purchase Access
+                    {purchasing ? <Loader2 className="animate-spin" size={20} /> : null}
+                    {purchasing ? 'Processing...' : 'Purchase Access'}
                   </button>
                   <button 
                     onClick={() => alert('Initiating subscription...')}
-                    className="bg-gray-800 text-white font-bold py-3 px-8 rounded-lg hover:bg-gray-900 transition"
+                    disabled={purchasing}
+                    className="bg-gray-800 text-white font-bold py-3 px-8 rounded-lg hover:bg-gray-900 transition disabled:opacity-50"
                   >
                     Subscribe to Creator
                   </button>
                 </div>
+
+                {txId && (
+                  <div className="mt-4 p-4 bg-blue-50 text-blue-700 rounded-lg flex flex-col items-center gap-2">
+                    <p className="font-medium text-sm">Transaction broadcasted!</p>
+                    <a 
+                      href={`https://explorer.stacks.co/txid/${txId}?chain=testnet`} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-xs flex items-center gap-1 hover:underline"
+                    >
+                      View on Explorer <ExternalLink size={12} />
+                    </a>
+                    <p className="text-[10px] text-blue-500 mt-1">Access will be granted once the transaction is confirmed.</p>
+                  </div>
+                )}
                 <div className="mt-6 pt-6 border-t border-gray-100">
                   <p className="text-sm text-gray-500 mb-4">
                     OR hold at least {content?.gating?.threshold} {content?.gating?.tokenSymbol} tokens
