@@ -16,6 +16,11 @@ const UploadContent: React.FC = () => {
   const [tags, setTags] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [storageType, setStorageType] = useState('gaia');
+  const [isTokenGated, setIsTokenGated] = useState(false);
+  const [tokenType, setTokenType] = useState<'sip-009' | 'sip-010'>('sip-009');
+  const [tokenContract, setTokenContract] = useState('');
+  const [minBalance, setMinBalance] = useState('1');
+
   const { uploadToGaia, uploadToIPFS, uploadMetadata, uploading: storageUploading } = useStorage();
   const { addContent } = usePayPerView();
   const { stxAddress } = useAuth();
@@ -82,7 +87,33 @@ const UploadContent: React.FC = () => {
       // Call contract to register content
       setUploadStep('contract');
       setContractPending(true);
-      await addContent(parseInt(contentId), parseInt(price), metadataUrl);
+      const txId = await addContent(parseInt(contentId), parseInt(price), metadataUrl);
+      
+      // 4. Notify backend to store metadata and track transaction
+      try {
+        await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/content`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contentId: parseInt(contentId),
+            title,
+            description,
+            contentType,
+            price: parseInt(price),
+            creator: stxAddress,
+            url: contentUrl,
+            tokenGating: {
+              enabled: isTokenGated,
+              tokenType,
+              tokenContract,
+              minBalance: parseInt(minBalance)
+            }
+          })
+        });
+      } catch (backendErr) {
+        console.error("Failed to notify backend:", backendErr);
+      }
+
       setContractPending(false);
       setUploadStep('idle');
       
@@ -198,6 +229,66 @@ const UploadContent: React.FC = () => {
             />
           </div>
         </div>
+
+        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h4 className="font-bold text-gray-800">Token Gating (Optional)</h4>
+              <p className="text-xs text-gray-500">Require fans to hold specific tokens to access this content</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input 
+                type="checkbox" 
+                className="sr-only peer" 
+                checked={isTokenGated}
+                onChange={(e) => setIsTokenGated(e.target.checked)}
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+            </label>
+          </div>
+
+          {isTokenGated && (
+            <div className="space-y-4 pt-2 border-t border-gray-200">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Token Type</label>
+                  <select
+                    value={tokenType}
+                    onChange={(e) => setTokenType(e.target.value as any)}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-orange-500 focus:border-orange-500"
+                  >
+                    <option value="sip-009">SIP-009 (NFT)</option>
+                    <option value="sip-010">SIP-010 (FT)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Minimum Balance</label>
+                  <input
+                    type="number"
+                    value={minBalance}
+                    onChange={(e) => setMinBalance(e.target.value)}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-orange-500 focus:border-orange-500"
+                    placeholder="1"
+                    min="1"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Token Contract Identifier</label>
+                <input
+                  type="text"
+                  value={tokenContract}
+                  onChange={(e) => setTokenContract(e.target.value)}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-orange-500 focus:border-orange-500"
+                  placeholder="SP2KAF9...stacks-punks-v3::stacks-punks"
+                  required={isTokenGated}
+                />
+                <p className="mt-1 text-xs text-gray-400">Format: [Principal].[ContractName]::[AssetName]</p>
+              </div>
+            </div>
+          )}
+        </div>
+
         <button
           type="submit"
           disabled={uploading}
