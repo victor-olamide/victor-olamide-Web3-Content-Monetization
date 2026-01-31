@@ -14,9 +14,18 @@ router.get('/verify/:user/:contentId', async (req, res) => {
     }
     
     const allowed = await hasAccess(content, user);
-    res.json({ hasAccess: allowed });
+    res.json({ 
+      hasAccess: allowed,
+      method: allowed ? 'verified' : 'denied',
+      gating: content.tokenGating
+    });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error('Verification error:', err);
+    res.status(500).json({ 
+      message: 'Failed to verify access', 
+      error: err.message,
+      hasAccess: false 
+    });
   }
 });
 
