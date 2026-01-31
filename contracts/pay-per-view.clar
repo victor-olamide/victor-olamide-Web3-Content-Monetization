@@ -5,11 +5,15 @@
 (define-constant contract-owner tx-sender)
 
 ;; Error codes
-(define-constant ERR-NOT-AUTHORIZED (err u100))
-(define-constant ERR-ALREADY-EXISTS (err u101))
-(define-constant ERR-NOT-FOUND (err u102))
-(define-constant ERR-INSUFFICIENT-FUNDS (err u103))
-(define-constant ERR-ALREADY-PURCHASED (err u104))
+(define-constant ERR-NOT-AUTHORIZED (err u401))
+(define-constant ERR-ALREADY-EXISTS (err u409))
+(define-constant ERR-NOT-FOUND (err u404))
+(define-constant ERR-INSUFFICIENT-FUNDS (err u402))
+(define-constant ERR-ALREADY-PURCHASED (err u403))
+(define-constant ERR-INVALID-FEE (err u405))
+
+;; Data vars
+(define-data-var platform-fee uint u250) ;; 2.5% in basis points
 
 ;; Data maps
 ;; Mapping of content ID to its price and creator
@@ -69,6 +73,15 @@
     ))
 )
 
+;; Admin functions
+(define-public (set-platform-fee (new-fee uint))
+    (begin
+        (asserts! (is-eq tx-sender contract-owner) ERR-NOT-AUTHORIZED)
+        (asserts! (<= new-fee u1000) ERR-INVALID-FEE)
+        (ok (var-set platform-fee new-fee))
+    )
+)
+
 ;; Read-only functions
 (define-read-only (has-access (content-id uint) (user principal))
     (default-to false (map-get? content-access { content-id: content-id, user: user }))
@@ -76,4 +89,8 @@
 
 (define-read-only (get-content-info (content-id uint))
     (map-get? content-pricing content-id)
+)
+
+(define-read-only (is-owner (user principal))
+    (is-eq user contract-owner)
 )
