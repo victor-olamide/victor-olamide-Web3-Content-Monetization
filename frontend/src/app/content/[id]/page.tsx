@@ -41,6 +41,7 @@ export default function ContentView({ params }: { params: { id: string } }) {
     if (!content || !stxAddress) return;
     
     setPurchaseError(null);
+    setTxStatus(null);
     // Simple balance check (mock)
     // In a real app, you would fetch the balance from the API/Contract
     const mockBalance = 1000; 
