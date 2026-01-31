@@ -26,7 +26,13 @@ const UploadContent: React.FC = () => {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
+      const selectedFile = e.target.files[0];
+      if (selectedFile.size > 10 * 1024 * 1024) { // 10MB limit
+        alert("File size exceeds 10MB limit");
+        e.target.value = '';
+        return;
+      }
+      setFile(selectedFile);
     }
   };
 
