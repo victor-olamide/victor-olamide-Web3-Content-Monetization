@@ -12,13 +12,19 @@ router.get('/user/:address', async (req, res) => {
   }
 });
 
-// Register a new purchase (usually called by indexer)
+// Register a new purchase (usually called by indexer or frontend)
 router.post('/', async (req, res) => {
+  const { contentId, user, txId, amount } = req.body;
+  
+  if (!contentId || !user || !txId || !amount) {
+    return res.status(400).json({ message: 'Missing required fields' });
+  }
+
   const purchase = new Purchase({
-    contentId: req.body.contentId,
-    user: req.body.user,
-    txId: req.body.txId,
-    amount: req.body.amount
+    contentId,
+    user,
+    txId,
+    amount
   });
 
   try {
