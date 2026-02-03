@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/contexts/AuthContext";
 import EarningsCard from "@/components/EarningsCard";
+import SubscribersCard from "@/components/SubscribersCard";
 import UploadContent from "@/components/UploadContent";
 import TokenGating from "@/components/TokenGating";
 import PurchaseHistory from "@/components/PurchaseHistory";
@@ -29,6 +30,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
           <div className="space-y-8">
             <EarningsCard />
+            <SubscribersCard />
             <PurchaseHistory />
             <TokenGating />
           </div>
