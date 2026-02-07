@@ -98,3 +98,17 @@ Clarinet.test({
         feeResult.result.expectUint(25000);
     },
 });
+
+Clarinet.test({
+    name: "Creator amount is calculated correctly",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get('deployer')!;
+        const price = 1000000;
+
+        let amountResult = chain.callReadOnlyFn('pay-per-view', 'calculate-creator-amount', [
+            types.uint(price)
+        ], deployer.address);
+        
+        amountResult.result.expectUint(975000);
+    },
+});
