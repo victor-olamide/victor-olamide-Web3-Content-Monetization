@@ -100,4 +100,56 @@ router.get('/history/:address', async (req, res) => {
   }
 });
 
+/**
+ * Get revenue analytics by time period
+ */
+router.get('/analytics/:address', async (req, res) => {
+  try {
+    const { address } = req.params;
+    const { period = '7d' } = req.query;
+    
+    const days = period === '30d' ? 30 : 7;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    const purchases = await Purchase.find({ 
+      creator: address,
+      timestamp: { $gte: startDate }
+    });
+
+    const subscriptions = await Subscription.find({ 
+      creator: address,
+      timestamp: { $gte: startDate }
+    });
+
+    const dailyData = {};
+    for (let i = 0; i < days; i++) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const key = date.toISOString().split('T')[0];
+      dailyData[key] = { ppv: 0, subscription: 0, total: 0 };
+    }
+
+    purchases.forEach(p => {
+      const key = new Date(p.timestamp).toISOString().split('T')[0];
+      if (dailyData[key]) {
+        dailyData[key].ppv += p.amount;
+        dailyData[key].total += p.amount;
+      }
+    });
+
+    subscriptions.forEach(s => {
+      const key = new Date(s.timestamp).toISOString().split('T')[0];
+      if (dailyData[key]) {
+        dailyData[key].subscription += s.amount;
+        dailyData[key].total += s.amount;
+      }
+    });
+
+    res.json(dailyData);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 module.exports = router;
