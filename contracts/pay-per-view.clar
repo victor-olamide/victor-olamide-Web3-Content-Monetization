@@ -11,6 +11,7 @@
 (define-constant ERR-INSUFFICIENT-FUNDS (err u402))
 (define-constant ERR-ALREADY-PURCHASED (err u403))
 (define-constant ERR-INVALID-FEE (err u405))
+(define-constant ERR-REFUND-FAILED (err u406))
 
 ;; Data vars
 (define-data-var platform-fee uint u250) ;; 2.5% in basis points
