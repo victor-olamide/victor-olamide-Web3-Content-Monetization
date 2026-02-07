@@ -334,3 +334,31 @@ Clarinet.test({
         hasAccess.result.expectBool(false);
     },
 });
+
+Clarinet.test({
+    name: "Only creator can issue refunds",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get('deployer')!;
+        const user = accounts.get('wallet_1')!;
+        const other = accounts.get('wallet_2')!;
+        const contentId = 1;
+        const price = 1000000;
+
+        let block = chain.mineBlock([
+            Tx.contractCall('pay-per-view', 'add-content', [
+                types.uint(contentId),
+                types.uint(price),
+                types.ascii("ipfs://test")
+            ], deployer.address),
+            Tx.contractCall('pay-per-view', 'purchase-content', [
+                types.uint(contentId)
+            ], user.address),
+            Tx.contractCall('pay-per-view', 'refund-user', [
+                types.uint(contentId),
+                types.principal(user.address)
+            ], other.address)
+        ]);
+
+        block.receipts[2].result.expectErr().expectUint(401);
+    },
+});
