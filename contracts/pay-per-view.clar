@@ -15,6 +15,7 @@
 ;; Data vars
 (define-data-var platform-fee uint u250) ;; 2.5% in basis points
 (define-data-var platform-wallet principal contract-owner)
+(define-data-var refund-window uint u144) ;; blocks (~24 hours)
 
 ;; Data maps
 ;; Mapping of content ID to its price and creator
