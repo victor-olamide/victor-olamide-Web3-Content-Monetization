@@ -1,0 +1,74 @@
+name: Integration Tests
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'contracts/**'
+      - 'backend/**'
+      - 'integration-tests/**'
+
+jobs:
+  integration-test:
+    runs-on: ubuntu-latest
+    
+    services:
+      mongodb:
+        image: mongo:latest
+        ports:
+          - 27017:27017
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: Install backend dependencies
+      run: |
+        cd backend
+        npm install
+
+    - name: Start backend server
+      run: |
+        cd backend
+        npm start &
+        sleep 10
+      env:
+        MONGODB_URI: mongodb://localhost:27017/stacks_monetization
+        STACKS_NETWORK: testnet
+        CONTRACT_ADDRESS: ${{ secrets.TESTNET_CONTRACT_ADDRESS }}
+
+    - name: Install integration test dependencies
+      run: |
+        cd integration-tests
+        npm install
+
+    - name: Run integration tests
+      run: |
+        cd integration-tests
+        npm test
+      env:
+        BACKEND_API: http://localhost:5000/api
+        CONTRACT_ADDRESS: ${{ secrets.TESTNET_CONTRACT_ADDRESS }}
+        DEPLOYER_KEY: ${{ secrets.TESTNET_DEPLOYER_KEY }}
+        CREATOR_KEY: ${{ secrets.TESTNET_CREATOR_KEY }}
+        USER1_KEY: ${{ secrets.TESTNET_USER1_KEY }}
+        USER2_KEY: ${{ secrets.TESTNET_USER2_KEY }}
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: integration-test-results
+        path: integration-tests/coverage/
+
+    - name: Notify on failure
+      if: failure()
+      run: echo "Integration tests failed on Stacks Testnet"
