@@ -183,4 +183,29 @@ router.get('/growth/:address', async (req, res) => {
   }
 });
 
+/**
+ * Get top performing content by revenue
+ */
+router.get('/top-content/:address', async (req, res) => {
+  try {
+    const { address } = req.params;
+    const { limit = 5 } = req.query;
+
+    const topContent = await Purchase.aggregate([
+      { $match: { creator: address } },
+      { $group: { 
+        _id: '$contentId', 
+        revenue: { $sum: '$amount' },
+        sales: { $sum: 1 }
+      }},
+      { $sort: { revenue: -1 } },
+      { $limit: parseInt(limit) }
+    ]);
+
+    res.json(topContent);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 module.exports = router;
