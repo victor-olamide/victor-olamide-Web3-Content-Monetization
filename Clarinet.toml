@@ -1,0 +1,47 @@
+[project]
+name = "stacks-content-monetization"
+description = "Decentralized content monetization platform on Stacks"
+authors = ["victor-olamide"]
+telemetry = false
+cache_dir = ".cache"
+requirements = []
+
+[contracts.sip-009-trait]
+path = "contracts/sip-009-trait.clar"
+clarity_version = 2
+
+[contracts.sip-010-trait]
+path = "contracts/sip-010-trait.clar"
+clarity_version = 2
+
+[contracts.mock-nft]
+path = "contracts/mock-nft.clar"
+clarity_version = 2
+depends_on = ["sip-009-trait"]
+
+[contracts.mock-token]
+path = "contracts/mock-token.clar"
+clarity_version = 2
+depends_on = ["sip-010-trait"]
+
+[contracts.pay-per-view]
+path = "contracts/pay-per-view.clar"
+clarity_version = 2
+
+[contracts.subscription]
+path = "contracts/subscription.clar"
+clarity_version = 2
+
+[contracts.content-gate]
+path = "contracts/content-gate.clar"
+clarity_version = 2
+depends_on = ["sip-009-trait", "sip-010-trait", "pay-per-view"]
+
+[repl.analysis]
+passes = ["check_checker"]
+
+[repl.analysis.check_checker]
+strict = false
+trusted_sender = false
+trusted_caller = false
+callee_filter = false

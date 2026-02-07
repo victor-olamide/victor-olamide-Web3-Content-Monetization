@@ -1,0 +1,36 @@
+name: Clarinet Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup Clarinet
+      uses: hirosystems/clarinet-action@v1
+      with:
+        clarinet-version: latest
+
+    - name: Run contract checks
+      run: clarinet check
+
+    - name: Run contract tests
+      run: clarinet test
+
+    - name: Generate coverage report
+      run: clarinet test --coverage
+
+    - name: Upload coverage
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./coverage.lcov
+        flags: clarity-contracts
+        name: clarity-coverage
