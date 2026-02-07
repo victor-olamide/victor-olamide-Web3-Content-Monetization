@@ -6,6 +6,8 @@ const purchaseSchema = new mongoose.Schema({
   creator: { type: String, required: true },
   txId: { type: String, required: true, unique: true },
   amount: { type: Number, required: true },
+  platformFee: { type: Number, default: 0 },
+  creatorAmount: { type: Number, required: true },
   timestamp: { type: Date, default: Date.now }
 });
 
