@@ -41,8 +41,16 @@ const checkStorageHealth = async () => {
   }
 };
 
+const uploadToGaia = async (fileBuffer, fileName) => {
+  // Gaia is typically client-side, but we can simulate/implement backend-side Gaia upload
+  // For now, we'll mark it as a placeholder for backend-mediated Gaia storage
+  console.log(`Uploading ${fileName} to Gaia (Mock)`);
+  return `gaia://${process.env.GAIA_HUB_URL || 'hub.blockstack.org'}/${fileName}`;
+};
+
 module.exports = {
   uploadToIPFS,
+  uploadToGaia,
   getGatewayUrl,
   checkStorageHealth,
 };
