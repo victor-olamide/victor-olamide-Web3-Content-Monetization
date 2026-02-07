@@ -14,22 +14,23 @@
 
 ;; Data vars
 (define-data-var platform-fee uint u250) ;; 2.5% in basis points
+(define-data-var platform-wallet principal contract-owner)
 
 ;; Data maps
 ;; Mapping of content ID to its price and creator
-(define-map content-pricing uint { price: uint, creator: principal })
+(define-map content-pricing uint { price: uint, creator: principal, uri: (string-ascii 256) })
 
 ;; Mapping of content ID and user principal to access status
 (define-map content-access { content-id: uint, user: principal } bool)
 
 ;; Public functions
 
-;; Register new content with a specific price
-(define-public (add-content (content-id uint) (price uint))
+;; Register new content with a specific price and URI
+(define-public (add-content (content-id uint) (price uint) (uri (string-ascii 256)))
     (begin
         (asserts! (is-none (map-get? content-pricing content-id)) ERR-ALREADY-EXISTS)
-        (print { event: "add-content", content-id: content-id, price: price, creator: tx-sender })
-        (ok (map-set content-pricing content-id { price: price, creator: tx-sender }))
+        (print { event: "add-content", content-id: content-id, price: price, creator: tx-sender, uri: uri })
+        (ok (map-set content-pricing content-id { price: price, creator: tx-sender, uri: uri }))
     )
 )
 
@@ -54,10 +55,11 @@
     (let (
         (content (unwrap! (map-get? content-pricing content-id) ERR-NOT-FOUND))
         (creator (get creator content))
+        (uri (get uri content))
     )
     (begin
         (asserts! (is-eq tx-sender creator) ERR-NOT-AUTHORIZED)
-        (ok (map-set content-pricing content-id { price: new-price, creator: creator }))
+        (ok (map-set content-pricing content-id { price: new-price, creator: creator, uri: uri }))
     ))
 )
 
