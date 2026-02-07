@@ -27,15 +27,16 @@ router.get('/check/:user/:contentId', async (req, res) => {
 
 // Register a new purchase (usually called by indexer or frontend)
 router.post('/', async (req, res) => {
-  const { contentId, user, txId, amount } = req.body;
+  const { contentId, user, txId, amount, creator } = req.body;
   
-  if (!contentId || !user || !txId || !amount) {
+  if (!contentId || !user || !txId || !amount || !creator) {
     return res.status(400).json({ message: 'Missing required fields' });
   }
 
   const purchase = new Purchase({
     contentId,
     user,
+    creator,
     txId,
     amount
   });
