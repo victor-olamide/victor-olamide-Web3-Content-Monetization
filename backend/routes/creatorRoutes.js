@@ -152,4 +152,35 @@ router.get('/analytics/:address', async (req, res) => {
   }
 });
 
+/**
+ * Get subscriber growth metrics
+ */
+router.get('/growth/:address', async (req, res) => {
+  try {
+    const { address } = req.params;
+    const now = new Date();
+    const lastMonth = new Date();
+    lastMonth.setMonth(lastMonth.getMonth() - 1);
+
+    const currentSubs = await Subscription.countDocuments({ 
+      creator: address,
+      expiry: { $gt: now }
+    });
+
+    const lastMonthSubs = await Subscription.countDocuments({ 
+      creator: address,
+      timestamp: { $lt: lastMonth },
+      expiry: { $gt: lastMonth }
+    });
+
+    const growth = lastMonthSubs > 0 
+      ? ((currentSubs - lastMonthSubs) / lastMonthSubs * 100).toFixed(1)
+      : 0;
+
+    res.json({ current: currentSubs, previous: lastMonthSubs, growth });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 module.exports = router;
