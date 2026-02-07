@@ -87,6 +87,13 @@
     )
 )
 
+(define-public (set-platform-wallet (new-wallet principal))
+    (begin
+        (asserts! (is-eq tx-sender contract-owner) ERR-NOT-AUTHORIZED)
+        (ok (var-set platform-wallet new-wallet))
+    )
+)
+
 ;; Read-only functions
 (define-read-only (calculate-platform-fee (amount uint))
     (/ (* amount (var-get platform-fee)) u10000)
