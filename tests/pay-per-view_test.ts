@@ -84,3 +84,166 @@ Clarinet.test({
         block.receipts[2].result.expectErr().expectUint(403);
     },
 });
+
+Clarinet.test({
+    name: "Platform fee is calculated correctly",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get('deployer')!;
+        const price = 1000000;
+
+        let feeResult = chain.callReadOnlyFn('pay-per-view', 'calculate-platform-fee', [
+            types.uint(price)
+        ], deployer.address);
+        
+        feeResult.result.expectUint(25000);
+    },
+});
+
+Clarinet.test({
+    name: "Creator amount is calculated correctly",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get('deployer')!;
+        const price = 1000000;
+
+        let amountResult = chain.callReadOnlyFn('pay-per-view', 'calculate-creator-amount', [
+            types.uint(price)
+        ], deployer.address);
+        
+        amountResult.result.expectUint(975000);
+    },
+});
+
+Clarinet.test({
+    name: "Platform fee is collected on purchase",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get('deployer')!;
+        const user = accounts.get('wallet_1')!;
+        const platform = accounts.get('wallet_2')!;
+        const contentId = 1;
+        const price = 1000000;
+
+        let block = chain.mineBlock([
+            Tx.contractCall('pay-per-view', 'set-platform-wallet', [
+                types.principal(platform.address)
+            ], deployer.address),
+            Tx.contractCall('pay-per-view', 'add-content', [
+                types.uint(contentId),
+                types.uint(price),
+                types.ascii("ipfs://test")
+            ], deployer.address),
+            Tx.contractCall('pay-per-view', 'purchase-content', [
+                types.uint(contentId)
+            ], user.address)
+        ]);
+
+        block.receipts[2].result.expectOk().expectBool(true);
+        
+        const platformBalance = chain.getAssetsMaps().assets['STX'][platform.address];
+        assertEquals(platformBalance, 100000000 + 25000);
+    },
+});
+
+Clarinet.test({
+    name: "Creator receives correct amount after platform fee",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get('deployer')!;
+        const user = accounts.get('wallet_1')!;
+        const platform = accounts.get('wallet_2')!;
+        const contentId = 1;
+        const price = 1000000;
+
+        let block = chain.mineBlock([
+            Tx.contractCall('pay-per-view', 'set-platform-wallet', [
+                types.principal(platform.address)
+            ], deployer.address),
+            Tx.contractCall('pay-per-view', 'add-content', [
+                types.uint(contentId),
+                types.uint(price),
+                types.ascii("ipfs://test")
+            ], deployer.address),
+            Tx.contractCall('pay-per-view', 'purchase-content', [
+                types.uint(contentId)
+            ], user.address)
+        ]);
+
+        block.receipts[2].result.expectOk().expectBool(true);
+        
+        const creatorBalance = chain.getAssetsMaps().assets['STX'][deployer.address];
+        assertEquals(creatorBalance, 100000000 + 975000);
+    },
+});
+
+Clarinet.test({
+    name: "Only owner can set platform wallet",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get('deployer')!;
+        const user = accounts.get('wallet_1')!;
+        const newWallet = accounts.get('wallet_2')!;
+
+        let block = chain.mineBlock([
+            Tx.contractCall('pay-per-view', 'set-platform-wallet', [
+                types.principal(newWallet.address)
+            ], user.address)
+        ]);
+
+        block.receipts[0].result.expectErr().expectUint(401);
+    },
+});
+
+Clarinet.test({
+    name: "Can retrieve platform fee",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get('deployer')!;
+
+        let feeResult = chain.callReadOnlyFn('pay-per-view', 'get-platform-fee', [], deployer.address);
+        
+        feeResult.result.expectUint(250);
+    },
+});
+
+Clarinet.test({
+    name: "Can retrieve platform wallet",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get('deployer')!;
+
+        let walletResult = chain.callReadOnlyFn('pay-per-view', 'get-platform-wallet', [], deployer.address);
+        
+        walletResult.result.expectPrincipal(deployer.address);
+    },
+});
+
+Clarinet.test({
+    name: "Owner can update platform fee",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get('deployer')!;
+        const newFee = 500;
+
+        let block = chain.mineBlock([
+            Tx.contractCall('pay-per-view', 'set-platform-fee', [
+                types.uint(newFee)
+            ], deployer.address)
+        ]);
+
+        block.receipts[0].result.expectOk().expectBool(true);
+        
+        let feeResult = chain.callReadOnlyFn('pay-per-view', 'get-platform-fee', [], deployer.address);
+        feeResult.result.expectUint(newFee);
+    },
+});
+
+Clarinet.test({
+    name: "Platform fee calculation works with different amounts",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get('deployer')!;
+
+        let fee1 = chain.callReadOnlyFn('pay-per-view', 'calculate-platform-fee', [
+            types.uint(5000000)
+        ], deployer.address);
+        fee1.result.expectUint(125000);
+
+        let fee2 = chain.callReadOnlyFn('pay-per-view', 'calculate-platform-fee', [
+            types.uint(100000)
+        ], deployer.address);
+        fee2.result.expectUint(2500);
+    },
+});
