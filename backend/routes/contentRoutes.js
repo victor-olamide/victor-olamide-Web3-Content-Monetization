@@ -121,7 +121,8 @@ router.post('/', async (req, res) => {
     contentType: req.body.contentType,
     price: req.body.price,
     creator: req.body.creator,
-    url: req.body.url
+    url: req.body.url,
+    tokenGating: req.body.tokenGating || { enabled: false }
   });
 
   try {
