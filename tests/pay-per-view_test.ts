@@ -189,3 +189,14 @@ Clarinet.test({
         block.receipts[0].result.expectErr().expectUint(401);
     },
 });
+
+Clarinet.test({
+    name: "Can retrieve platform fee",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get('deployer')!;
+
+        let feeResult = chain.callReadOnlyFn('pay-per-view', 'get-platform-fee', [], deployer.address);
+        
+        feeResult.result.expectUint(250);
+    },
+});
