@@ -7,7 +7,7 @@ import { useCreatorData } from '@/hooks/useCreatorData';
 const SubscribersCard: React.FC = () => {
   const { userData } = useAuth();
   const address = userData?.profile?.stxAddress?.mainnet;
-  const { subscribers, loading } = useCreatorData(address);
+  const { subscribers, growth, loading } = useCreatorData(address);
 
   return (
     <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
@@ -40,9 +40,16 @@ const SubscribersCard: React.FC = () => {
       
       <div className="mt-6 pt-6 border-t border-gray-100">
         <p className="text-xs text-gray-400 font-medium uppercase mb-2">Growth</p>
-        <p className="text-sm text-green-600 font-medium">
-          +0% <span className="text-gray-400 text-xs font-normal ml-1">from last month</span>
-        </p>
+        {loading ? (
+          <div className="h-5 w-32 bg-gray-100 animate-pulse rounded"></div>
+        ) : (
+          <p className={`text-sm font-medium ${
+            growth && parseFloat(growth.growth) >= 0 ? 'text-green-600' : 'text-red-600'
+          }`}>
+            {growth && parseFloat(growth.growth) >= 0 ? '+' : ''}{growth?.growth || '0'}% 
+            <span className="text-gray-400 text-xs font-normal ml-1">from last month</span>
+          </p>
+        )}
       </div>
     </div>
   );
