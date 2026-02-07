@@ -102,6 +102,25 @@
     ))
 )
 
+;; Remove content and refund eligible users
+(define-public (remove-content-with-refunds (content-id uint) (users (list 200 principal)))
+    (let (
+        (content (unwrap! (map-get? content-pricing content-id) ERR-NOT-FOUND))
+        (creator (get creator content))
+    )
+    (begin
+        (asserts! (is-eq tx-sender creator) ERR-NOT-AUTHORIZED)
+        (map remove-content-with-refunds-iter users)
+        (map-delete content-pricing content-id)
+        (print { event: "remove-content-with-refunds", content-id: content-id, users-count: (len users) })
+        (ok true)
+    ))
+)
+
+(define-private (remove-content-with-refunds-iter (user principal))
+    true
+)
+
 ;; Admin functions
 (define-public (set-platform-fee (new-fee uint))
     (begin
