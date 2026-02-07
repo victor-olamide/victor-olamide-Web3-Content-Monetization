@@ -1,43 +1,103 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Upload, FileText, CheckCircle } from 'lucide-react';
+import { Upload, FileText, CheckCircle, Loader2 } from 'lucide-react';
 import { useStorage } from '@/hooks/useStorage';
+import { useAuth } from '@/contexts/AuthContext';
+import { validateMetadata } from '@/utils/metadata';
+import { usePayPerView } from '@/hooks/usePayPerView';
 
 const UploadContent: React.FC = () => {
   const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [contentId, setContentId] = useState('');
   const [price, setPrice] = useState('');
   const [contentType, setContentType] = useState('video');
+  const [tags, setTags] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [storageType, setStorageType] = useState('gaia');
-  const { uploadToGaia, uploadToIPFS, uploading, lastUploadedUrl } = useStorage();
+  const { uploadToGaia, uploadToIPFS, uploadMetadata, uploading: storageUploading } = useStorage();
+  const { addContent } = usePayPerView();
+  const { stxAddress } = useAuth();
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [uploadStep, setUploadStep] = useState<'idle' | 'storage' | 'metadata' | 'contract'>('idle');
+  const [contractPending, setContractPending] = useState(false);
+
+  const uploading = storageUploading || contractPending;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
+      const selectedFile = e.target.files[0];
+      if (selectedFile.size > 10 * 1024 * 1024) { // 10MB limit
+        alert("File size exceeds 10MB limit");
+        e.target.value = '';
+        return;
+      }
+      setFile(selectedFile);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file) {
-      alert("Please select a file first");
+    if (!file || !stxAddress) {
+      alert("Please select a file and ensure you are connected");
       return;
     }
 
     try {
-      let url = '';
+      setSuccess(false);
+      setError(null);
+      setUploadStep('storage');
+      
+      // Preliminary check
+      if (!title || !contentId || !price) {
+        setError("Please fill in all required fields");
+        setUploadStep('idle');
+        return;
+      }
+
+      let contentUrl = '';
       if (storageType === 'gaia') {
-        url = await uploadToGaia(file);
+        contentUrl = await uploadToGaia(file);
       } else {
-        url = await uploadToIPFS(file);
+        contentUrl = await uploadToIPFS(file);
       }
       
-      console.log("Uploaded successfully:", url);
-      // Proceed to register content on contract/backend
-    } catch (err) {
-      alert("Upload failed");
+      setUploadStep('metadata');
+      const metadata = {
+        title,
+        description,
+        contentType,
+        tags: tags.split(',').map(t => t.trim()),
+        contentUrl,
+        createdAt: Date.now(),
+        creator: stxAddress,
+        contentId: parseInt(contentId)
+      };
+
+      const metadataUrl = await uploadMetadata(metadata, storageType as any);
+      console.log("Metadata uploaded:", metadataUrl);
+
+      // Call contract to register content
+      setUploadStep('contract');
+      setContractPending(true);
+      await addContent(parseInt(contentId), parseInt(price), metadataUrl);
+      setContractPending(false);
+      setUploadStep('idle');
+      
+      setSuccess(true);
+      // Reset form
+      setTitle('');
+      setDescription('');
+      setContentId('');
+      setPrice('');
+      setTags('');
+      setFile(null);
+    } catch (err: any) {
+      console.error(err);
+      setContractPending(false);
+      setError(err.message || "Upload failed. Please try again.");
     }
   };
 
@@ -69,6 +129,17 @@ const UploadContent: React.FC = () => {
             />
           </div>
         </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Description</label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-orange-500 focus:border-orange-500"
+            placeholder="Tell your fans what this content is about..."
+            rows={3}
+            required
+          />
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700">Content Type</label>
@@ -94,14 +165,77 @@ const UploadContent: React.FC = () => {
               required
             />
           </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Tags (comma separated)</label>
+            <input
+              type="text"
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-orange-500 focus:border-orange-500"
+              placeholder="crypto, web3, tutorial"
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Storage Type</label>
+            <select
+              value={storageType}
+              onChange={(e) => setStorageType(e.target.value)}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-orange-500 focus:border-orange-500"
+            >
+              <option value="gaia">Gaia (Built-in)</option>
+              <option value="ipfs">IPFS (Pinata)</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Content File</label>
+            <input
+              type="file"
+              onChange={handleFileChange}
+              className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
+              required
+            />
+          </div>
         </div>
         <button
           type="submit"
-          className="w-full bg-orange-500 text-white font-bold py-2 px-4 rounded hover:bg-orange-600 transition flex items-center justify-center gap-2"
+          disabled={uploading}
+          className={`w-full ${uploading ? 'bg-orange-300' : 'bg-orange-500 hover:bg-orange-600'} text-white font-bold py-2 px-4 rounded transition flex items-center justify-center gap-2`}
         >
-          <Upload size={20} />
-          Publish Content
+          {uploading ? <Loader2 className="animate-spin" size={20} /> : <Upload size={20} />}
+          {uploading ? 'Publishing...' : 'Publish Content'}
         </button>
+
+        {uploading && (
+          <div className="bg-orange-50 p-4 rounded-md space-y-2">
+            <div className="flex items-center gap-2 text-sm text-orange-800">
+              <div className={`w-3 h-3 rounded-full ${uploadStep === 'storage' ? 'bg-orange-500 animate-pulse' : 'bg-green-500'}`} />
+              <span>Uploading content to {storageType.toUpperCase()}...</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-orange-800">
+              <div className={`w-3 h-3 rounded-full ${uploadStep === 'metadata' ? 'bg-orange-500 animate-pulse' : (uploadStep === 'contract' ? 'bg-green-500' : 'bg-gray-300')}`} />
+              <span>Saving metadata...</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-orange-800">
+              <div className={`w-3 h-3 rounded-full ${uploadStep === 'contract' ? 'bg-orange-500 animate-pulse' : 'bg-gray-300'}`} />
+              <span>Waiting for blockchain confirmation...</span>
+            </div>
+          </div>
+        )}
+        
+        {success && (
+          <div className="flex items-center gap-2 text-green-600 font-medium justify-center mt-2">
+            <CheckCircle size={20} />
+            <span>Content published successfully!</span>
+          </div>
+        )}
+
+        {error && (
+          <div className="flex items-center gap-2 text-red-600 font-medium justify-center mt-2">
+            <span className="bg-red-50 p-2 rounded-md w-full text-center">{error}</span>
+          </div>
+        )}
       </form>
     </div>
   );
