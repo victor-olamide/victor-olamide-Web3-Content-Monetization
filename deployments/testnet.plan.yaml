@@ -1,0 +1,56 @@
+---
+id: 0
+name: Testnet deployment
+network: testnet
+stacks-node: "https://stacks-node-api.testnet.stacks.co"
+bitcoin-node: "http://blockstack:blockstacksystem@bitcoind.testnet.stacks.co:18332"
+plan:
+  batches:
+    - id: 0
+      transactions:
+        - contract-publish:
+            contract-name: sip-009-trait
+            expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            cost: 5000
+            path: contracts/sip-009-trait.clar
+            anchor-block-only: true
+        - contract-publish:
+            contract-name: sip-010-trait
+            expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            cost: 5000
+            path: contracts/sip-010-trait.clar
+            anchor-block-only: true
+    - id: 1
+      transactions:
+        - contract-publish:
+            contract-name: mock-nft
+            expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            cost: 10000
+            path: contracts/mock-nft.clar
+            anchor-block-only: true
+        - contract-publish:
+            contract-name: mock-token
+            expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            cost: 10000
+            path: contracts/mock-token.clar
+            anchor-block-only: true
+        - contract-publish:
+            contract-name: pay-per-view
+            expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            cost: 15000
+            path: contracts/pay-per-view.clar
+            anchor-block-only: true
+        - contract-publish:
+            contract-name: subscription
+            expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            cost: 15000
+            path: contracts/subscription.clar
+            anchor-block-only: true
+    - id: 2
+      transactions:
+        - contract-publish:
+            contract-name: content-gate
+            expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            cost: 20000
+            path: contracts/content-gate.clar
+            anchor-block-only: true
