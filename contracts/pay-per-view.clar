@@ -52,6 +52,7 @@
         (try! (stx-transfer? fee-amount tx-sender (var-get platform-wallet)))
         (try! (stx-transfer? creator-amount tx-sender creator))
         (map-set content-access { content-id: content-id, user: tx-sender } true)
+        (map-set purchase-blocks { content-id: content-id, user: tx-sender } block-height)
         (print { event: "purchase-content", content-id: content-id, user: tx-sender, price: price, creator: creator, platform-fee: fee-amount, creator-amount: creator-amount })
         (ok true)
     ))
