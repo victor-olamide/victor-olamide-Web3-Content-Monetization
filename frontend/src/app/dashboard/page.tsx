@@ -4,6 +4,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import EarningsCard from "@/components/EarningsCard";
 import SubscribersCard from "@/components/SubscribersCard";
 import RevenueChart from "@/components/RevenueChart";
+import StatsOverview from "@/components/StatsOverview";
+import EarningsBreakdown from "@/components/EarningsBreakdown";
+import TransactionList from "@/components/TransactionList";
 import UploadContent from "@/components/UploadContent";
 import TokenGating from "@/components/TokenGating";
 import PurchaseHistory from "@/components/PurchaseHistory";
@@ -28,11 +31,22 @@ export default function Dashboard() {
     <DashboardShell>
       <div className="p-8 max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold mb-8 text-gray-900">Creator Dashboard</h1>
+        
+        <div className="mb-8">
+          <StatsOverview />
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <EarningsCard />
           <SubscribersCard />
           <RevenueChart />
         </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <EarningsBreakdown />
+          <TransactionList />
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
           <div className="space-y-8">
             <PurchaseHistory />
@@ -42,6 +56,7 @@ export default function Dashboard() {
             <UploadContent />
           </div>
         </div>
+        
         <div className="grid grid-cols-1 gap-8">
           <ContentList />
         </div>
