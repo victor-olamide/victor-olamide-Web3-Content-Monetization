@@ -23,9 +23,10 @@ This platform leverages **Stacks blockchain** to bring smart contracts to Bitcoi
 ### Stacks-Native Monetization
 
 - **Pay-Per-View (PPV)**: One-time STX payments for instant content access
+- **Platform Fee Collection**: Configurable fee collection (default 2.5%) on all purchases
 - **Subscriptions**: Recurring STX payments managed by Clarity contracts
 - **Token Gating**: Content access based on SIP-009 NFT or SIP-010 token ownership
-- **Creator Earnings**: Direct STX payments to creator wallets
+- **Creator Earnings**: Direct STX payments to creator wallets (minus platform fee)
 - **On-Chain Verification**: All access rights verified on Stacks blockchain
 
 ### Built on Stacks
