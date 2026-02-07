@@ -23,6 +23,19 @@ const SubscribersCard: React.FC = () => {
             </>
           )}
         </div>
+        {!loading && subscribers && subscribers.count > 0 && (
+          <div className="mt-4">
+            <p className="text-xs text-gray-400 font-medium uppercase mb-2">Recent Subscribers</p>
+            <div className="space-y-2">
+              {subscribers.subscribers.slice(0, 3).map((sub, i) => (
+                <div key={i} className="flex justify-between items-center text-xs">
+                  <span className="font-mono text-gray-600 truncate w-24">{sub.user}</span>
+                  <span className="text-gray-400">{new Date(sub.timestamp).toLocaleDateString()}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
       
       <div className="mt-6 pt-6 border-t border-gray-100">
