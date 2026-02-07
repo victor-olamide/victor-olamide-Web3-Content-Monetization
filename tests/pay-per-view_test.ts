@@ -247,3 +247,31 @@ Clarinet.test({
         fee2.result.expectUint(2500);
     },
 });
+
+Clarinet.test({
+    name: "User is eligible for refund within window",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get('deployer')!;
+        const user = accounts.get('wallet_1')!;
+        const contentId = 1;
+        const price = 1000000;
+
+        let block = chain.mineBlock([
+            Tx.contractCall('pay-per-view', 'add-content', [
+                types.uint(contentId),
+                types.uint(price),
+                types.ascii("ipfs://test")
+            ], deployer.address),
+            Tx.contractCall('pay-per-view', 'purchase-content', [
+                types.uint(contentId)
+            ], user.address)
+        ]);
+
+        let eligible = chain.callReadOnlyFn('pay-per-view', 'is-eligible-for-refund', [
+            types.uint(contentId),
+            types.principal(user.address)
+        ], user.address);
+        
+        eligible.result.expectBool(true);
+    },
+});
