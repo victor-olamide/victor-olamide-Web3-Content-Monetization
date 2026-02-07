@@ -179,3 +179,7 @@
 (define-read-only (get-platform-wallet)
     (var-get platform-wallet)
 )
+
+(define-read-only (get-refund-window)
+    (var-get refund-window)
+)
