@@ -393,3 +393,14 @@ Clarinet.test({
         block.receipts[3].result.expectOk().expectBool(true);
     },
 });
+
+Clarinet.test({
+    name: "Can retrieve refund window",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get('deployer')!;
+
+        let windowResult = chain.callReadOnlyFn('pay-per-view', 'get-refund-window', [], deployer.address);
+        
+        windowResult.result.expectUint(144);
+    },
+});
