@@ -208,4 +208,33 @@ router.get('/top-content/:address', async (req, res) => {
   }
 });
 
+/**
+ * Export earnings data as CSV
+ */
+router.get('/export/:address', async (req, res) => {
+  try {
+    const { address } = req.params;
+    const { startDate, endDate } = req.query;
+
+    const query = { creator: address };
+    if (startDate || endDate) {
+      query.timestamp = {};
+      if (startDate) query.timestamp.$gte = new Date(startDate);
+      if (endDate) query.timestamp.$lte = new Date(endDate);
+    }
+
+    const purchases = await Purchase.find(query).lean();
+    const subscriptions = await Subscription.find(query).lean();
+
+    const allTransactions = [
+      ...purchases.map(p => ({ ...p, type: 'purchase' })),
+      ...subscriptions.map(s => ({ ...s, type: 'subscription' }))
+    ].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    res.json(allTransactions);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 module.exports = router;
