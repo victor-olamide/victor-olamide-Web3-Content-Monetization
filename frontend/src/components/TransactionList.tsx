@@ -19,6 +19,7 @@ const TransactionList: React.FC = () => {
   const address = userData?.profile?.stxAddress?.mainnet;
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!address) return;
@@ -29,8 +30,12 @@ const TransactionList: React.FC = () => {
         if (res.ok) {
           const data = await res.json();
           setTransactions(data.slice(0, 10));
+          setError(null);
+        } else {
+          setError('Failed to load transactions');
         }
       } catch (err) {
+        setError('Failed to fetch transactions');
         console.error('Failed to fetch transactions', err);
       } finally {
         setLoading(false);
@@ -49,6 +54,8 @@ const TransactionList: React.FC = () => {
             <div key={i} className="h-16 bg-gray-100 animate-pulse rounded"></div>
           ))}
         </div>
+      ) : error ? (
+        <p className="text-red-500 text-sm text-center py-8">{error}</p>
       ) : transactions.length === 0 ? (
         <p className="text-gray-400 text-sm text-center py-8">No transactions yet</p>
       ) : (
