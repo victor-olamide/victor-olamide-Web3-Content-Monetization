@@ -142,3 +142,33 @@ Clarinet.test({
         assertEquals(platformBalance, 100000000 + 25000);
     },
 });
+
+Clarinet.test({
+    name: "Creator receives correct amount after platform fee",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get('deployer')!;
+        const user = accounts.get('wallet_1')!;
+        const platform = accounts.get('wallet_2')!;
+        const contentId = 1;
+        const price = 1000000;
+
+        let block = chain.mineBlock([
+            Tx.contractCall('pay-per-view', 'set-platform-wallet', [
+                types.principal(platform.address)
+            ], deployer.address),
+            Tx.contractCall('pay-per-view', 'add-content', [
+                types.uint(contentId),
+                types.uint(price),
+                types.ascii("ipfs://test")
+            ], deployer.address),
+            Tx.contractCall('pay-per-view', 'purchase-content', [
+                types.uint(contentId)
+            ], user.address)
+        ]);
+
+        block.receipts[2].result.expectOk().expectBool(true);
+        
+        const creatorBalance = chain.getAssetsMaps().assets['STX'][deployer.address];
+        assertEquals(creatorBalance, 100000000 + 975000);
+    },
+});
