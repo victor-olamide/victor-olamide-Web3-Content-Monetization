@@ -14,22 +14,23 @@
 
 ;; Data vars
 (define-data-var platform-fee uint u250) ;; 2.5% in basis points
+(define-data-var platform-wallet principal contract-owner)
 
 ;; Data maps
 ;; Mapping of content ID to its price and creator
-(define-map content-pricing uint { price: uint, creator: principal })
+(define-map content-pricing uint { price: uint, creator: principal, uri: (string-ascii 256) })
 
 ;; Mapping of content ID and user principal to access status
 (define-map content-access { content-id: uint, user: principal } bool)
 
 ;; Public functions
 
-;; Register new content with a specific price
-(define-public (add-content (content-id uint) (price uint))
+;; Register new content with a specific price and URI
+(define-public (add-content (content-id uint) (price uint) (uri (string-ascii 256)))
     (begin
         (asserts! (is-none (map-get? content-pricing content-id)) ERR-ALREADY-EXISTS)
-        (print { event: "add-content", content-id: content-id, price: price, creator: tx-sender })
-        (ok (map-set content-pricing content-id { price: price, creator: tx-sender }))
+        (print { event: "add-content", content-id: content-id, price: price, creator: tx-sender, uri: uri })
+        (ok (map-set content-pricing content-id { price: price, creator: tx-sender, uri: uri }))
     )
 )
 
@@ -39,12 +40,15 @@
         (content (unwrap! (map-get? content-pricing content-id) ERR-NOT-FOUND))
         (price (get price content))
         (creator (get creator content))
+        (fee-amount (calculate-platform-fee price))
+        (creator-amount (calculate-creator-amount price))
     )
     (begin
         (asserts! (is-none (map-get? content-access { content-id: content-id, user: tx-sender })) ERR-ALREADY-PURCHASED)
-        (try! (stx-transfer? price tx-sender creator))
+        (try! (stx-transfer? fee-amount tx-sender (var-get platform-wallet)))
+        (try! (stx-transfer? creator-amount tx-sender creator))
         (map-set content-access { content-id: content-id, user: tx-sender } true)
-        (print { event: "purchase-content", content-id: content-id, user: tx-sender, price: price, creator: creator })
+        (print { event: "purchase-content", content-id: content-id, user: tx-sender, price: price, creator: creator, platform-fee: fee-amount, creator-amount: creator-amount })
         (ok true)
     ))
 )
@@ -54,10 +58,11 @@
     (let (
         (content (unwrap! (map-get? content-pricing content-id) ERR-NOT-FOUND))
         (creator (get creator content))
+        (uri (get uri content))
     )
     (begin
         (asserts! (is-eq tx-sender creator) ERR-NOT-AUTHORIZED)
-        (ok (map-set content-pricing content-id { price: new-price, creator: creator }))
+        (ok (map-set content-pricing content-id { price: new-price, creator: creator, uri: uri }))
     ))
 )
 
@@ -82,7 +87,22 @@
     )
 )
 
+(define-public (set-platform-wallet (new-wallet principal))
+    (begin
+        (asserts! (is-eq tx-sender contract-owner) ERR-NOT-AUTHORIZED)
+        (ok (var-set platform-wallet new-wallet))
+    )
+)
+
 ;; Read-only functions
+(define-read-only (calculate-platform-fee (amount uint))
+    (/ (* amount (var-get platform-fee)) u10000)
+)
+
+(define-read-only (calculate-creator-amount (amount uint))
+    (- amount (calculate-platform-fee amount))
+)
+
 (define-read-only (has-access (content-id uint) (user principal))
     (default-to false (map-get? content-access { content-id: content-id, user: user }))
 )
@@ -93,4 +113,12 @@
 
 (define-read-only (is-owner (user principal))
     (is-eq user contract-owner)
+)
+
+(define-read-only (get-platform-fee)
+    (var-get platform-fee)
+)
+
+(define-read-only (get-platform-wallet)
+    (var-get platform-wallet)
 )

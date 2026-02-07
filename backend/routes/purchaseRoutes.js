@@ -1,6 +1,33 @@
 const express = require('express');
 const router = express.Router();
 const Purchase = require('../models/Purchase');
+const { getPlatformFee, calculatePlatformFee } = require('../services/contractService');
+
+// Get platform fee information
+router.get('/platform-fee', async (req, res) => {
+  try {
+    const fee = await getPlatformFee();
+    res.json({ platformFee: fee, feePercentage: (fee / 100).toFixed(2) + '%' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Calculate platform fee for a specific amount
+router.get('/calculate-fee/:amount', async (req, res) => {
+  try {
+    const amount = parseInt(req.params.amount);
+    const fee = await calculatePlatformFee(amount);
+    const creatorAmount = amount - fee;
+    res.json({ 
+      totalAmount: amount, 
+      platformFee: fee, 
+      creatorAmount: creatorAmount 
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
 
 // Get purchase history for a user
 router.get('/user/:address', async (req, res) => {
