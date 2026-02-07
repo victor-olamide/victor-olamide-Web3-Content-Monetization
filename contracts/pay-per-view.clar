@@ -118,3 +118,7 @@
 (define-read-only (get-platform-fee)
     (var-get platform-fee)
 )
+
+(define-read-only (get-platform-wallet)
+    (var-get platform-wallet)
+)
