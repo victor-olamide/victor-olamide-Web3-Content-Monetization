@@ -8,6 +8,7 @@ import StatsOverview from "@/components/StatsOverview";
 import EarningsBreakdown from "@/components/EarningsBreakdown";
 import TransactionList from "@/components/TransactionList";
 import TopContent from "@/components/TopContent";
+import ExportButton from "@/components/ExportButton";
 import UploadContent from "@/components/UploadContent";
 import TokenGating from "@/components/TokenGating";
 import PurchaseHistory from "@/components/PurchaseHistory";
@@ -31,7 +32,10 @@ export default function Dashboard() {
   return (
     <DashboardShell>
       <div className="p-8 max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8 text-gray-900">Creator Dashboard</h1>
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Creator Dashboard</h1>
+          <ExportButton />
+        </div>
         
         <div className="mb-8">
           <StatsOverview />
