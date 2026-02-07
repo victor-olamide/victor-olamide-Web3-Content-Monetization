@@ -74,6 +74,7 @@ export default function ContentView({ params }: { params: { id: string } }) {
           body: JSON.stringify({
             contentId: parseInt(params.id),
             user: stxAddress,
+            creator: content.creator,
             txId: result,
             amount: content.price
           })
