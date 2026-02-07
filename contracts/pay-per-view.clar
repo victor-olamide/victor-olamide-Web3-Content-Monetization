@@ -84,6 +84,24 @@
     ))
 )
 
+;; Refund a user for content purchase
+(define-public (refund-user (content-id uint) (user principal))
+    (let (
+        (content (unwrap! (map-get? content-pricing content-id) ERR-NOT-FOUND))
+        (creator (get creator content))
+        (price (get price content))
+    )
+    (begin
+        (asserts! (is-eq tx-sender creator) ERR-NOT-AUTHORIZED)
+        (asserts! (is-eligible-for-refund content-id user) ERR-REFUND-FAILED)
+        (try! (as-contract (stx-transfer? price tx-sender user)))
+        (map-delete content-access { content-id: content-id, user: user })
+        (map-delete purchase-blocks { content-id: content-id, user: user })
+        (print { event: "refund-user", content-id: content-id, user: user, amount: price })
+        (ok true)
+    ))
+)
+
 ;; Admin functions
 (define-public (set-platform-fee (new-fee uint))
     (begin
