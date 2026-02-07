@@ -137,6 +137,13 @@
     )
 )
 
+(define-public (set-refund-window (new-window uint))
+    (begin
+        (asserts! (is-eq tx-sender contract-owner) ERR-NOT-AUTHORIZED)
+        (ok (var-set refund-window new-window))
+    )
+)
+
 ;; Read-only functions
 (define-read-only (is-eligible-for-refund (content-id uint) (user principal))
     (match (map-get? purchase-blocks { content-id: content-id, user: user })
