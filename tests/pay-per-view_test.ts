@@ -84,3 +84,17 @@ Clarinet.test({
         block.receipts[2].result.expectErr().expectUint(403);
     },
 });
+
+Clarinet.test({
+    name: "Platform fee is calculated correctly",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get('deployer')!;
+        const price = 1000000;
+
+        let feeResult = chain.callReadOnlyFn('pay-per-view', 'calculate-platform-fee', [
+            types.uint(price)
+        ], deployer.address);
+        
+        feeResult.result.expectUint(25000);
+    },
+});
