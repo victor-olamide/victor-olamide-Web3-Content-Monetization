@@ -85,6 +85,10 @@
 )
 
 ;; Read-only functions
+(define-read-only (calculate-platform-fee (amount uint))
+    (/ (* amount (var-get platform-fee)) u10000)
+)
+
 (define-read-only (has-access (content-id uint) (user principal))
     (default-to false (map-get? content-access { content-id: content-id, user: user }))
 )
