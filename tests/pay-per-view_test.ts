@@ -230,3 +230,20 @@ Clarinet.test({
         feeResult.result.expectUint(newFee);
     },
 });
+
+Clarinet.test({
+    name: "Platform fee calculation works with different amounts",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get('deployer')!;
+
+        let fee1 = chain.callReadOnlyFn('pay-per-view', 'calculate-platform-fee', [
+            types.uint(5000000)
+        ], deployer.address);
+        fee1.result.expectUint(125000);
+
+        let fee2 = chain.callReadOnlyFn('pay-per-view', 'calculate-platform-fee', [
+            types.uint(100000)
+        ], deployer.address);
+        fee2.result.expectUint(2500);
+    },
+});
