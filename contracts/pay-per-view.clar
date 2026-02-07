@@ -101,6 +101,13 @@
 )
 
 ;; Read-only functions
+(define-read-only (is-eligible-for-refund (content-id uint) (user principal))
+    (match (map-get? purchase-blocks { content-id: content-id, user: user })
+        purchase-block (<= (- block-height purchase-block) (var-get refund-window))
+        false
+    )
+)
+
 (define-read-only (calculate-platform-fee (amount uint))
     (/ (* amount (var-get platform-fee)) u10000)
 )
