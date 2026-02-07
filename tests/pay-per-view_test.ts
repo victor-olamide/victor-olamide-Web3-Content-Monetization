@@ -211,3 +211,22 @@ Clarinet.test({
         walletResult.result.expectPrincipal(deployer.address);
     },
 });
+
+Clarinet.test({
+    name: "Owner can update platform fee",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get('deployer')!;
+        const newFee = 500;
+
+        let block = chain.mineBlock([
+            Tx.contractCall('pay-per-view', 'set-platform-fee', [
+                types.uint(newFee)
+            ], deployer.address)
+        ]);
+
+        block.receipts[0].result.expectOk().expectBool(true);
+        
+        let feeResult = chain.callReadOnlyFn('pay-per-view', 'get-platform-fee', [], deployer.address);
+        feeResult.result.expectUint(newFee);
+    },
+});
