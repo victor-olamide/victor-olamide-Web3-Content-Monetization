@@ -82,6 +82,74 @@ const removeContentFromContract = async (contentId, privateKey) => {
 };
 
 /**
+ * Pause the pay-per-view contract (admin only)
+ * @param {string} privateKey
+ * @returns {Promise<Object>} Broadcast response
+ */
+const pauseContract = async (privateKey) => {
+  const txOptions = {
+    contractAddress: process.env.CONTRACT_ADDRESS,
+    contractName: 'pay-per-view',
+    functionName: 'pause-contract',
+    functionArgs: [],
+    senderKey: privateKey,
+    validateWithAbi: true,
+    network,
+    anchorMode: AnchorMode.Any,
+    postConditionMode: PostConditionMode.Allow,
+  };
+
+  const transaction = await makeContractCall(txOptions);
+  const broadcastResponse = await broadcastTransaction(transaction, network);
+  return broadcastResponse;
+};
+
+/**
+ * Unpause the pay-per-view contract (admin only)
+ * @param {string} privateKey
+ * @returns {Promise<Object>} Broadcast response
+ */
+const unpauseContract = async (privateKey) => {
+  const txOptions = {
+    contractAddress: process.env.CONTRACT_ADDRESS,
+    contractName: 'pay-per-view',
+    functionName: 'unpause-contract',
+    functionArgs: [],
+    senderKey: privateKey,
+    validateWithAbi: true,
+    network,
+    anchorMode: AnchorMode.Any,
+    postConditionMode: PostConditionMode.Allow,
+  };
+
+  const transaction = await makeContractCall(txOptions);
+  const broadcastResponse = await broadcastTransaction(transaction, network);
+  return broadcastResponse;
+};
+
+/**
+ * Get paused state of the contract (read-only)
+ * @returns {Promise<boolean>} paused
+ */
+const getContractPaused = async () => {
+  try {
+    const { callReadOnlyFunction, cvToJSON } = require('@stacks/transactions');
+    const result = await callReadOnlyFunction({
+      contractAddress: process.env.CONTRACT_ADDRESS,
+      contractName: 'pay-per-view',
+      functionName: 'get-paused',
+      functionArgs: [],
+      network,
+      senderAddress: process.env.CONTRACT_ADDRESS,
+    });
+
+    return cvToJSON(result).value;
+  } catch (error) {
+    throw new Error(`Failed to get contract paused state: ${error.message}`);
+  }
+};
+
+/**
  * Update content price on-chain
  * @param {number} contentId
  * @param {number} newPrice
@@ -313,6 +381,9 @@ const isSubscriptionInGracePeriod = async (subscriptionId) => {
 module.exports = {
   addContentToContract,
   removeContentFromContract,
+  pauseContract,
+  unpauseContract,
+  getContractPaused,
   updateContentPrice,
   getPlatformFee,
   calculatePlatformFee,
