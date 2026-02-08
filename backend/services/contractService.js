@@ -150,6 +150,101 @@ const getContractPaused = async () => {
 };
 
 /**
+ * Issue a rental license on-chain
+ * @param {string} user - User principal address
+ * @param {number} contentId - Content ID
+ * @param {string} licenseType - License type (rental-24h, rental-7d, etc)
+ * @param {number} expiresAtBlock - Block height when license expires
+ * @param {string} privateKey - Signer private key (admin)
+ * @returns {Promise<Object>} Broadcast response
+ */
+const issueRentalLicense = async (user, contentId, licenseType, expiresAtBlock, privateKey) => {
+  try {
+    const txOptions = {
+      contractAddress: process.env.CONTRACT_ADDRESS,
+      contractName: 'pay-per-view',
+      functionName: 'issue-rental-license',
+      functionArgs: [
+        principalCV(user),
+        uintCV(contentId),
+        stringAsciiCV(licenseType),
+        uintCV(expiresAtBlock)
+      ],
+      senderKey: privateKey,
+      validateWithAbi: true,
+      network,
+      anchorMode: AnchorMode.Any,
+      postConditionMode: PostConditionMode.Allow,
+    };
+
+    const transaction = await makeContractCall(txOptions);
+    const broadcastResponse = await broadcastTransaction(transaction, network);
+    return broadcastResponse;
+  } catch (error) {
+    throw new Error(`Failed to issue rental license: ${error.message}`);
+  }
+};
+
+/**
+ * Revoke a rental license on-chain
+ * @param {string} user - User principal address
+ * @param {number} contentId - Content ID
+ * @param {string} privateKey - Signer private key (admin)
+ * @returns {Promise<Object>} Broadcast response
+ */
+const revokeRentalLicense = async (user, contentId, privateKey) => {
+  try {
+    const txOptions = {
+      contractAddress: process.env.CONTRACT_ADDRESS,
+      contractName: 'pay-per-view',
+      functionName: 'revoke-rental-license',
+      functionArgs: [
+        principalCV(user),
+        uintCV(contentId)
+      ],
+      senderKey: privateKey,
+      validateWithAbi: true,
+      network,
+      anchorMode: AnchorMode.Any,
+      postConditionMode: PostConditionMode.Allow,
+    };
+
+    const transaction = await makeContractCall(txOptions);
+    const broadcastResponse = await broadcastTransaction(transaction, network);
+    return broadcastResponse;
+  } catch (error) {
+    throw new Error(`Failed to revoke rental license: ${error.message}`);
+  }
+};
+
+/**
+ * Check if user has valid rental license (read-only)
+ * @param {string} user - User principal address
+ * @param {number} contentId - Content ID
+ * @returns {Promise<boolean>} Has valid license
+ */
+const hasValidRentalLicense = async (user, contentId) => {
+  try {
+    const { callReadOnlyFunction, cvToJSON } = require('@stacks/transactions');
+    const result = await callReadOnlyFunction({
+      contractAddress: process.env.CONTRACT_ADDRESS,
+      contractName: 'pay-per-view',
+      functionName: 'has-valid-rental-license',
+      functionArgs: [
+        principalCV(user),
+        uintCV(contentId)
+      ],
+      network,
+      senderAddress: process.env.CONTRACT_ADDRESS,
+    });
+
+    return cvToJSON(result).value;
+  } catch (error) {
+    throw new Error(`Failed to check rental license: ${error.message}`);
+  }
+};
+
+/**
  * Update content price on-chain
  * @param {number} contentId
  * @param {number} newPrice
@@ -385,6 +480,9 @@ module.exports = {
   unpauseContract,
   getContractPaused,
   updateContentPrice,
+  issueRentalLicense,
+  revokeRentalLicense,
+  hasValidRentalLicense,
   getPlatformFee,
   calculatePlatformFee,
   registerSubscriptionRenewal,
