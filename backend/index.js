@@ -44,6 +44,7 @@ app.use('/api/refunds', refundRoutes);
 const indexer = require('./services/indexer');
 const { checkStorageHealth } = require('./services/storageService');
 const { initializeScheduler, getHealthStatus } = require('./services/refundScheduler');
+const { initializeRenewalScheduler, getRenewalStats } = require('./services/renewalScheduler');
 
 indexer.start();
 
@@ -51,14 +52,20 @@ indexer.start();
 const refundScheduleInterval = parseInt(process.env.REFUND_SCHEDULE_INTERVAL) || 3600000;
 initializeScheduler(refundScheduleInterval);
 
+// Initialize renewal scheduler (runs every hour by default)
+const renewalScheduleInterval = parseInt(process.env.RENEWAL_SCHEDULE_INTERVAL) || 3600000;
+initializeRenewalScheduler(renewalScheduleInterval);
+
 app.get('/api/status', async (req, res) => {
   const storageHealthy = await checkStorageHealth();
   const refundHealth = await getHealthStatus();
+  const renewalHealth = await getRenewalStats();
   res.json({
     server: 'up',
     indexer: indexer.getStatus(),
     storage: storageHealthy ? 'connected' : 'disconnected',
-    refunds: refundHealth
+    refunds: refundHealth,
+    renewals: renewalHealth
   });
 });
 
