@@ -28,6 +28,7 @@ const accessRoutes = require('./routes/accessRoutes');
 const creatorRoutes = require('./routes/creatorRoutes');
 const deliveryRoutes = require('./routes/deliveryRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
+const refundRoutes = require('./routes/refundRoutes');
 
 app.use('/api/content', contentRoutes);
 app.use('/api/purchases', purchaseRoutes);
@@ -37,6 +38,7 @@ app.use('/api/access', accessRoutes);
 app.use('/api/creator', creatorRoutes);
 app.use('/api/delivery', deliveryRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/refunds', refundRoutes);
 
 // Start Indexer
 const indexer = require('./services/indexer');
