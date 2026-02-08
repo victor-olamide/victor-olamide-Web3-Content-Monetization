@@ -29,6 +29,7 @@ const creatorRoutes = require('./routes/creatorRoutes');
 const deliveryRoutes = require('./routes/deliveryRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
 const refundRoutes = require('./routes/refundRoutes');
+const proRataRefundRoutes = require('./routes/proRataRefundRoutes');
 
 app.use('/api/content', contentRoutes);
 app.use('/api/purchases', purchaseRoutes);
@@ -39,12 +40,14 @@ app.use('/api/creator', creatorRoutes);
 app.use('/api/delivery', deliveryRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/refunds', refundRoutes);
+app.use('/api/refunds', proRataRefundRoutes);
 
 // Start Indexer
 const indexer = require('./services/indexer');
 const { checkStorageHealth } = require('./services/storageService');
 const { initializeScheduler, getHealthStatus } = require('./services/refundScheduler');
 const { initializeRenewalScheduler, getRenewalStats } = require('./services/renewalScheduler');
+const { initializeRefundScheduler, getRefundSchedulerStats } = require('./services/proRataRefundScheduler');
 
 indexer.start();
 
@@ -56,16 +59,22 @@ initializeScheduler(refundScheduleInterval);
 const renewalScheduleInterval = parseInt(process.env.RENEWAL_SCHEDULE_INTERVAL) || 3600000;
 initializeRenewalScheduler(renewalScheduleInterval);
 
+// Initialize pro-rata refund scheduler (runs every hour by default)
+const proRataRefundScheduleInterval = parseInt(process.env.PRO_RATA_REFUND_SCHEDULE_INTERVAL) || 3600000;
+initializeRefundScheduler(proRataRefundScheduleInterval);
+
 app.get('/api/status', async (req, res) => {
   const storageHealthy = await checkStorageHealth();
   const refundHealth = await getHealthStatus();
   const renewalHealth = await getRenewalStats();
+  const proRataRefundHealth = getRefundSchedulerStats();
   res.json({
     server: 'up',
     indexer: indexer.getStatus(),
     storage: storageHealthy ? 'connected' : 'disconnected',
     refunds: refundHealth,
-    renewals: renewalHealth
+    renewals: renewalHealth,
+    proRataRefunds: proRataRefundHealth
   });
 });
 
