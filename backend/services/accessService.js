@@ -14,6 +14,11 @@ async function hasAccess(content, userAddress) {
     return { allowed: false, reason: 'No user address provided' };
   }
   
+  // 0. Check if content is removed
+  if (content.isRemoved) {
+    return { allowed: false, reason: 'content-removed', method: null };
+  }
+  
   // 1. Creator always has access
   if (content.creator === userAddress) {
     return { allowed: true, reason: 'creator', method: 'creator' };
