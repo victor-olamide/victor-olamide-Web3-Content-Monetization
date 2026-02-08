@@ -111,6 +111,7 @@
     )
     (begin
         (asserts! (is-eq tx-sender creator) ERR-NOT-AUTHORIZED)
+        (var-set current-refund-id content-id)
         (map remove-content-with-refunds-iter users)
         (map-delete content-pricing content-id)
         (print { event: "remove-content-with-refunds", content-id: content-id, users-count: (len users) })
