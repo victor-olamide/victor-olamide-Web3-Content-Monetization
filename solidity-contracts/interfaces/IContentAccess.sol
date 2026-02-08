@@ -10,4 +10,7 @@ interface IContentAccess {
     function addContent(uint256 price) external returns (uint256);
     function purchaseContent(uint256 contentId) external payable;
     function hasAccess(address user, uint256 contentId) external view returns (bool);
+    function removeContent(uint256 contentId) external;
+    function refundUser(uint256 contentId, address user) external payable;
+    function isEligibleForRefund(uint256 contentId, address user) external view returns (bool);
 }
