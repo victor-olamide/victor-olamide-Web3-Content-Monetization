@@ -4,6 +4,29 @@ const subscriptionSchema = new mongoose.Schema({
   user: { type: String, required: true },
   creator: { type: String, required: true },
   tierId: { type: Number, required: true },
+  
+  // Multi-tier support
+  subscriptionTierId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'SubscriptionTier',
+    default: null,
+    description: 'Reference to subscription tier'
+  },
+  tierName: {
+    type: String,
+    default: null,
+    description: 'Snapshot of tier name at purchase time'
+  },
+  tierPrice: {
+    type: Number,
+    default: null,
+    description: 'Snapshot of tier price at purchase time'
+  },
+  tierBenefits: [{
+    feature: String,
+    description: String
+  }],
+  
   amount: { type: Number, required: true, default: 0 },
   expiry: { type: Date, required: true },
   transactionId: { type: String, required: true, unique: true },
