@@ -56,6 +56,7 @@ const { checkStorageHealth } = require('./services/storageService');
 const { initializeScheduler, getHealthStatus } = require('./services/refundScheduler');
 const { initializeRenewalScheduler, getRenewalStats } = require('./services/renewalScheduler');
 const { initializeRefundScheduler, getRefundSchedulerStats } = require('./services/proRataRefundScheduler');
+const { initializeLicenseCleanup, getCleanupStats } = require('./services/licenseCleanupScheduler');
 
 indexer.start();
 
@@ -71,18 +72,24 @@ initializeRenewalScheduler(renewalScheduleInterval);
 const proRataRefundScheduleInterval = parseInt(process.env.PRO_RATA_REFUND_SCHEDULE_INTERVAL) || 3600000;
 initializeRefundScheduler(proRataRefundScheduleInterval);
 
+// Initialize license cleanup scheduler (runs every hour by default)
+const licenseCleanupInterval = parseInt(process.env.LICENSE_CLEANUP_INTERVAL) || 3600000;
+initializeLicenseCleanup(licenseCleanupInterval);
+
 app.get('/api/status', async (req, res) => {
   const storageHealthy = await checkStorageHealth();
   const refundHealth = await getHealthStatus();
   const renewalHealth = await getRenewalStats();
   const proRataRefundHealth = getRefundSchedulerStats();
+  const licenseCleanupHealth = getCleanupStats();
   res.json({
     server: 'up',
     indexer: indexer.getStatus(),
     storage: storageHealthy ? 'connected' : 'disconnected',
     refunds: refundHealth,
     renewals: renewalHealth,
-    proRataRefunds: proRataRefundHealth
+    proRataRefunds: proRataRefundHealth,
+    licenseCleanup: licenseCleanupHealth
   });
 });
 
