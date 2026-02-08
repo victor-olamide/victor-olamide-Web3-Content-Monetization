@@ -9,8 +9,13 @@ contract ContentManager is IContentAccess {
         uint256 price;
     }
 
+    struct Access {
+        bool hasAccess;
+        uint256 purchaseTime;
+    }
+
     mapping(uint256 => Content) public contents;
-    mapping(address => mapping(uint256 => bool)) public userAccess;
+    mapping(address => mapping(uint256 => Access)) public userAccess;
     uint256 public contentCount;
 
     function addContent(uint256 price) external override returns (uint256) {
@@ -20,16 +25,16 @@ contract ContentManager is IContentAccess {
         return contentId;
     }
 
-    function purchaseContent(uint256 contentId) external payable override {
+    function purchaseContent(uint256 contentId) external payable virtual override {
         Content storage content = contents[contentId];
         require(content.creator != address(0), "Content not found");
         require(msg.value >= content.price, "Insufficient payment");
 
-        userAccess[msg.sender][contentId] = true;
+        userAccess[msg.sender][contentId] = Access(true, block.timestamp);
         emit ContentAccessed(contentId, msg.sender);
     }
 
     function hasAccess(address user, uint256 contentId) external view override returns (bool) {
-        return userAccess[user][contentId] || contents[contentId].creator == user;
+        return userAccess[user][contentId].hasAccess || contents[contentId].creator == user;
     }
 }
