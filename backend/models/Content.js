@@ -15,6 +15,11 @@ const contentSchema = new mongoose.Schema({
     tokenContract: { type: String }, // Contract address
     minBalance: { type: Number, default: 1 } // Minimum tokens/NFTs required
   },
+  isRemoved: { type: Boolean, default: false },
+  removedAt: { type: Date, default: null },
+  removalReason: { type: String, default: null },
+  refundable: { type: Boolean, default: true },
+  refundWindowDays: { type: Number, default: 30 },
   createdAt: { type: Date, default: Date.now }
 });
 
