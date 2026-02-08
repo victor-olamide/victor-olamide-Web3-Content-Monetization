@@ -82,6 +82,35 @@ const removeContentFromContract = async (contentId, privateKey) => {
 };
 
 /**
+ * Update content price on-chain
+ * @param {number} contentId
+ * @param {number} newPrice
+ * @param {string} privateKey
+ * @returns {Promise<Object>} Broadcast response with transaction ID
+ */
+const updateContentPrice = async (contentId, newPrice, privateKey) => {
+  try {
+    const txOptions = {
+      contractAddress: process.env.CONTRACT_ADDRESS,
+      contractName: 'pay-per-view',
+      functionName: 'update-content-price',
+      functionArgs: [uintCV(contentId), uintCV(newPrice)],
+      senderKey: privateKey,
+      validateWithAbi: true,
+      network,
+      anchorMode: AnchorMode.Any,
+      postConditionMode: PostConditionMode.Allow,
+    };
+
+    const transaction = await makeContractCall(txOptions);
+    const broadcastResponse = await broadcastTransaction(transaction, network);
+    return broadcastResponse;
+  } catch (error) {
+    throw new Error(`Failed to update content price on blockchain: ${error.message}`);
+  }
+};
+
+/**
  * Register subscription renewal on blockchain
  * @param {number} subscriptionId - Subscription ID
  * @param {number} amount - Renewal amount in STX
@@ -284,6 +313,7 @@ const isSubscriptionInGracePeriod = async (subscriptionId) => {
 module.exports = {
   addContentToContract,
   removeContentFromContract,
+  updateContentPrice,
   getPlatformFee,
   calculatePlatformFee,
   registerSubscriptionRenewal,
