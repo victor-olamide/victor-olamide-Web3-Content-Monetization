@@ -119,7 +119,22 @@
 )
 
 (define-private (remove-content-with-refunds-iter (user principal))
-    true
+    (let (
+        (content-id (var-get current-refund-id))
+        (content (unwrap! (map-get? content-pricing content-id) false))
+        (price (get price content))
+    )
+    (if (is-eligible-for-refund content-id user)
+        (match (stx-transfer? price tx-sender user)
+            success (begin
+                (map-delete content-access { content-id: content-id, user: user })
+                (map-delete purchase-blocks { content-id: content-id, user: user })
+                true
+            )
+            error false
+        )
+        false
+    ))
 )
 
 ;; Admin functions
