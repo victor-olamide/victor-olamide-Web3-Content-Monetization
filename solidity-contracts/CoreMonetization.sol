@@ -55,7 +55,7 @@ contract CoreMonetization is BaseSubscription, ContentManager, IBaseMonetization
         uint256 fee = calculateFee(msg.value);
         uint256 creatorShare = msg.value - fee;
 
-        userAccess[msg.sender][contentId] = true;
+        userAccess[msg.sender][contentId] = Access(true, block.timestamp);
         payable(content.creator).transfer(creatorShare);
         
         emit ContentAccessed(contentId, msg.sender);
