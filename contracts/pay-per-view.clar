@@ -14,6 +14,10 @@
 (define-constant ERR-REFUND-FAILED (err u406))
 ;; Contract paused error
 (define-constant ERR-CONTRACT-PAUSED (err u507))
+;; License expired error
+(define-constant ERR-LICENSE-EXPIRED (err u508))
+;; Invalid license type error
+(define-constant ERR-INVALID-LICENSE-TYPE (err u509))
 
 ;; Data vars
 (define-data-var platform-fee uint u250) ;; 2.5% in basis points
@@ -31,6 +35,12 @@
 
 ;; Mapping of content ID and user principal to purchase block height
 (define-map purchase-blocks { content-id: uint, user: principal } uint)
+
+;; Mapping of rental licenses: { user: principal, content-id: uint } -> { expires-at: uint, license-type: (string-ascii 10) }
+(define-map rental-licenses { user: principal, content-id: uint } { expires-at: uint, license-type: (string-ascii 10) })
+
+;; Mapping to track license issue block height
+(define-map license-issue-blocks { user: principal, content-id: uint } uint)
 
 ;; Public functions
 
@@ -210,4 +220,31 @@
 
 (define-read-only (get-refund-window)
     (var-get refund-window)
+)
+
+;; License (rental) functions
+(define-public (issue-rental-license (user principal) (content-id uint) (license-type (string-ascii 10)) (expires-at uint))
+    (begin
+        (asserts! (is-eq tx-sender contract-owner) ERR-NOT-AUTHORIZED)
+        (asserts! (not (var-get paused)) ERR-CONTRACT-PAUSED)
+        (ok (map-set rental-licenses { user: user, content-id: content-id } { expires-at: expires-at, license-type: license-type }))
+    )
+)
+
+(define-read-only (get-rental-license (user principal) (content-id uint))
+    (map-get? rental-licenses { user: user, content-id: content-id })
+)
+
+(define-read-only (has-valid-rental-license (user principal) (content-id uint))
+    (match (map-get? rental-licenses { user: user, content-id: content-id })
+        license (< block-height (get expires-at license))
+        false
+    )
+)
+
+(define-public (revoke-rental-license (user principal) (content-id uint))
+    (begin
+        (asserts! (is-eq tx-sender contract-owner) ERR-NOT-AUTHORIZED)
+        (ok (map-delete rental-licenses { user: user, content-id: content-id }))
+    )
 )
