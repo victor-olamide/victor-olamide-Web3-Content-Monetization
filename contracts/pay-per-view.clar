@@ -153,6 +153,25 @@
     )
 )
 
+;; Emergency control: pause and unpause the contract
+(define-public (pause-contract)
+    (begin
+        (asserts! (is-eq tx-sender contract-owner) ERR-NOT-AUTHORIZED)
+        (ok (var-set paused true))
+    )
+)
+
+(define-public (unpause-contract)
+    (begin
+        (asserts! (is-eq tx-sender contract-owner) ERR-NOT-AUTHORIZED)
+        (ok (var-set paused false))
+    )
+)
+
+(define-read-only (get-paused)
+    (var-get paused)
+)
+
 ;; Read-only functions
 (define-read-only (is-eligible-for-refund (content-id uint) (user principal))
     (match (map-get? purchase-blocks { content-id: content-id, user: user })
