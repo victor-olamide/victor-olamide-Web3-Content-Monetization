@@ -247,3 +247,176 @@ Clarinet.test({
         fee2.result.expectUint(2500);
     },
 });
+
+Clarinet.test({
+    name: "User is eligible for refund within window",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get('deployer')!;
+        const user = accounts.get('wallet_1')!;
+        const contentId = 1;
+        const price = 1000000;
+
+        let block = chain.mineBlock([
+            Tx.contractCall('pay-per-view', 'add-content', [
+                types.uint(contentId),
+                types.uint(price),
+                types.ascii("ipfs://test")
+            ], deployer.address),
+            Tx.contractCall('pay-per-view', 'purchase-content', [
+                types.uint(contentId)
+            ], user.address)
+        ]);
+
+        let eligible = chain.callReadOnlyFn('pay-per-view', 'is-eligible-for-refund', [
+            types.uint(contentId),
+            types.principal(user.address)
+        ], user.address);
+        
+        eligible.result.expectBool(true);
+    },
+});
+
+Clarinet.test({
+    name: "Creator can refund eligible user",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get('deployer')!;
+        const user = accounts.get('wallet_1')!;
+        const contentId = 1;
+        const price = 1000000;
+
+        let block = chain.mineBlock([
+            Tx.contractCall('pay-per-view', 'add-content', [
+                types.uint(contentId),
+                types.uint(price),
+                types.ascii("ipfs://test")
+            ], deployer.address),
+            Tx.contractCall('pay-per-view', 'purchase-content', [
+                types.uint(contentId)
+            ], user.address),
+            Tx.contractCall('pay-per-view', 'refund-user', [
+                types.uint(contentId),
+                types.principal(user.address)
+            ], deployer.address)
+        ]);
+
+        block.receipts[2].result.expectOk().expectBool(true);
+    },
+});
+
+Clarinet.test({
+    name: "User loses access after refund",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get('deployer')!;
+        const user = accounts.get('wallet_1')!;
+        const contentId = 1;
+        const price = 1000000;
+
+        let block = chain.mineBlock([
+            Tx.contractCall('pay-per-view', 'add-content', [
+                types.uint(contentId),
+                types.uint(price),
+                types.ascii("ipfs://test")
+            ], deployer.address),
+            Tx.contractCall('pay-per-view', 'purchase-content', [
+                types.uint(contentId)
+            ], user.address),
+            Tx.contractCall('pay-per-view', 'refund-user', [
+                types.uint(contentId),
+                types.principal(user.address)
+            ], deployer.address)
+        ]);
+
+        let hasAccess = chain.callReadOnlyFn('pay-per-view', 'has-access', [
+            types.uint(contentId),
+            types.principal(user.address)
+        ], user.address);
+        
+        hasAccess.result.expectBool(false);
+    },
+});
+
+Clarinet.test({
+    name: "Only creator can issue refunds",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get('deployer')!;
+        const user = accounts.get('wallet_1')!;
+        const other = accounts.get('wallet_2')!;
+        const contentId = 1;
+        const price = 1000000;
+
+        let block = chain.mineBlock([
+            Tx.contractCall('pay-per-view', 'add-content', [
+                types.uint(contentId),
+                types.uint(price),
+                types.ascii("ipfs://test")
+            ], deployer.address),
+            Tx.contractCall('pay-per-view', 'purchase-content', [
+                types.uint(contentId)
+            ], user.address),
+            Tx.contractCall('pay-per-view', 'refund-user', [
+                types.uint(contentId),
+                types.principal(user.address)
+            ], other.address)
+        ]);
+
+        block.receipts[2].result.expectErr().expectUint(401);
+    },
+});
+
+Clarinet.test({
+    name: "Creator can remove content with refunds",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get('deployer')!;
+        const user1 = accounts.get('wallet_1')!;
+        const user2 = accounts.get('wallet_2')!;
+        const contentId = 1;
+        const price = 1000000;
+
+        let block = chain.mineBlock([
+            Tx.contractCall('pay-per-view', 'add-content', [
+                types.uint(contentId),
+                types.uint(price),
+                types.ascii("ipfs://test")
+            ], deployer.address),
+            Tx.contractCall('pay-per-view', 'purchase-content', [
+                types.uint(contentId)
+            ], user1.address),
+            Tx.contractCall('pay-per-view', 'purchase-content', [
+                types.uint(contentId)
+            ], user2.address),
+            Tx.contractCall('pay-per-view', 'remove-content-with-refunds', [
+                types.uint(contentId),
+                types.list([types.principal(user1.address), types.principal(user2.address)])
+            ], deployer.address)
+        ]);
+
+        block.receipts[3].result.expectOk().expectBool(true);
+    },
+});
+
+Clarinet.test({
+    name: "Can retrieve refund window",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get('deployer')!;
+
+        let windowResult = chain.callReadOnlyFn('pay-per-view', 'get-refund-window', [], deployer.address);
+        
+        windowResult.result.expectUint(144);
+    },
+});
+
+Clarinet.test({
+    name: "Only owner can set refund window",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get('deployer')!;
+        const user = accounts.get('wallet_1')!;
+
+        let block = chain.mineBlock([
+            Tx.contractCall('pay-per-view', 'set-refund-window', [
+                types.uint(288)
+            ], user.address)
+        ]);
+
+        block.receipts[0].result.expectErr().expectUint(401);
+    },
+});
