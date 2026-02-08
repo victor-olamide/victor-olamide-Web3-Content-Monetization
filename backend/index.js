@@ -33,6 +33,7 @@ const proRataRefundRoutes = require('./routes/proRataRefundRoutes');
 const subscriptionTierRoutes = require('./routes/subscriptionTierRoutes');
 const collaboratorRoutes = require('./routes/collaboratorRoutes');
 const royaltyRoutes = require('./routes/royaltyRoutes');
+const licensingRoutes = require('./routes/licensingRoutes');
 
 app.use('/api/content', contentRoutes);
 app.use('/api/purchases', purchaseRoutes);
@@ -47,6 +48,7 @@ app.use('/api/refunds', refundRoutes);
 app.use('/api/refunds', proRataRefundRoutes);
 app.use('/api/collaborators', collaboratorRoutes);
 app.use('/api/royalties', royaltyRoutes);
+app.use('/api/licenses', licensingRoutes);
 
 // Start Indexer
 const indexer = require('./services/indexer');
