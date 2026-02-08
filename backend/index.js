@@ -31,6 +31,8 @@ const analyticsRoutes = require('./routes/analyticsRoutes');
 const refundRoutes = require('./routes/refundRoutes');
 const proRataRefundRoutes = require('./routes/proRataRefundRoutes');
 const subscriptionTierRoutes = require('./routes/subscriptionTierRoutes');
+const collaboratorRoutes = require('./routes/collaboratorRoutes');
+const royaltyRoutes = require('./routes/royaltyRoutes');
 
 app.use('/api/content', contentRoutes);
 app.use('/api/purchases', purchaseRoutes);
@@ -43,6 +45,8 @@ app.use('/api/delivery', deliveryRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/refunds', refundRoutes);
 app.use('/api/refunds', proRataRefundRoutes);
+app.use('/api/collaborators', collaboratorRoutes);
+app.use('/api/royalties', royaltyRoutes);
 
 // Start Indexer
 const indexer = require('./services/indexer');
