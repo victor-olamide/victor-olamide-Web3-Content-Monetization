@@ -30,10 +30,12 @@ const deliveryRoutes = require('./routes/deliveryRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
 const refundRoutes = require('./routes/refundRoutes');
 const proRataRefundRoutes = require('./routes/proRataRefundRoutes');
+const subscriptionTierRoutes = require('./routes/subscriptionTierRoutes');
 
 app.use('/api/content', contentRoutes);
 app.use('/api/purchases', purchaseRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
+app.use('/api/subscriptions', subscriptionTierRoutes);
 app.use('/api/gating', gatingRoutes);
 app.use('/api/access', accessRoutes);
 app.use('/api/creator', creatorRoutes);
