@@ -28,6 +28,7 @@ const accessRoutes = require('./routes/accessRoutes');
 const creatorRoutes = require('./routes/creatorRoutes');
 const deliveryRoutes = require('./routes/deliveryRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
+const refundRoutes = require('./routes/refundRoutes');
 
 app.use('/api/content', contentRoutes);
 app.use('/api/purchases', purchaseRoutes);
@@ -37,18 +38,27 @@ app.use('/api/access', accessRoutes);
 app.use('/api/creator', creatorRoutes);
 app.use('/api/delivery', deliveryRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/refunds', refundRoutes);
 
 // Start Indexer
 const indexer = require('./services/indexer');
 const { checkStorageHealth } = require('./services/storageService');
+const { initializeScheduler, getHealthStatus } = require('./services/refundScheduler');
+
 indexer.start();
+
+// Initialize refund scheduler (runs every hour by default)
+const refundScheduleInterval = parseInt(process.env.REFUND_SCHEDULE_INTERVAL) || 3600000;
+initializeScheduler(refundScheduleInterval);
 
 app.get('/api/status', async (req, res) => {
   const storageHealthy = await checkStorageHealth();
+  const refundHealth = await getHealthStatus();
   res.json({
     server: 'up',
     indexer: indexer.getStatus(),
-    storage: storageHealthy ? 'connected' : 'disconnected'
+    storage: storageHealthy ? 'connected' : 'disconnected',
+    refunds: refundHealth
   });
 });
 

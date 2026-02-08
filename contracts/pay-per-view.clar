@@ -11,10 +11,13 @@
 (define-constant ERR-INSUFFICIENT-FUNDS (err u402))
 (define-constant ERR-ALREADY-PURCHASED (err u403))
 (define-constant ERR-INVALID-FEE (err u405))
+(define-constant ERR-REFUND-FAILED (err u406))
 
 ;; Data vars
 (define-data-var platform-fee uint u250) ;; 2.5% in basis points
 (define-data-var platform-wallet principal contract-owner)
+(define-data-var refund-window uint u144) ;; blocks (~24 hours)
+(define-data-var current-refund-id uint u0)
 
 ;; Data maps
 ;; Mapping of content ID to its price and creator
@@ -22,6 +25,9 @@
 
 ;; Mapping of content ID and user principal to access status
 (define-map content-access { content-id: uint, user: principal } bool)
+
+;; Mapping of content ID and user principal to purchase block height
+(define-map purchase-blocks { content-id: uint, user: principal } uint)
 
 ;; Public functions
 
@@ -48,6 +54,7 @@
         (try! (stx-transfer? fee-amount tx-sender (var-get platform-wallet)))
         (try! (stx-transfer? creator-amount tx-sender creator))
         (map-set content-access { content-id: content-id, user: tx-sender } true)
+        (map-set purchase-blocks { content-id: content-id, user: tx-sender } block-height)
         (print { event: "purchase-content", content-id: content-id, user: tx-sender, price: price, creator: creator, platform-fee: fee-amount, creator-amount: creator-amount })
         (ok true)
     ))
@@ -78,6 +85,59 @@
     ))
 )
 
+;; Refund a user for content purchase
+(define-public (refund-user (content-id uint) (user principal))
+    (let (
+        (content (unwrap! (map-get? content-pricing content-id) ERR-NOT-FOUND))
+        (creator (get creator content))
+        (price (get price content))
+    )
+    (begin
+        (asserts! (is-eq tx-sender creator) ERR-NOT-AUTHORIZED)
+        (asserts! (is-eligible-for-refund content-id user) ERR-REFUND-FAILED)
+        (try! (stx-transfer? price tx-sender user))
+        (map-delete content-access { content-id: content-id, user: user })
+        (map-delete purchase-blocks { content-id: content-id, user: user })
+        (print { event: "refund-user", content-id: content-id, user: user, amount: price })
+        (ok true)
+    ))
+)
+
+;; Remove content and refund eligible users
+(define-public (remove-content-with-refunds (content-id uint) (users (list 200 principal)))
+    (let (
+        (content (unwrap! (map-get? content-pricing content-id) ERR-NOT-FOUND))
+        (creator (get creator content))
+    )
+    (begin
+        (asserts! (is-eq tx-sender creator) ERR-NOT-AUTHORIZED)
+        (var-set current-refund-id content-id)
+        (map remove-content-with-refunds-iter users)
+        (map-delete content-pricing content-id)
+        (print { event: "remove-content-with-refunds", content-id: content-id, users-count: (len users) })
+        (ok true)
+    ))
+)
+
+(define-private (remove-content-with-refunds-iter (user principal))
+    (let (
+        (content-id (var-get current-refund-id))
+        (content (unwrap! (map-get? content-pricing content-id) false))
+        (price (get price content))
+    )
+    (if (is-eligible-for-refund content-id user)
+        (match (stx-transfer? price tx-sender user)
+            success (begin
+                (map-delete content-access { content-id: content-id, user: user })
+                (map-delete purchase-blocks { content-id: content-id, user: user })
+                true
+            )
+            error false
+        )
+        false
+    ))
+)
+
 ;; Admin functions
 (define-public (set-platform-fee (new-fee uint))
     (begin
@@ -94,7 +154,21 @@
     )
 )
 
+(define-public (set-refund-window (new-window uint))
+    (begin
+        (asserts! (is-eq tx-sender contract-owner) ERR-NOT-AUTHORIZED)
+        (ok (var-set refund-window new-window))
+    )
+)
+
 ;; Read-only functions
+(define-read-only (is-eligible-for-refund (content-id uint) (user principal))
+    (match (map-get? purchase-blocks { content-id: content-id, user: user })
+        purchase-block (<= (- block-height purchase-block) (var-get refund-window))
+        false
+    )
+)
+
 (define-read-only (calculate-platform-fee (amount uint))
     (/ (* amount (var-get platform-fee)) u10000)
 )
@@ -121,4 +195,8 @@
 
 (define-read-only (get-platform-wallet)
     (var-get platform-wallet)
+)
+
+(define-read-only (get-refund-window)
+    (var-get refund-window)
 )
