@@ -17,6 +17,19 @@ const subscriptionSchema = new mongoose.Schema({
   renewalTxId: { type: String, default: null },
   cancelledAt: { type: Date, default: null },
   cancelReason: { type: String, default: null },
+  
+  // Pro-rata refund fields
+  refundEligible: { type: Boolean, default: true }, // Can user get pro-rata refund
+  refundWindowDays: { type: Number, default: 30 }, // Days within which refund is allowed
+  isRefundApplied: { type: Boolean, default: false }, // Whether refund has been applied
+  proRataRefundId: { type: mongoose.Schema.Types.ObjectId, ref: 'ProRataRefund', default: null },
+  cancellationDetails: {
+    reason: { type: String, default: null }, // Detailed cancellation reason
+    initiatedBy: { type: String, default: null }, // 'user' or 'admin'
+    requestedAt: { type: Date, default: null }, // When cancellation was requested
+    effectiveDate: { type: Date, default: null } // When cancellation takes effect
+  },
+  
   timestamp: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
