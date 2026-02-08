@@ -12,6 +12,8 @@ const purchaseSchema = new mongoose.Schema({
   refundAmount: { type: Number, default: null },
   refundTxId: { type: String, default: null },
   refundedAt: { type: Date, default: null },
+  royaltiesDistributed: { type: Boolean, default: false },
+  distributionCompletedAt: { type: Date, default: null },
   timestamp: { type: Date, default: Date.now }
 });
 
