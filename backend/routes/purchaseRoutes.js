@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Purchase = require('../models/Purchase');
 const { getPlatformFee, calculatePlatformFee } = require('../services/contractService');
+const { distributePurchaseRoyalties } = require('../services/royaltyService');
 
 // Get platform fee information
 router.get('/platform-fee', async (req, res) => {
@@ -70,6 +71,21 @@ router.post('/', async (req, res) => {
 
   try {
     const newPurchase = await purchase.save();
+
+    // Trigger royalty distribution asynchronously
+    try {
+      const distributions = await distributePurchaseRoyalties(newPurchase);
+      if (distributions.length > 0) {
+        newPurchase.royaltiesDistributed = true;
+        newPurchase.distributionCompletedAt = new Date();
+        await newPurchase.save();
+      }
+    } catch (royaltyErr) {
+      console.error('Failed to distribute royalties:', royaltyErr);
+      // Don't fail the purchase if royalty distribution fails
+      // It can be retried later
+    }
+
     res.status(201).json(newPurchase);
   } catch (err) {
     res.status(400).json({ message: err.message });
