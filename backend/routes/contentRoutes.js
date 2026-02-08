@@ -2,8 +2,11 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const Content = require('../models/Content');
+const Purchase = require('../models/Purchase');
 const { uploadToIPFS } = require('../services/storageService');
-const { addContentToContract } = require('../services/contractService');
+const { addContentToContract, removeContentFromContract } = require('../services/contractService');
+const { verifyCreatorOwnership, checkContentNotRemoved } = require('../middleware/creatorAuth');
+const { initiateRefund, getPendingRefundsForCreator } = require('../services/refundService');
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -130,6 +133,93 @@ router.post('/', async (req, res) => {
     res.status(201).json(newContent);
   } catch (err) {
     res.status(400).json({ message: err.message });
+  }
+});
+
+// Remove content and initiate refunds
+router.post('/:contentId/remove', verifyCreatorOwnership, async (req, res) => {
+  try {
+    const { contentId } = req.params;
+    const { reason = 'Creator requested removal' } = req.body;
+    const creatorKey = process.env.CREATOR_PRIVATE_KEY;
+
+    if (!creatorKey) {
+      return res.status(500).json({ message: 'Creator private key not configured' });
+    }
+
+    const content = req.content;
+
+    // 1. Remove from smart contract
+    let txId = null;
+    try {
+      const txResult = await removeContentFromContract(parseInt(contentId), creatorKey);
+      txId = txResult.txid;
+    } catch (contractErr) {
+      console.error('Contract removal error:', contractErr);
+      return res.status(500).json({ 
+        message: 'Failed to remove content from blockchain', 
+        error: contractErr.message 
+      });
+    }
+
+    // 2. Mark content as removed in database
+    content.isRemoved = true;
+    content.removedAt = new Date();
+    content.removalReason = reason;
+    await content.save();
+
+    // 3. Find all purchases for this content
+    const purchases = await Purchase.find({ contentId: parseInt(contentId) });
+
+    // 4. Initiate refunds for eligible purchases
+    const refundResults = [];
+    for (const purchase of purchases) {
+      const refundResult = await initiateRefund(purchase._id, 'content-removed');
+      refundResults.push({
+        purchaseId: purchase._id,
+        user: purchase.user,
+        success: refundResult.success,
+        message: refundResult.message
+      });
+    }
+
+    res.json({
+      message: 'Content removed successfully',
+      content: {
+        contentId,
+        isRemoved: true,
+        removedAt: content.removedAt,
+        removalReason: reason
+      },
+      transactionId: txId,
+      refunds: {
+        totalPurchases: purchases.length,
+        refundsInitiated: refundResults.filter(r => r.success).length,
+        results: refundResults
+      }
+    });
+  } catch (err) {
+    console.error('Content removal error:', err);
+    res.status(500).json({ message: 'Failed to remove content', error: err.message });
+  }
+});
+
+// Get refund status for a content
+router.get('/:contentId/refunds', verifyCreatorOwnership, async (req, res) => {
+  try {
+    const { contentId } = req.params;
+    const creatorAddress = req.creatorAddress;
+
+    const refunds = await getPendingRefundsForCreator(creatorAddress);
+    const contentRefunds = refunds.filter(r => r.contentId === parseInt(contentId));
+
+    res.json({
+      contentId,
+      totalRefunds: contentRefunds.length,
+      refunds: contentRefunds
+    });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch refund status', error: err.message });
   }
 });
 
