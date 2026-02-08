@@ -94,7 +94,7 @@
     (begin
         (asserts! (is-eq tx-sender creator) ERR-NOT-AUTHORIZED)
         (asserts! (is-eligible-for-refund content-id user) ERR-REFUND-FAILED)
-        (try! (as-contract (stx-transfer? price tx-sender user)))
+        (try! (stx-transfer? price tx-sender user))
         (map-delete content-access { content-id: content-id, user: user })
         (map-delete purchase-blocks { content-id: content-id, user: user })
         (print { event: "refund-user", content-id: content-id, user: user, amount: price })
