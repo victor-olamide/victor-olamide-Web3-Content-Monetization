@@ -46,6 +46,18 @@ router.post('/upload', (req, res) => {
   });
 });
 
+// Search endpoint for content discovery
+router.get('/search', async (req, res) => {
+  try {
+    const searchService = require('../services/searchService');
+    const results = await searchService.searchContent(req.query);
+    res.json(results);
+  } catch (err) {
+    console.error('Content search error:', err);
+    res.status(500).json({ message: 'Failed to perform search', error: err.message });
+  }
+});
+
 // Enhanced IPFS upload with progress tracking and retry logic
 router.post('/upload-ipfs', (req, res) => {
   upload.single('file')(req, res, async (err) => {
