@@ -197,6 +197,26 @@ Visit `http://localhost:3000` → Upload Content → Select file → Publish
 
 ---
 
+## 🔎 Search Indexes
+
+This project uses MongoDB text indexes to power content discovery and full-text search across `title` and `description` fields. After pulling the repo and starting your database, run the index sync script once to ensure indexes are created:
+
+```bash
+# from repository root
+node backend/scripts/create_text_index.js
+```
+
+The script will connect to `process.env.MONGODB_URI` (see `.env.example`) and create the necessary text indexes via Mongoose's `syncIndexes()`.
+
+If you prefer to create the index manually in MongoDB shell:
+
+```javascript
+use stacks_monetization
+db.contents.createIndex({ title: 'text', description: 'text' })
+```
+
+This enables the `/api/content/search` endpoint for fast queries.
+
 ## 📚 Documentation Guide
 
 | Document | Purpose | Audience | Read Time |
