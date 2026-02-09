@@ -23,4 +23,7 @@ const contentSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+// Text index for search on title and description
+contentSchema.index({ title: 'text', description: 'text' });
+
 module.exports = mongoose.model('Content', contentSchema);
