@@ -446,10 +446,16 @@ mongoose.connection.on('disconnected', () => {
 
 2. **Check connection string**
    ```bash
-   # Verify format in .env
-   MONGODB_URI=mongodb://localhost:27017/stacks_monetization
-   MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/database
+   # Verify format in .env file (NEVER commit credentials to version control)
+   # Use environment variables or a secrets manager for credentials
+   export MONGODB_URI="your_secure_mongodb_uri_here"
+   
+   # Example formats (use with proper credentials from secure source):
+   # Local: mongodb://localhost:27017/stacks_monetization
+   # Atlas: mongodb+srv://username:password@cluster.mongodb.net/database
    ```
+   
+   **SECURITY WARNING:** Never hardcode credentials in files or documentation!
 
 3. **Verify network access**
    - Check firewall rules
