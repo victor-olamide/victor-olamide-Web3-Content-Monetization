@@ -35,6 +35,7 @@ const collaboratorRoutes = require('./routes/collaboratorRoutes');
 const royaltyRoutes = require('./routes/royaltyRoutes');
 const licensingRoutes = require('./routes/licensingRoutes');
 const batchOperationRoutes = require('./routes/batchOperationRoutes');
+const walletRoutes = require('./routes/walletRoutes');
 
 app.use('/api/content', contentRoutes);
 app.use('/api/purchases', purchaseRoutes);
@@ -51,6 +52,7 @@ app.use('/api/collaborators', collaboratorRoutes);
 app.use('/api/royalties', royaltyRoutes);
 app.use('/api/licenses', licensingRoutes);
 app.use('/api/batches', batchOperationRoutes);
+app.use('/api/wallet', walletRoutes);
 
 // Start Indexer
 const indexer = require('./services/indexer');
