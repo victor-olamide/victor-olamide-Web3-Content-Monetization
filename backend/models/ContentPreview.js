@@ -44,6 +44,15 @@ const contentPreviewSchema = new mongoose.Schema({
     default: 'purchase_required' 
   },
   
+  // Preview analytics
+  previewAnalytics: {
+    dailyViews: { type: Map, of: Number, default: new Map() },
+    dailyDownloads: { type: Map, of: Number, default: new Map() },
+    lastAnalyticsUpdate: { type: Date },
+    conversionRate: { type: Number, default: 0 },
+    averageWatchTime: { type: Number, default: 0 } // in seconds for videos
+  },
+  
   // Timestamps
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
