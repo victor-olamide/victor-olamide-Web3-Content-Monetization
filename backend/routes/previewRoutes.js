@@ -345,4 +345,73 @@ router.delete('/:contentId', verifyCreatorOwnership, async (req, res) => {
   }
 });
 
+/**
+ * Get preview analytics
+ * GET /api/preview/:contentId/analytics
+ */
+router.get('/:contentId/analytics', verifyCreatorOwnership, async (req, res) => {
+  try {
+    const { contentId } = req.params;
+    
+    // Verify content belongs to creator
+    const content = await Content.findOne({ contentId: parseInt(contentId) });
+    if (!content || content.creator !== req.user.address) {
+      return res.status(403).json({ success: false, error: 'Unauthorized' });
+    }
+
+    const analytics = await previewService.getPreviewAnalytics(parseInt(contentId));
+    res.json({ success: true, data: analytics });
+  } catch (error) {
+    console.error('Error fetching preview analytics:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Get previews with analytics for multiple items
+ * POST /api/preview/analytics/batch
+ */
+router.post('/analytics/batch', verifyCreatorOwnership, async (req, res) => {
+  try {
+    const { contentIds } = req.body;
+    if (!Array.isArray(contentIds)) {
+      return res.status(400).json({ success: false, error: 'contentIds must be an array' });
+    }
+
+    // Verify all content items belong to creator
+    const contents = await Content.find({ contentId: { $in: contentIds } });
+    for (const content of contents) {
+      if (content.creator !== req.user.address) {
+        return res.status(403).json({ success: false, error: 'Unauthorized - not all content belongs to you' });
+      }
+    }
+
+    const analytics = await previewService.getPreviewsWithAnalytics(contentIds);
+    res.json({ success: true, data: analytics });
+  } catch (error) {
+    console.error('Error fetching batch analytics:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Track preview engagement event
+ * POST /api/preview/:contentId/track/:eventType
+ */
+router.post('/:contentId/track/:eventType', async (req, res) => {
+  try {
+    const { contentId, eventType } = req.params;
+    
+    if (!['view', 'download'].includes(eventType)) {
+      return res.status(400).json({ success: false, error: 'Invalid event type' });
+    }
+
+    await previewService.trackDailyAnalytics(parseInt(contentId), eventType);
+    res.json({ success: true, message: `Event tracked: ${eventType}` });
+  } catch (error) {
+    console.error('Error tracking event:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 module.exports = router;
