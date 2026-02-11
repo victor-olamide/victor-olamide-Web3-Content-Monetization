@@ -9,6 +9,52 @@ const Subscription = require('../models/Subscription');
  */
 
 class PreviewService {
+  constructor() {
+    // In-memory cache for preview data
+    this.previewCache = new Map();
+    this.cacheExpiry = 5 * 60 * 1000; // 5 minutes cache expiry
+  }
+
+  /**
+   * Get preview from cache or database
+   * @param {Number} contentId - Content ID
+   * @returns {Promise<Object>} Cached or fetched preview
+   */
+  async getPreviewFromCache(contentId) {
+    const cacheKey = `preview_${contentId}`;
+    const cached = this.previewCache.get(cacheKey);
+    
+    if (cached && cached.expiry > Date.now()) {
+      return cached.data;
+    }
+    
+    // Cache miss or expired
+    this.previewCache.delete(cacheKey);
+    return null;
+  }
+
+  /**
+   * Set preview in cache
+   * @param {Number} contentId - Content ID
+   * @param {Object} data - Preview data
+   */
+  setPreviewInCache(contentId, data) {
+    const cacheKey = `preview_${contentId}`;
+    this.previewCache.set(cacheKey, {
+      data,
+      expiry: Date.now() + this.cacheExpiry
+    });
+  }
+
+  /**
+   * Invalidate preview cache
+   * @param {Number} contentId - Content ID
+   */
+  invalidatePreviewCache(contentId) {
+    const cacheKey = `preview_${contentId}`;
+    this.previewCache.delete(cacheKey);
+  }
+
   /**
    * Create or update a preview for content
    * @param {Number} contentId - Content ID
@@ -38,6 +84,9 @@ class PreviewService {
         { upsert: true, new: true }
       );
 
+      // Invalidate cache when preview is updated
+      this.invalidatePreviewCache(contentId);
+
       return previewDoc;
     } catch (error) {
       console.error('Error creating/updating preview:', error);
@@ -52,6 +101,12 @@ class PreviewService {
    */
   async getPreview(contentId) {
     try {
+      // Check cache first
+      const cachedPreview = await this.getPreviewFromCache(contentId);
+      if (cachedPreview) {
+        return cachedPreview;
+      }
+
       const preview = await ContentPreview.findOne({ contentId, previewEnabled: true });
       
       if (!preview) {
@@ -63,7 +118,7 @@ class PreviewService {
       await preview.save();
 
       // Return preview data without sensitive information
-      return {
+      const previewData = {
         contentId: preview.contentId,
         title: preview.title,
         description: preview.description,
@@ -80,6 +135,11 @@ class PreviewService {
         contentAccessType: preview.contentAccessType,
         totalViews: preview.totalViews
       };
+
+      // Cache the preview
+      this.setPreviewInCache(contentId, previewData);
+
+      return previewData;
     } catch (error) {
       console.error('Error fetching preview:', error);
       throw error;
