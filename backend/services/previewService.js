@@ -401,6 +401,96 @@ class PreviewService {
       throw error;
     }
   }
+
+  /**
+   * Track daily analytics for preview
+   * @param {Number} contentId - Content ID
+   * @param {String} eventType - Type of event ('view' or 'download')
+   * @returns {Promise<void>}
+   */
+  async trackDailyAnalytics(contentId, eventType = 'view') {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const preview = await ContentPreview.findOne({ contentId });
+      
+      if (!preview) {
+        throw new Error('Preview not found');
+      }
+
+      if (!preview.previewAnalytics) {
+        preview.previewAnalytics = {
+          dailyViews: new Map(),
+          dailyDownloads: new Map()
+        };
+      }
+
+      if (eventType === 'view') {
+        const currentViews = preview.previewAnalytics.dailyViews.get(today) || 0;
+        preview.previewAnalytics.dailyViews.set(today, currentViews + 1);
+      } else if (eventType === 'download') {
+        const currentDownloads = preview.previewAnalytics.dailyDownloads.get(today) || 0;
+        preview.previewAnalytics.dailyDownloads.set(today, currentDownloads + 1);
+      }
+
+      preview.previewAnalytics.lastAnalyticsUpdate = new Date();
+      await preview.save();
+    } catch (error) {
+      console.error('Error tracking daily analytics:', error);
+      // Don't throw - analytics tracking should not break preview functionality
+    }
+  }
+
+  /**
+   * Get preview analytics
+   * @param {Number} contentId - Content ID
+   * @returns {Promise<Object>} Analytics data
+   */
+  async getPreviewAnalytics(contentId) {
+    try {
+      const preview = await ContentPreview.findOne({ contentId });
+      
+      if (!preview) {
+        throw new Error('Preview not found');
+      }
+
+      return {
+        contentId: preview.contentId,
+        totalViews: preview.totalViews,
+        totalDownloads: preview.totalPreviewDownloads,
+        analytics: preview.previewAnalytics || {},
+        lastUpdated: preview.updatedAt
+      };
+    } catch (error) {
+      console.error('Error getting preview analytics:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Bulk get previews with analytics
+   * @param {Array<Number>} contentIds - Array of content IDs
+   * @returns {Promise<Array>} Previews with analytics
+   */
+  async getPreviewsWithAnalytics(contentIds) {
+    try {
+      const previews = await ContentPreview.find({
+        contentId: { $in: contentIds },
+        previewEnabled: true
+      });
+
+      return previews.map(preview => ({
+        contentId: preview.contentId,
+        title: preview.title,
+        totalViews: preview.totalViews,
+        totalDownloads: preview.totalPreviewDownloads,
+        conversionRate: preview.previewAnalytics?.conversionRate || 0,
+        averageWatchTime: preview.previewAnalytics?.averageWatchTime || 0
+      }));
+    } catch (error) {
+      console.error('Error getting previews with analytics:', error);
+      throw error;
+    }
+  }
 }
 
 module.exports = new PreviewService();
