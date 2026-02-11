@@ -20,10 +20,18 @@ const contentSchema = new mongoose.Schema({
   removalReason: { type: String, default: null },
   refundable: { type: Boolean, default: true },
   refundWindowDays: { type: Number, default: 30 },
+  
+  // Preview content integration
+  hasPreview: { type: Boolean, default: false },
+  previewEnabled: { type: Boolean, default: true },
+  previewId: { type: mongoose.Schema.Types.ObjectId, ref: 'ContentPreview' },
+  
   createdAt: { type: Date, default: Date.now }
 });
 
 // Text index for search on title and description
 contentSchema.index({ title: 'text', description: 'text' });
+contentSchema.index({ hasPreview: 1 });
+contentSchema.index({ previewEnabled: 1 });
 
 module.exports = mongoose.model('Content', contentSchema);
