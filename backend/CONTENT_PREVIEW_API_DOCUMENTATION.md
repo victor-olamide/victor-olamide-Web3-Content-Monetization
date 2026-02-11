@@ -479,6 +479,19 @@ await fetch('/api/preview/123/thumbnail', {
 
 ## Changelog
 
+### Version 2.0.0 (2026-02-11)
+- Added comprehensive analytics endpoints for creators
+- Implemented preview caching mechanism with 5-minute TTL
+- Added validation middleware for all endpoints
+- Created enhanced frontend components (PreviewPlayer, PreviewCard)
+- Added engagement tracking hooks (usePreviewDiscovery, usePreviewEngagement)
+- Implemented access control middleware with rate limiting
+- Added error handling and recovery service with retry logic
+- Support for preview quality configuration (low/medium/high/ultra)
+- Daily analytics tracking for views and downloads
+- Batch preview and analytics endpoints
+- Event tracking for user engagement
+
 ### Version 1.0.0 (2024-01-15)
 - Initial release with full preview functionality
 - Support for thumbnails, trailers, and metadata
