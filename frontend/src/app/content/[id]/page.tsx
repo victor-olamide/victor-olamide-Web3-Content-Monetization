@@ -109,9 +109,14 @@ export default function ContentView({ params }: { params: { id: string } }) {
         <div className="p-8 max-w-4xl mx-auto text-center">
           <h1 className="text-3xl font-bold mb-4">{error || 'Content Not Found'}</h1>
           <p className="text-gray-600 mb-8">The content you are looking for does not exist or has been removed.</p>
-          <Link href="/dashboard" className="text-orange-600 font-bold hover:underline">
-            Return to Dashboard
-          </Link>
+         <Link   
+           href="/dashboard"   
+           className="flex items-center gap-1 text-gray-500 hover:text-gray-700 mb-6 transition text-sm sm:text-base"  
+            >  
+           <ChevronLeft size={20} />  
+            <span className="hidden sm:inline">Back to Dashboard</span>  
+            <span className="sm:hidden">Back</span>  
+         </Link> 
         </div>
       </DashboardShell>
     );
@@ -156,22 +161,22 @@ export default function ContentView({ params }: { params: { id: string } }) {
                 <p className="text-gray-600 mb-8">
                   This content requires a one-time payment of {content?.price || 'some'} STX or a subscription.
                 </p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <button 
-                    onClick={handlePurchase}
-                    disabled={purchasing}
-                    className={`bg-orange-500 text-white font-bold py-3 px-8 rounded-lg ${purchasing ? 'opacity-50 cursor-not-allowed' : 'hover:bg-orange-600'} transition flex items-center gap-2`}
-                  >
-                    {purchasing ? <Loader2 className="animate-spin" size={20} /> : null}
-                    {purchasing ? 'Processing...' : 'Purchase Access'}
-                  </button>
-                  <button 
-                    onClick={() => alert('Initiating subscription...')}
-                    disabled={purchasing}
-                    className="bg-gray-800 text-white font-bold py-3 px-8 rounded-lg hover:bg-gray-900 transition disabled:opacity-50"
-                  >
-                    Subscribe to Creator
-                  </button>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">  
+                    <button   
+                     onClick={handlePurchase}  
+                     disabled={purchasing}  
+                      className={`bg-orange-500 text-white font-bold py-3 px-6 sm:px-8 rounded-lg min-h-[44px] ${purchasing ? 'opacity-50 cursor-not-allowed' : 'hover:bg-orange-600'} transition flex items-center justify-center gap-2 text-sm sm:text-base`}  
+                    >  
+                   {purchasing ? <Loader2 className="animate-spin" size={20} /> : null}  
+                   {purchasing ? 'Processing...' : 'Purchase Access'}  
+                  </button>  
+                  <button   
+                       onClick={() => alert('Initiating subscription...')}  
+                       disabled={purchasing}  
+                       className="bg-gray-800 text-white font-bold py-3 px-6 sm:px-8 rounded-lg hover:bg-gray-900 transition disabled:opacity-50 min-h-[44px] text-sm sm:text-base"  
+                    >  
+                 Subscribe to Creator  
+                </button>  
                 </div>
 
                 {purchaseError && (
