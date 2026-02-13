@@ -68,7 +68,7 @@ nano .env
 ### Verify Pre-commit Hook
 ```bash
 # Try to commit a file with a fake secret (should be blocked)
-echo "MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/db" > test.js
+echo "MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/<database>" > test.js
 git add test.js
 git commit -m "test"  # Should fail with security error
 rm test.js
@@ -108,7 +108,7 @@ Automated security checks that run before each commit:
 - Allows documentation review with warnings
 
 **Patterns blocked:**
-- `mongodb+srv://user:pass@...`
+- `mongodb+srv://.*:.*@` (detects any embedded credentials)
 - `AKIA...` (AWS Access Keys)
 - `api_key`, `secret_key`, `access_token`
 - `password=...`, `password: ...`
