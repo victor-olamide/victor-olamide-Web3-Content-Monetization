@@ -450,9 +450,9 @@ mongoose.connection.on('disconnected', () => {
    # Use environment variables or a secrets manager for credentials
    export MONGODB_URI="your_secure_mongodb_uri_here"
    
-   # Example formats (use with proper credentials from secure source):
-   # Local: mongodb://localhost:27017/stacks_monetization
-   # Atlas: mongodb+srv://username:password@cluster.mongodb.net/database
+  # Example formats (use with proper credentials from secure source):
+  # Local: mongodb://localhost:27017/stacks_monetization
+  # Atlas: mongodb+srv://<username>:<password>@<cluster>.mongodb.net/<database>
    ```
    
    **SECURITY WARNING:** Never hardcode credentials in files or documentation!
