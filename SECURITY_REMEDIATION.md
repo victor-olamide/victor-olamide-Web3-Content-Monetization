@@ -8,7 +8,7 @@
 
 ### Leaked Secret
 - **Type:** MongoDB Atlas Database URI with credentials
-- **Format:** `mongodb+srv://user:pass@cluster.mongodb.net/database`
+-- **Format:** `mongodb+srv://<username>:<password>@<cluster>.mongodb.net/<database>`
 - **Location:** [WALLET_CONNECTION_TROUBLESHOOTING.md](WALLET_CONNECTION_TROUBLESHOOTING.md) (Line 451)
 - **Severity:** CRITICAL
 - **Impact:** Unauthorized database access, potential data breach
@@ -110,7 +110,9 @@ if (!mongoUri) {
 }
 
 // ❌ WRONG: Hardcoded credentials
-const mongoUri = 'mongodb+srv://user:pass@cluster.mongodb.net/database';
+// Never store real credentials in code or docs. Use placeholders or environment variables.
+// Example (redacted):
+// const mongoUri = 'mongodb+srv://<username>:<password>@<cluster>.mongodb.net/<database>';
 ```
 
 ## Security Scanning Recommendations
