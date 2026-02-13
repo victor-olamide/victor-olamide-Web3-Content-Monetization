@@ -37,6 +37,8 @@ const licensingRoutes = require('./routes/licensingRoutes');
 const batchOperationRoutes = require('./routes/batchOperationRoutes');
 const walletRoutes = require('./routes/walletRoutes');
 const previewRoutes = require('./routes/previewRoutes');
+const webhookRoutes = require('./routes/webhookRoutes');
+const webhookAdminRoutes = require('./routes/webhookAdminRoutes');
 
 app.use('/api/content', contentRoutes);
 app.use('/api/purchases', purchaseRoutes);
@@ -55,6 +57,8 @@ app.use('/api/licenses', licensingRoutes);
 app.use('/api/batches', batchOperationRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/preview', previewRoutes);
+app.use('/api/webhooks', webhookRoutes);
+app.use('/api/webhooks/admin', webhookAdminRoutes);
 
 // Start Indexer
 const indexer = require('./services/indexer');
@@ -103,6 +107,10 @@ app.get('/', (req, res) => {
   res.send('Stacks Content Monetization API');
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+
+module.exports = app;
