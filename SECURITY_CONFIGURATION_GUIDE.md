@@ -69,7 +69,7 @@ cat .gitignore | grep "^\.env$"
 # Create secret
 aws secretsmanager create-secret \
   --name stacks-monetization/mongodb \
-  --secret-string '{"MONGODB_URI":"mongodb+srv://user:pass@cluster.mongodb.net/db"}'
+  --secret-string '{"MONGODB_URI":"mongodb+srv://<username>:<password>@<cluster>.mongodb.net/<database>"}'
 
 # Retrieve in application
 const AWS = require('aws-sdk');
@@ -99,7 +99,7 @@ getSecrets();
 az keyvault secret set \
   --vault-name "stacks-vault" \
   --name "mongodb-uri" \
-  --value "mongodb+srv://user:pass@cluster.mongodb.net/db"
+  --value "mongodb+srv://<username>:<password>@<cluster>.mongodb.net/<database>"
 
 # Retrieve in application
 const { DefaultAzureCredential } = require("@azure/identity");
@@ -129,7 +129,7 @@ getSecrets();
 ```bash
 # Write secret
 vault kv put secret/stacks-monetization/mongodb \
-  MONGODB_URI="mongodb+srv://user:pass@cluster.mongodb.net/db"
+  MONGODB_URI="mongodb+srv://<username>:<password>@<cluster>.mongodb.net/<database>"
 
 # Retrieve in application
 const vault = require('node-vault')({
@@ -196,8 +196,8 @@ getSecrets();
 
 ### ❌ WRONG - Hardcoded Credentials
 ```javascript
-const mongoUri = 'mongodb+srv://user:password@cluster.mongodb.net/db';
-mongoose.connect(mongoUri);
+// const mongoUri = 'mongodb+srv://<username>:<password>@<cluster>.mongodb.net/<database>'; // ❌ WRONG
+// mongoose.connect(mongoUri);
 ```
 
 ### ✅ CORRECT - Environment Variable
@@ -315,8 +315,8 @@ git log --oneline -n 20
 # 3. Remove from git history (use BFG or git-filter-branch)
 # Install BFG: brew install bfg
 
-# Create file with secrets to remove
-echo "mongodb+srv://user:pass@cluster.mongodb.net/db" > /tmp/secrets.txt
+# Create file with secrets to remove (use redacted placeholder)
+echo "mongodb+srv://<username>:<password>@<cluster>.mongodb.net/<database>" > /tmp/secrets.txt
 
 # Remove from history
 bfg --replace-text /tmp/secrets.txt
