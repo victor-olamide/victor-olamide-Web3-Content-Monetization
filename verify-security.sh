@@ -18,12 +18,13 @@ NC='\033[0m' # No Color
 
 # Check 1: Leaked credentials removed
 echo "Checking: Leaked credentials removed from documentation..."
-if grep -r "mongodb+srv://user:pass@cluster.mongodb.net/database" . --include="*.md" --include="*.js" --include="*.json" > /dev/null 2>&1; then
-    echo -e "${RED}❌ FAILED${NC} - Leaked credentials still found"
-    grep -r "mongodb+srv://user:pass@cluster.mongodb.net/database" . --include="*.md"
+# Look for MongoDB Atlas connection strings containing embedded credentials (user:pass@)
+if grep -Er "mongodb\+srv://[^[:space:]]+:[^[:space:]]+@[^[:space:]]+" . --include="*.md" --include="*.js" --include="*.json" > /dev/null 2>&1; then
+    echo -e "${RED}❌ FAILED${NC} - Potential embedded MongoDB credentials still found"
+    grep -Er "mongodb\+srv://[^[:space:]]+:[^[:space:]]+@[^[:space:]]+" . --include="*.md"
     FAILED=$((FAILED + 1))
 else
-    echo -e "${GREEN}✅ PASSED${NC} - No leaked credentials found"
+    echo -e "${GREEN}✅ PASSED${NC} - No embedded MongoDB credentials found"
     PASSED=$((PASSED + 1))
 fi
 echo ""
