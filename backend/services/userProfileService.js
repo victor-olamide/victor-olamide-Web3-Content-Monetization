@@ -60,7 +60,8 @@ class UserProfileService {
         'bio',
         'preferences',
         'settings',
-        'socialLinks'
+        'socialLinks',
+        'tier'
       ];
 
       const updateData = {};
@@ -151,6 +152,33 @@ class UserProfileService {
       return profile;
     } catch (error) {
       console.error('Error updating social links:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update user tier
+   */
+  async updateTier(address, tier) {
+    try {
+      const allowedTiers = ['free', 'basic', 'premium', 'enterprise', 'admin'];
+      if (!allowedTiers.includes(tier)) {
+        throw new Error('Invalid tier');
+      }
+
+      const profile = await UserProfile.findOneAndUpdate(
+        { address: address.toLowerCase() },
+        { tier },
+        { new: true }
+      );
+
+      if (!profile) {
+        throw new Error('Profile not found');
+      }
+
+      return profile;
+    } catch (error) {
+      console.error('Error updating tier:', error);
       throw error;
     }
   }
