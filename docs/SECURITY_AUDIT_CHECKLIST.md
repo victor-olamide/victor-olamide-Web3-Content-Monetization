@@ -304,3 +304,40 @@ This checklist covers:
 - [ ] Custom validation functions audited
 - [ ] Validation error handling secure
 - [ ] Validation bypass prevention
+
+## Encryption
+
+### Data at Rest
+- [ ] Database encryption implemented
+- [ ] File system encryption configured
+- [ ] Backup encryption enabled
+- [ ] Key management secure
+- [ ] Encryption algorithms current
+
+### Data in Transit
+- [ ] HTTPS/TLS enforced everywhere
+- [ ] TLS 1.2+ only (no deprecated versions)
+- [ ] Certificate validation enabled
+- [ ] Perfect forward secrecy configured
+- [ ] HSTS headers set
+
+### Key Management
+- [ ] Encryption keys securely stored
+- [ ] Key rotation procedures defined
+- [ ] Key backup and recovery secure
+- [ ] Hardware security modules (HSM) used if applicable
+- [ ] Key access logging enabled
+
+### Application-Level Encryption
+- [ ] Sensitive data encrypted before storage
+- [ ] Password hashing with strong algorithms
+- [ ] API key encryption
+- [ ] Session data encryption
+- [ ] Configuration secrets encrypted
+
+### Cryptographic Practices
+- [ ] Strong random number generation
+- [ ] Cryptographic algorithm selection appropriate
+- [ ] Digital signatures verified
+- [ ] Hash functions secure (no MD5/SHA1)
+- [ ] Salt usage for password hashing
