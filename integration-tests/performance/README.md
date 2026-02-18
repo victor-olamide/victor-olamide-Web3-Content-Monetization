@@ -28,6 +28,12 @@ The performance testing suite provides:
 - **Live Streaming**: Real-time streaming simulation
 - **Analytics**: Performance metrics collection and analysis
 
+### Locust Load Test (`content-streaming-locust.py`)
+- **Python-based Load Testing**: Using Locust for flexible content streaming tests
+- **Multiple Tasks**: Stream content and fetch metadata with different weights
+- **Error Handling**: Built-in response validation and failure detection
+- **Scalable**: Easy to configure user count and test duration
+
 ## Quick Start
 
 ### Prerequisites
