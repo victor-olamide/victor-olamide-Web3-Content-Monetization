@@ -1,0 +1,31 @@
+{
+  "name": "clarity-contract-tests",
+  "version": "1.0.0",
+  "description": "Test suite for Clarity smart contract upgrades",
+  "main": "upgrade.test.js",
+  "scripts": {
+    "test": "mocha contracts/test/upgrade.test.js --timeout 10000",
+    "test:upgrade": "npm test -- --grep 'Contract Upgrade'",
+    "test:migration": "npm test -- --grep 'Data Migration'",
+    "test:security": "npm test -- --grep 'Upgrade Security'",
+    "test:compatibility": "npm test -- --grep 'Backward Compatibility'"
+  },
+  "dependencies": {
+    "chai": "^4.3.7",
+    "mocha": "^10.2.0",
+    "@blockstack/clarity": "^1.0.0"
+  },
+  "devDependencies": {
+    "clarity-cli": "^1.0.0"
+  },
+  "keywords": [
+    "clarity",
+    "stacks",
+    "blockchain",
+    "smart-contracts",
+    "testing",
+    "upgrades"
+  ],
+  "author": "Web3 Platform Team",
+  "license": "MIT"
+}
