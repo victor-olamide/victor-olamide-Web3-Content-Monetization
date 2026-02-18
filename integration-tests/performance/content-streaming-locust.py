@@ -8,7 +8,10 @@ class ContentStreamingUser(HttpUser):
 
     def on_start(self):
         # Setup authentication if needed
-        pass
+        self.client.headers = {
+            'Authorization': 'Bearer test-token',  # Replace with actual auth
+            'Content-Type': 'application/json'
+        }
 
     @task(3)
     def stream_content(self):
