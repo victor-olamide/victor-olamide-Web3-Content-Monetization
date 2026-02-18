@@ -378,3 +378,40 @@ This checklist covers:
 - [ ] Audit log review procedures
 - [ ] Regulatory compliance logging
 - [ ] Log correlation and analysis
+
+## Dependency Management
+
+### Vulnerability Scanning
+- [ ] Automated dependency scanning implemented
+- [ ] Security advisories monitored
+- [ ] Vulnerable dependencies identified and tracked
+- [ ] Critical vulnerabilities prioritized
+- [ ] Dependency updates scheduled
+
+### Dependency Management
+- [ ] Dependency lists maintained and reviewed
+- [ ] License compliance checked
+- [ ] Unused dependencies removed
+- [ ] Dependency versions pinned
+- [ ] Private dependencies secure
+
+### Supply Chain Security
+- [ ] Third-party libraries vetted
+- [ ] Open source dependencies reviewed
+- [ ] Software Bill of Materials (SBOM) maintained
+- [ ] Dependency signing verified
+- [ ] Build pipeline security
+
+### Update Procedures
+- [ ] Regular dependency updates
+- [ ] Security patches applied promptly
+- [ ] Breaking changes tested
+- [ ] Rollback procedures for failed updates
+- [ ] Update testing in staging environment
+
+### Custom Dependencies
+- [ ] Internal libraries security reviewed
+- [ ] Code signing for internal packages
+- [ ] Secure package repositories
+- [ ] Dependency injection security
+- [ ] Shared library security
