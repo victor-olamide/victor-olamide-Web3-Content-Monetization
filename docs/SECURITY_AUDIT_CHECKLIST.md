@@ -117,3 +117,41 @@ This checklist covers:
 - [ ] Secure cookie attributes (HttpOnly, Secure, SameSite)
 - [ ] Clickjacking protection (X-Frame-Options)
 - [ ] MIME type sniffing protection
+
+## Blockchain Security
+
+### Smart Contract Security
+- [ ] Code audited by external security firm
+- [ ] Reentrancy vulnerabilities checked
+- [ ] Integer overflow/underflow protection
+- [ ] Access control mechanisms verified
+- [ ] Emergency stop/pause functionality implemented
+- [ ] Upgrade mechanisms secure and tested
+
+### Wallet Integration
+- [ ] Secure wallet connection handling
+- [ ] Transaction signing security
+- [ ] Private key protection (never stored)
+- [ ] User consent for transactions
+- [ ] Gas limit validation
+
+### Blockchain Interactions
+- [ ] Input validation for blockchain operations
+- [ ] Transaction replay protection
+- [ ] Front-running protection mechanisms
+- [ ] Oracle security (if used)
+- [ ] Bridge security (cross-chain operations)
+
+### Token Security
+- [ ] ERC-20/ERC-721 compliance verified
+- [ ] Total supply limits enforced
+- [ ] Minting/burning controls secure
+- [ ] Transfer restrictions properly implemented
+- [ ] Royalty distribution mechanisms audited
+
+### Decentralized Storage
+- [ ] IPFS/Filecoin security configurations
+- [ ] Content integrity verification
+- [ ] Access control for stored content
+- [ ] Encryption for sensitive data
+- [ ] Backup and redundancy measures
