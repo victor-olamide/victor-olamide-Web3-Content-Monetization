@@ -16,9 +16,13 @@ class ContentStreamingUser(HttpUser):
     @task(3)
     def stream_content(self):
         content_id = random.randint(1, 100)  # Assume content IDs from 1 to 100
-        self.client.get(f"/api/delivery/{content_id}/stream")
+        with self.client.get(f"/api/delivery/{content_id}/stream", catch_response=True) as response:
+            if response.status_code != 200:
+                response.failure(f"Failed to stream content {content_id}: {response.status_code}")
 
     @task(1)
     def get_content_metadata(self):
         content_id = random.randint(1, 100)
-        self.client.get(f"/api/delivery/{content_id}/metadata")
+        with self.client.get(f"/api/delivery/{content_id}/metadata", catch_response=True) as response:
+            if response.status_code != 200:
+                response.failure(f"Failed to get metadata for {content_id}: {response.status_code}")
