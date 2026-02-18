@@ -155,3 +155,40 @@ This checklist covers:
 - [ ] Access control for stored content
 - [ ] Encryption for sensitive data
 - [ ] Backup and redundancy measures
+
+## Database Security
+
+### Access Control
+- [ ] Database credentials securely stored (not in code)
+- [ ] Principle of least privilege for database users
+- [ ] Network access restricted to authorized hosts
+- [ ] Database ports not exposed publicly
+- [ ] Connection pooling configured securely
+
+### Data Protection
+- [ ] Sensitive data encrypted at rest
+- [ ] Data in transit encrypted (TLS)
+- [ ] Personal data minimization
+- [ ] Data retention policies defined
+- [ ] Secure deletion procedures
+
+### Query Security
+- [ ] SQL injection prevention (prepared statements)
+- [ ] Query parameterization enforced
+- [ ] ORM security configurations
+- [ ] Database query logging enabled
+- [ ] Slow query monitoring
+
+### Backup & Recovery
+- [ ] Encrypted database backups
+- [ ] Backup integrity verification
+- [ ] Secure backup storage
+- [ ] Backup access controls
+- [ ] Disaster recovery procedures tested
+
+### Monitoring & Auditing
+- [ ] Database activity monitoring
+- [ ] Failed login attempt logging
+- [ ] Schema change auditing
+- [ ] Performance monitoring for anomalies
+- [ ] Automated alerting for security events
