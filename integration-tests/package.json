@@ -1,19 +1,89 @@
 {
-  "name": "integration-tests",
+  "name": "web3-content-monitization-integration-tests",
   "version": "1.0.0",
-  "description": "End-to-end integration tests for Stacks Content Monetization",
+  "description": "Comprehensive integration tests for Web3 Content Monetization platform",
+  "main": "index.js",
   "scripts": {
-    "test": "jest --runInBand",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test": "npm run test:api && npm run test:e2e",
+    "test:api": "jest --config jest.api.config.js",
+    "test:e2e": "playwright test",
+    "test:ci": "npm run test:api && npm run test:e2e:ci",
+    "test:e2e:ci": "playwright test --headed=false",
+    "test:smoke": "jest --config jest.smoke.config.js",
+    "test:performance": "artillery run performance-tests.yml",
+    "test:security": "jest --config jest.security.config.js",
+    "install:browsers": "playwright install",
+    "report": "allure generate allure-results --clean && allure open",
+    "clean": "rimraf test-results allure-results"
   },
   "dependencies": {
+    "@playwright/test": "^1.40.0",
     "@stacks/transactions": "^6.15.0",
     "@stacks/network": "^6.15.0",
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3",
     "axios": "^1.6.2",
+    "mongodb-memory-server": "^9.0.0",
+    "faker": "^6.6.6",
+    "uuid": "^9.0.1",
+    "jsonwebtoken": "^9.0.2",
+    "bcryptjs": "^2.4.3",
     "dotenv": "^16.3.1"
   },
   "devDependencies": {
-    "jest": "^29.7.0"
+    "@types/jest": "^29.5.8",
+    "@types/supertest": "^2.0.16",
+    "@types/uuid": "^9.0.7",
+    "allure-playwright": "^2.9.2",
+    "artillery": "^2.0.7",
+    "rimraf": "^5.0.5",
+    "jest-html-reporter": "^3.10.2",
+    "jest-junit": "^16.0.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "setupFilesAfterEnv": ["<rootDir>/utils/test-setup.js"],
+    "testMatch": [
+      "**/__tests__/**/*.test.js",
+      "**/?(*.)+(spec|test).js"
+    ],
+    "collectCoverageFrom": [
+      "**/*.js",
+      "!**/node_modules/**",
+      "!**/test-results/**",
+      "!**/allure-results/**"
+    ],
+    "coverageReporters": ["text", "lcov", "html"],
+    "coverageDirectory": "coverage"
+  },
+  "playwright": {
+    "testDir": "./e2e",
+    "testMatch": "**/*.spec.js",
+    "use": {
+      "baseURL": "http://localhost:3000",
+      "headless": true,
+      "screenshot": "only-on-failure",
+      "video": "retain-on-failure",
+      "trace": "retain-on-failure"
+    },
+    "projects": [
+      {
+        "name": "chromium",
+        "use": { "browserName": "chromium" }
+      },
+      {
+        "name": "firefox",
+        "use": { "browserName": "firefox" }
+      },
+      {
+        "name": "webkit",
+        "use": { "browserName": "webkit" }
+      }
+    ],
+    "reporter": [
+      ["list"],
+      ["html", { "open": "never" }],
+      ["allure-playwright"]
+    ]
   }
 }
