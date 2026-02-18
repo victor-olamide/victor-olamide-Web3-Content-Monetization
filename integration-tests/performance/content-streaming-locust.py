@@ -4,6 +4,7 @@ import random
 
 class ContentStreamingUser(HttpUser):
     wait_time = between(1, 3)
+    host = "http://localhost:3000"  # Adjust port as needed
 
     @task(3)
     def stream_content(self):
