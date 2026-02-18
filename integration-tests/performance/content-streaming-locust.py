@@ -2,6 +2,12 @@ from locust import HttpUser, task, between
 import random
 
 
+# Configuration:
+# - Host: Update host variable if backend runs on different port
+# - Authentication: Replace test-token with actual auth mechanism
+# - Content IDs: Adjust range based on available test data (1-100 default)
+
+
 class ContentStreamingUser(HttpUser):
     wait_time = between(1, 3)
     host = "http://localhost:3000"  # Adjust port as needed
