@@ -53,6 +53,9 @@ npm run test:performance:content
 # Run video streaming performance test
 npm run test:performance:video
 
+# Run Locust load test
+locust -f content-streaming-locust.py
+
 # Run all performance tests
 npm run test:performance:all
 ```
