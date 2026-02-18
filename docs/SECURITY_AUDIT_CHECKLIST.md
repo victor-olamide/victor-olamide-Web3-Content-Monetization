@@ -82,3 +82,38 @@ This checklist covers:
 - [ ] X-Frame-Options set to prevent clickjacking
 - [ ] X-Content-Type-Options set to nosniff
 - [ ] Referrer-Policy configured appropriately
+
+## Frontend Security
+
+### Client-Side Security
+- [ ] Sensitive data not stored in localStorage/sessionStorage
+- [ ] Secure token storage and handling
+- [ ] Input validation on client-side (defense in depth)
+- [ ] XSS prevention through proper encoding
+- [ ] DOM-based XSS protection
+
+### Authentication
+- [ ] Secure login/logout flows
+- [ ] Token expiration handling
+- [ ] Automatic logout on inactivity
+- [ ] Secure password reset functionality
+- [ ] Multi-factor authentication support
+
+### API Communication
+- [ ] HTTPS enforced for all API calls
+- [ ] CORS properly configured
+- [ ] API keys/tokens not exposed in client code
+- [ ] Secure handling of API responses
+- [ ] Request signing for sensitive operations
+
+### Third-Party Dependencies
+- [ ] Frontend dependencies scanned for vulnerabilities
+- [ ] Subresource Integrity (SRI) for external scripts
+- [ ] Content Security Policy compatible with dependencies
+- [ ] Regular dependency updates and security patches
+
+### Browser Security
+- [ ] Mixed content prevention (HTTPS everywhere)
+- [ ] Secure cookie attributes (HttpOnly, Secure, SameSite)
+- [ ] Clickjacking protection (X-Frame-Options)
+- [ ] MIME type sniffing protection
