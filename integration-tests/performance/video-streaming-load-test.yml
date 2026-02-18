@@ -1,0 +1,335 @@
+{
+  "config": {
+    "target": "http://localhost:5000",
+    "phases": [
+      {
+        "duration": 60,
+        "arrivalRate": 1,
+        "name": "Initialization Phase"
+      },
+      {
+        "duration": 120,
+        "arrivalRate": 5,
+        "name": "Video Streaming Warm-up"
+      },
+      {
+        "duration": 300,
+        "arrivalRate": 15,
+        "name": "Concurrent Video Streaming"
+      },
+      {
+        "duration": 180,
+        "arrivalRate": 30,
+        "name": "High Load Video Delivery"
+      },
+      {
+        "duration": 120,
+        "arrivalRate": 8,
+        "name": "Recovery Phase"
+      }
+    ],
+    "defaults": {
+      "headers": {
+        "Content-Type": "application/json",
+        "User-Agent": "Artillery-VideoStreaming-Test/1.0"
+      }
+    },
+    "plugins": {
+      "metrics-by-endpoint": {},
+      "ensure": {},
+      "apdex": {},
+      "expect": {},
+      "publish-metrics": {
+        "cloudwatch": {
+          "region": "us-east-1",
+          "namespace": "Web3VideoStreaming"
+        }
+      }
+    },
+    "apdex": {
+      "tolerated": 5000,
+      "satisfied": 2000
+    },
+    "ensure": {
+      "thresholds": {
+        "http.response_time.p99": 8000,
+        "http.response_time.p95": 5000,
+        "http.response_time.p50": 1500,
+        "http.error_rate": 2,
+        "vusers.created": 100
+      }
+    }
+  },
+  "scenarios": [
+    {
+      "name": "HD Video Streaming",
+      "weight": 35,
+      "flow": [
+        {
+          "post": {
+            "url": "/api/auth/login",
+            "json": {
+              "email": "premium-streamer@example.com",
+              "password": "TestPassword123!"
+            },
+            "capture": [
+              {
+                "json": "$.data.token",
+                "as": "streamToken"
+              }
+            ],
+            "expect": [
+              {
+                "statusCode": 200
+              }
+            ]
+          }
+        },
+        {
+          "think": 1
+        },
+        {
+          "get": {
+            "url": "/api/delivery/{{ $randomInt(1, 20) }}/stream",
+            "headers": {
+              "Authorization": "Bearer {{ streamToken }}",
+              "Range": "bytes=0-1048575"
+            },
+            "expect": [
+              {
+                "statusCode": 206
+              },
+              {
+                "hasHeader": "Content-Type"
+              },
+              {
+                "hasHeader": "Content-Range"
+              },
+              {
+                "hasHeader": "Accept-Ranges"
+              }
+            ]
+          }
+        },
+        {
+          "think": 3
+        },
+        {
+          "get": {
+            "url": "/api/delivery/{{ $randomInt(1, 20) }}/stream",
+            "headers": {
+              "Authorization": "Bearer {{ streamToken }}",
+              "Range": "bytes=1048576-2097151"
+            },
+            "expect": [
+              {
+                "statusCode": 206
+              }
+            ]
+          }
+        },
+        {
+          "think": 5
+        }
+      ]
+    },
+    {
+      "name": "CDN Video Delivery",
+      "weight": 25,
+      "flow": [
+        {
+          "get": {
+            "url": "/api/cdn/health",
+            "expect": [
+              {
+                "statusCode": 200
+              },
+              {
+                "hasProperty": "status"
+              }
+            ]
+          }
+        },
+        {
+          "think": 0.5
+        },
+        {
+          "get": {
+            "url": "/api/cdn/cache/hit-rate",
+            "headers": {
+              "X-API-Key": "cdn-monitor-key"
+            },
+            "expect": [
+              {
+                "statusCode": 200
+              },
+              {
+                "hasProperty": "hitRate"
+              }
+            ]
+          }
+        },
+        {
+          "think": 1
+        },
+        {
+          "post": {
+            "url": "/api/cdn/purge",
+            "headers": {
+              "X-API-Key": "cdn-admin-key"
+            },
+            "json": {
+              "contentIds": ["{{ $randomInt(1, 50) }}"]
+            },
+            "expect": [
+              {
+                "statusCode": 202
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Adaptive Bitrate Streaming",
+      "weight": 20,
+      "flow": [
+        {
+          "post": {
+            "url": "/api/auth/login",
+            "json": {
+              "email": "mobile-user@example.com",
+              "password": "TestPassword123!"
+            },
+            "capture": [
+              {
+                "json": "$.data.token",
+                "as": "mobileToken"
+              }
+            ]
+          }
+        },
+        {
+          "think": 0.8
+        },
+        {
+          "get": {
+            "url": "/api/delivery/{{ $randomInt(1, 30) }}/stream?quality=480p",
+            "headers": {
+              "Authorization": "Bearer {{ mobileToken }}",
+              "User-Agent": "Mobile Safari/537.36"
+            },
+            "expect": [
+              {
+                "statusCode": 200
+              },
+              {
+                "hasHeader": "X-Video-Quality"
+              }
+            ]
+          }
+        },
+        {
+          "think": 2
+        },
+        {
+          "get": {
+            "url": "/api/delivery/{{ $randomInt(1, 30) }}/stream?quality=720p",
+            "headers": {
+              "Authorization": "Bearer {{ mobileToken }}",
+              "User-Agent": "Chrome/120.0"
+            },
+            "expect": [
+              {
+                "statusCode": 200
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Live Streaming Simulation",
+      "weight": 15,
+      "flow": [
+        {
+          "post": {
+            "url": "/api/auth/login",
+            "json": {
+              "email": "live-viewer@example.com",
+              "password": "TestPassword123!"
+            },
+            "capture": [
+              {
+                "json": "$.data.token",
+                "as": "liveToken"
+              }
+            ]
+          }
+        },
+        {
+          "loop": [
+            {
+              "get": {
+                "url": "/api/delivery/{{ $randomInt(1, 10) }}/stream?live=true",
+                "headers": {
+                  "Authorization": "Bearer {{ liveToken }}"
+                },
+                "expect": [
+                  {
+                    "statusCode": 200
+                  }
+                ]
+              }
+            },
+            {
+              "think": 0.1
+            }
+          ],
+          "count": 10
+        }
+      ]
+    },
+    {
+      "name": "Content Delivery Analytics",
+      "weight": 5,
+      "flow": [
+        {
+          "get": {
+            "url": "/api/analytics/delivery/performance",
+            "headers": {
+              "X-API-Key": "analytics-key"
+            },
+            "expect": [
+              {
+                "statusCode": 200
+              },
+              {
+                "hasProperty": "metrics"
+              }
+            ]
+          }
+        },
+        {
+          "think": 2
+        },
+        {
+          "get": {
+            "url": "/api/analytics/delivery/bandwidth",
+            "headers": {
+              "X-API-Key": "analytics-key"
+            },
+            "qs": {
+              "period": "1h"
+            },
+            "expect": [
+              {
+                "statusCode": 200
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
