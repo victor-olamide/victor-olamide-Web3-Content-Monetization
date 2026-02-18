@@ -6,6 +6,10 @@ class ContentStreamingUser(HttpUser):
     wait_time = between(1, 3)
     host = "http://localhost:3000"  # Adjust port as needed
 
+    def on_start(self):
+        # Setup authentication if needed
+        pass
+
     @task(3)
     def stream_content(self):
         content_id = random.randint(1, 100)  # Assume content IDs from 1 to 100
