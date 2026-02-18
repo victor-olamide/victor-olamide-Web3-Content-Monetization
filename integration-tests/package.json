@@ -10,9 +10,15 @@
     "test:smoke": "jest --config jest.smoke.config.js --testPathPattern=smoke",
     "test:security": "jest --config jest.security.config.js --testPathPattern=security",
     "test:performance": "artillery run performance/load-test.yml",
+    "test:performance:content": "artillery run performance/content-delivery-load-test.yml --output test-results/content-delivery-report.json",
+    "test:performance:video": "artillery run performance/video-streaming-load-test.yml --output test-results/video-streaming-report.json",
+    "test:performance:all": "npm run test:performance:content && npm run test:performance:video",
+    "performance:analyze": "node performance/analyze-performance.js",
+    "performance:monitor": "node performance/monitor.js",
+    "performance:compare": "node performance/analyze-performance.js compare content-delivery-load-test video-streaming-load-test",
     "test:ci": "npm run test:smoke && npm run test:api && npm run test:security && npm run test:e2e:ci",
     "test:e2e:ci": "playwright test e2e/ --headed=false --shard=1/3",
-    "test:all": "npm run test:smoke && npm run test:api && npm run test:security && npm run test:e2e && npm run test:performance",
+    "test:all": "npm run test:smoke && npm run test:api && npm run test:security && npm run test:e2e && npm run test:performance:all",
     "install:browsers": "playwright install",
     "report": "allure generate allure-results --clean --output test-results/allure-report && allure open test-results/allure-report",
     "report:html": "playwright show-report test-results/playwright-report",
@@ -33,7 +39,8 @@
     "uuid": "^9.0.1",
     "jsonwebtoken": "^9.0.2",
     "bcryptjs": "^2.4.3",
-    "dotenv": "^16.3.1"
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2"
   },
   "devDependencies": {
     "@types/jest": "^29.5.8",
