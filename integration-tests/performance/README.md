@@ -41,7 +41,10 @@ The performance testing suite provides:
 # Install dependencies
 npm install
 
-# Ensure backend is running on localhost:5000
+# Install Locust for Python-based load testing
+pip install locust
+
+# Ensure backend is running on localhost:3000
 cd ../backend && npm start
 ```
 
