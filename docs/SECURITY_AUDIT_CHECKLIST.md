@@ -229,3 +229,41 @@ This checklist covers:
 - [ ] Response validation from external APIs
 - [ ] Fallback mechanisms for API failures
 - [ ] Secure handling of external API data
+
+## Authentication & Authorization
+
+### Authentication Mechanisms
+- [ ] Multi-factor authentication (MFA) available
+- [ ] Password complexity requirements enforced
+- [ ] Account lockout after failed attempts
+- [ ] Secure password reset process
+- [ ] Session management secure
+- [ ] Logout functionality complete
+
+### Authorization Models
+- [ ] Role-based access control (RBAC) implemented
+- [ ] Attribute-based access control (ABAC) where needed
+- [ ] Principle of least privilege enforced
+- [ ] Permission inheritance properly configured
+- [ ] Administrative access segregated
+
+### Session Security
+- [ ] Session tokens cryptographically secure
+- [ ] Session timeout configured
+- [ ] Concurrent session limits
+- [ ] Session invalidation on logout
+- [ ] Secure session storage
+
+### Identity Management
+- [ ] User identity verification processes
+- [ ] Account creation security
+- [ ] Profile update validation
+- [ ] Account deactivation procedures
+- [ ] Identity provider security (OAuth, etc.)
+
+### Access Control
+- [ ] API endpoint protection
+- [ ] Database-level access controls
+- [ ] File system access restrictions
+- [ ] Network access controls
+- [ ] Administrative interface protection
