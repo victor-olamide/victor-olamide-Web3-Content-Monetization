@@ -452,3 +452,40 @@ This checklist covers:
 - [ ] Secure disposal procedures
 - [ ] Environmental controls
 - [ ] Backup power and redundancy
+
+## Compliance
+
+### Regulatory Compliance
+- [ ] GDPR compliance for EU users
+- [ ] CCPA compliance for California users
+- [ ] Industry-specific regulations (if applicable)
+- [ ] Data residency requirements met
+- [ ] Privacy policy compliant
+
+### Security Standards
+- [ ] OWASP Top 10 addressed
+- [ ] NIST Cybersecurity Framework alignment
+- [ ] ISO 27001 compliance (if applicable)
+- [ ] SOC 2 Type II compliance (if applicable)
+- [ ] PCI DSS compliance (if handling payments)
+
+### Audit & Reporting
+- [ ] Regular security audits conducted
+- [ ] Penetration testing performed
+- [ ] Vulnerability assessments completed
+- [ ] Security incident reporting procedures
+- [ ] Compliance documentation maintained
+
+### Data Protection
+- [ ] Data classification implemented
+- [ ] Data handling procedures documented
+- [ ] Privacy impact assessments conducted
+- [ ] Data subject rights handled
+- [ ] Breach notification procedures
+
+### Legal & Contractual
+- [ ] Security clauses in vendor contracts
+- [ ] Data processing agreements in place
+- [ ] Insurance coverage for security incidents
+- [ ] Legal compliance monitoring
+- [ ] Regulatory reporting automated
