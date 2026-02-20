@@ -1,0 +1,226 @@
+config:
+  target: "http://localhost:5000"
+  phases:
+    - duration: 60
+      arrivalRate: 5
+      name: "Warm up - Low concurrent users (5)"
+    - duration: 120
+      arrivalRate: 25
+      name: "Ramp up - Moderate concurrent users (25)"
+    - duration: 180
+      arrivalRate: 50
+      name: "Sustained load - High concurrent users (50)"
+    - duration: 240
+      arrivalRate: 100
+      name: "Peak load - Very high concurrent users (100)"
+    - duration: 180
+      arrivalRate: 75
+      name: "Sustain peak - Maintain high load (75)"
+    - duration: 120
+      arrivalRate: 50
+      name: "Back down - Reduce to moderate (50)"
+    - duration: 60
+      arrivalRate: 10
+      name: "Cool down - Recovery phase (10)"
+  
+  defaults:
+    headers:
+      Content-Type: "application/json"
+      User-Agent: "Artillery-Concurrent-Load-Test/2.0"
+  
+  processor: "./performance/scripts/concurrent-user-processor.js"
+  plugins:
+    metrics-by-endpoint: {}
+    ensure: {}
+    apdex:
+      tolerated: 2000
+      frustrated: 5000
+    expect: {}
+    statsd:
+      host: "localhost"
+      port: 8125
+      prefix: "artillery_concurrent_"
+  
+  variables:
+    contentIds:
+      - 1
+      - 5
+      - 10
+      - 25
+      - 50
+      - 75
+      - 100
+    searchTerms:
+      - "tutorial"
+      - "music"
+      - "video"
+      - "live"
+      - "exclusive"
+      - "trending"
+
+scenarios:
+  - name: "ContentViewer - Heavy Usage"
+    weight: 50
+    flow:
+      - think: 2
+      - get:
+          url: "/api/content/browse?page=1&limit=20"
+          headers:
+            Authorization: "Bearer {{ $randomString(32) }}"
+          expect:
+            - statusCode: 200
+              strict: false
+      - think: 1
+      - get:
+          url: "/api/content/{{ contentIds.$random }}"
+          headers:
+            Authorization: "Bearer {{ $randomString(32) }}"
+          expect:
+            - statusCode: 200
+              strict: false
+      - think: 3
+      - get:
+          url: "/api/content/{{ contentIds.$random }}/stream"
+          headers:
+            Authorization: "Bearer {{ $randomString(32) }}"
+          timeout: 30000
+          expect:
+            - statusCode: 200
+              strict: false
+      - think: 1
+      - post:
+          url: "/api/content/{{ contentIds.$random }}/like"
+          headers:
+            Authorization: "Bearer {{ $randomString(32) }}"
+          expect:
+            - statusCode: 200
+              strict: false
+      - think: 2
+      - get:
+          url: "/api/content/search?q={{ searchTerms.$random }}"
+          headers:
+            Authorization: "Bearer {{ $randomString(32) }}"
+          expect:
+            - statusCode: 200
+              strict: false
+
+  - name: "Creator - Publishing Heavy"
+    weight: 20
+    flow:
+      - think: 2
+      - post:
+          url: "/api/auth/login"
+          headers:
+            Content-Type: "application/json"
+          json:
+            email: "creator_{{ $timestamp }}@test.com"
+            password: "password"
+            role: "creator"
+          capture:
+            json: "$.token"
+            as: "creatorToken"
+      - think: 1
+      - post:
+          url: "/api/content/create"
+          headers:
+            Authorization: "Bearer {{ creatorToken }}"
+            Content-Type: "application/json"
+          json:
+            title: "Content_{{ $timestamp }}"
+            description: "Load test content"
+            category: "music"
+            price: 4.99
+            duration: 1800
+          expect:
+            - statusCode: 201
+              strict: false
+          capture:
+            json: "$.id"
+            as: "newContentId"
+      - think: 2
+      - get:
+          url: "/api/content/{{ newContentId }}/analytics"
+          headers:
+            Authorization: "Bearer {{ creatorToken }}"
+          expect:
+            - statusCode: 200
+              strict: false
+      - think: 1
+      - put:
+          url: "/api/content/{{ newContentId }}"
+          headers:
+            Authorization: "Bearer {{ creatorToken }}"
+            Content-Type: "application/json"
+          json:
+            description: "Updated content"
+            price: 5.99
+          expect:
+            - statusCode: 200
+              strict: false
+
+  - name: "Subscriber - Premium Access"
+    weight: 20
+    flow:
+      - think: 2
+      - post:
+          url: "/api/auth/login"
+          headers:
+            Content-Type: "application/json"
+          json:
+            email: "subscriber_{{ $timestamp }}@test.com"
+            password: "password"
+          capture:
+            json: "$.token"
+            as: "subscriberToken"
+      - think: 1
+      - get:
+          url: "/api/subscriptions"
+          headers:
+            Authorization: "Bearer {{ subscriberToken }}"
+          expect:
+            - statusCode: 200
+              strict: false
+      - think: 2
+      - get:
+          url: "/api/content/{{ contentIds.$random }}/premium"
+          headers:
+            Authorization: "Bearer {{ subscriberToken }}"
+          expect:
+            - statusCode: 200
+              strict: false
+      - think: 1
+      - get:
+          url: "/api/subscriptions/status"
+          headers:
+            Authorization: "Bearer {{ subscriberToken }}"
+          expect:
+            - statusCode: 200
+              strict: false
+      - think: 2
+      - get:
+          url: "/api/payments/methods"
+          headers:
+            Authorization: "Bearer {{ subscriberToken }}"
+          expect:
+            - statusCode: 200
+              strict: false
+
+  - name: "Mixed - Realistic User Behavior"
+    weight: 10
+    flow:
+      - think: 1
+      - get:
+          url: "/api/content/browse?page=1&limit=10"
+      - think: 2
+      - get:
+          url: "/api/content/{{ contentIds.$random }}"
+      - think: 3
+      - get:
+          url: "/api/content/{{ contentIds.$random }}/stream"
+          timeout: 30000
+      - think: 1
+      - post:
+          url: "/api/content/{{ contentIds.$random }}/like"
+      - think: 2
+      - get:
+          url: "/api/content/search?q={{ searchTerms.$random }}"
