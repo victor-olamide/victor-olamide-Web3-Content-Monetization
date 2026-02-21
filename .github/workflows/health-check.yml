@@ -1,0 +1,30 @@
+name: Health Check
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'  # Every 5 minutes
+  workflow_dispatch:
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+    - name: Install dependencies
+      run: npm ci
+      working-directory: backend
+    - name: Start backend
+      run: npm start &
+      working-directory: backend
+    - name: Wait for backend
+      run: sleep 10
+    - name: Run health check
+      run: bash monitoring/monitor-health.sh
+    - name: Alert on failure
+      if: failure()
+      run: echo "Health check failed" && exit 1
