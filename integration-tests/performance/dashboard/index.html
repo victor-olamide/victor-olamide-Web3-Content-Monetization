@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Content Delivery Performance Monitor</title>
+    <title>Concurrent User Load Testing Monitor</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * {
@@ -214,6 +214,10 @@
                 <div class="metric-value" id="throughputValue">-</div>
                 <div class="metric-unit">req/sec</div>
             </div>
+            <div class="metric-card">
+                <div class="metric-title">Active Users</div>
+                <div class="metric-value" id="activeUsersValue">-</div>
+            </div>
         </div>
 
         <div class="charts-grid">
@@ -300,6 +304,7 @@
             document.getElementById('errorRateValue').textContent = current.errorRate ? current.errorRate.toFixed(2) : 0;
             document.getElementById('latencyValue').textContent = current.latency ? current.latency.p95.toFixed(0) : 0;
             document.getElementById('throughputValue').textContent = current.throughput ? current.throughput.toFixed(2) : 0;
+            document.getElementById('activeUsersValue').textContent = current.activeUsers || 0;
 
             // Update status colors
             updateStatusColors(current);
@@ -381,6 +386,15 @@
             try {
                 const response = await fetch('/api/metrics');
                 const data = await response.json();
+
+                // Also fetch concurrent metrics if available
+                try {
+                    const concurrentResponse = await fetch('/api/concurrent/metrics');
+                    const concurrentData = await concurrentResponse.json();
+                    data.current = { ...data.current, ...concurrentData };
+                } catch (e) {
+                    // Ignore if concurrent endpoint not available
+                }
 
                 updateMetrics(data);
                 updateCharts(data.history);
