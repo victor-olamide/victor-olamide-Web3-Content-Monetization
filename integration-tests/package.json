@@ -8,6 +8,8 @@
     "test:api": "jest --config jest.api.config.js --testPathPattern=api",
     "test:e2e": "playwright test e2e/",
     "test:smoke": "jest --config jest.smoke.config.js --testPathPattern=smoke",
+    "test:smoke:deployment": "node smoke/deployment-smoke-test.js",
+    "test:smoke:deployment:script": "./smoke/run-deployment-smoke-tests.sh",
     "test:security": "jest --config jest.security.config.js --testPathPattern=security",
     "test:performance": "artillery run performance/load-test.yml",
     "test:performance:content": "artillery run performance/content-delivery-load-test.yml --output test-results/content-delivery-report.json",
