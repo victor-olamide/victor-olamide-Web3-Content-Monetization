@@ -325,6 +325,11 @@ main() {
         test_mode="analyze"
         shift
         ;;
+      --ci)
+        test_mode="ci"
+        skip_verify=1
+        shift
+        ;;
       --skip-verify)
         skip_verify=1
         shift
@@ -390,6 +395,9 @@ main() {
     analyze)
       analyze_results
       exit 0
+      ;;
+    ci)
+      run_standard_tests
       ;;
   esac
   
