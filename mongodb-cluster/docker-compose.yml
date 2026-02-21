@@ -1,0 +1,194 @@
+version: '3.8'
+
+services:
+  # MongoDB Primary Node
+  mongodb-primary:
+    image: mongo:7.0
+    container_name: mongodb-primary
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-password123}
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-web3content}
+      MONGO_REPLICA_SET_NAME: ${MONGO_REPLICA_SET_NAME:-rs0}
+      MONGO_REPLICA_SET_KEY: ${MONGO_REPLICA_SET_KEY:-replicaSetKey123}
+    volumes:
+      - mongodb_primary_data:/data/db
+      - mongodb_primary_config:/data/configdb
+      - ./scripts/init-replica-set.js:/docker-entrypoint-initdb.d/init-replica-set.js:ro
+      - ./config/mongod-primary.conf:/etc/mongod.conf:ro
+      - ./ssl:/etc/ssl/mongodb:ro
+    ports:
+      - "${MONGO_PRIMARY_PORT:-27017}:27017"
+    networks:
+      - mongodb-cluster
+    command: --config /etc/mongod.conf
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      - mongodb-secondary1
+      - mongodb-secondary2
+
+  # MongoDB Secondary Node 1
+  mongodb-secondary1:
+    image: mongo:7.0
+    container_name: mongodb-secondary1
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-password123}
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-web3content}
+      MONGO_REPLICA_SET_NAME: ${MONGO_REPLICA_SET_NAME:-rs0}
+      MONGO_REPLICA_SET_KEY: ${MONGO_REPLICA_SET_KEY:-replicaSetKey123}
+    volumes:
+      - mongodb_secondary1_data:/data/db
+      - mongodb_secondary1_config:/data/configdb
+      - ./config/mongod-secondary.conf:/etc/mongod.conf:ro
+      - ./ssl:/etc/ssl/mongodb:ro
+    ports:
+      - "${MONGO_SECONDARY1_PORT:-27018}:27017"
+    networks:
+      - mongodb-cluster
+    command: --config /etc/mongod.conf
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # MongoDB Secondary Node 2
+  mongodb-secondary2:
+    image: mongo:7.0
+    container_name: mongodb-secondary2
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-password123}
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-web3content}
+      MONGO_REPLICA_SET_NAME: ${MONGO_REPLICA_SET_NAME:-rs0}
+      MONGO_REPLICA_SET_KEY: ${MONGO_REPLICA_SET_KEY:-replicaSetKey123}
+    volumes:
+      - mongodb_secondary2_data:/data/db
+      - mongodb_secondary2_config:/data/configdb
+      - ./config/mongod-secondary.conf:/etc/mongod.conf:ro
+      - ./ssl:/etc/ssl/mongodb:ro
+    ports:
+      - "${MONGO_SECONDARY2_PORT:-27019}:27017"
+    networks:
+      - mongodb-cluster
+    command: --config /etc/mongod.conf
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # MongoDB Arbiter Node (for tie-breaking in elections)
+  mongodb-arbiter:
+    image: mongo:7.0
+    container_name: mongodb-arbiter
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-password123}
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-web3content}
+      MONGO_REPLICA_SET_NAME: ${MONGO_REPLICA_SET_NAME:-rs0}
+      MONGO_REPLICA_SET_KEY: ${MONGO_REPLICA_SET_KEY:-replicaSetKey123}
+    volumes:
+      - mongodb_arbiter_data:/data/db
+      - mongodb_arbiter_config:/data/configdb
+      - ./config/mongod-arbiter.conf:/etc/mongod.conf:ro
+      - ./ssl:/etc/ssl/mongodb:ro
+    ports:
+      - "${MONGO_ARBITER_PORT:-27020}:27017"
+    networks:
+      - mongodb-cluster
+    command: --config /etc/mongod.conf
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # MongoDB Config Server (for sharding support)
+  mongodb-config:
+    image: mongo:7.0
+    container_name: mongodb-config
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-password123}
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-web3content}
+    volumes:
+      - mongodb_config_data:/data/db
+      - mongodb_config_config:/data/configdb
+      - ./config/mongod-config.conf:/etc/mongod.conf:ro
+      - ./ssl:/etc/ssl/mongodb:ro
+    ports:
+      - "${MONGO_CONFIG_PORT:-27021}:27017"
+    networks:
+      - mongodb-cluster
+    command: --config /etc/mongod.conf
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # MongoDB Monitoring Service (mongoshake for data sync)
+  mongodb-monitor:
+    image: mongo:7.0
+    container_name: mongodb-monitor
+    restart: unless-stopped
+    environment:
+      MONGO_REPLICA_SET_NAME: ${MONGO_REPLICA_SET_NAME:-rs0}
+    volumes:
+      - ./scripts/monitor-replica-set.js:/monitor-replica-set.js:ro
+    networks:
+      - mongodb-cluster
+    command: >
+      bash -c "
+      while true; do
+        echo 'Checking replica set status...'
+        mongosh --host mongodb-primary --eval 'rs.status()'
+        sleep 30
+      done
+      "
+    depends_on:
+      - mongodb-primary
+      - mongodb-secondary1
+      - mongodb-secondary2
+
+volumes:
+  mongodb_primary_data:
+    driver: local
+  mongodb_primary_config:
+    driver: local
+  mongodb_secondary1_data:
+    driver: local
+  mongodb_secondary1_config:
+    driver: local
+  mongodb_secondary2_data:
+    driver: local
+  mongodb_secondary2_config:
+    driver: local
+  mongodb_arbiter_data:
+    driver: local
+  mongodb_arbiter_config:
+    driver: local
+  mongodb_config_data:
+    driver: local
+  mongodb_config_config:
+    driver: local
+
+networks:
+  mongodb-cluster:
+    driver: bridge
