@@ -1,0 +1,87 @@
+# Deployment Smoke Test Configuration
+
+# This file contains configuration for automated smoke tests
+# that run after each deployment to verify system health
+
+# Environment configurations
+environments:
+  development:
+    url: "http://localhost:5000"
+    timeout: 30000
+    retries: 3
+    skip_external_services: true
+
+  staging:
+    url: "https://staging-api.example.com"
+    timeout: 45000
+    retries: 5
+    skip_external_services: false
+
+  production:
+    url: "https://api.example.com"
+    timeout: 60000
+    retries: 5
+    skip_external_services: false
+
+# Test configuration
+tests:
+  health_checks:
+    enabled: true
+    timeout: 10000
+    critical: true  # Fail deployment if these fail
+
+  authentication:
+    enabled: true
+    timeout: 15000
+    critical: true
+
+  content_access:
+    enabled: true
+    timeout: 20000
+    critical: true
+
+  database_connectivity:
+    enabled: true
+    timeout: 10000
+    critical: true
+
+  external_services:
+    enabled: true
+    timeout: 30000
+    critical: false  # Allow deployment even if external services fail
+
+  performance:
+    enabled: true
+    timeout: 30000
+    critical: true
+    max_response_time: 2000  # milliseconds
+    concurrent_requests: 5
+
+# Notification settings
+notifications:
+  slack:
+    enabled: false
+    webhook_url: ""
+    channels:
+      - "#deployments"
+      - "#alerts"
+
+  email:
+    enabled: false
+    recipients: []
+    smtp_config: {}
+
+# Reporting
+reporting:
+  generate_html_report: true
+  generate_json_report: true
+  store_results: true
+  retention_days: 30
+
+# Advanced settings
+advanced:
+  enable_debug_logging: false
+  enable_performance_metrics: true
+  enable_detailed_error_reporting: true
+  custom_test_endpoints: []
+  environment_variables: {}
