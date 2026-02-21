@@ -17,6 +17,7 @@
     "test:performance:all": "npm run test:performance:content && npm run test:performance:video && npm run test:performance:concurrent && echo 'Note: Run npm run test:performance:locust separately for Locust tests'",
     "performance:analyze": "node performance/analyze-performance.js",
     "performance:analyze:concurrent": "node performance/concurrent-load-analyzer.js",
+    "performance:validate": "node performance/validate-load-testing.js",
     "performance:monitor": "node performance/monitor.js",
     "performance:compare": "node performance/analyze-performance.js compare content-delivery-load-test video-streaming-load-test",
     "test:ci": "npm run test:smoke && npm run test:api && npm run test:security && npm run test:e2e:ci",
