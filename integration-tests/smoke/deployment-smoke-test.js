@@ -240,9 +240,31 @@ class DeploymentSmokeTester {
 
 // CLI interface
 if (require.main === module) {
-  const tester = new DeploymentSmokeTester();
-  const success = tester.runTests();
+  const args = process.argv.slice(2);
+  const healthOnly = args.includes('--health-only');
 
+  const tester = new DeploymentSmokeTester();
+
+  if (healthOnly) {
+    // Run only health checks
+    tester.runTests = async () => {
+      console.log('🏥 Running Health Checks Only...');
+      console.log(`📍 Target URL: ${tester.baseUrl}`);
+      console.log('='.repeat(50));
+
+      try {
+        await tester.testHealthChecks();
+        tester.printSummary();
+        return tester.results.failed === 0;
+      } catch (error) {
+        console.error('❌ Health checks failed:', error.message);
+        tester.printSummary();
+        return false;
+      }
+    };
+  }
+
+  const success = tester.runTests();
   process.exit(success ? 0 : 1);
 }
 
