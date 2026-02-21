@@ -18,6 +18,7 @@ function generateMockToken(userId, role = 'user') {
   const payload = {
     id: userId,
     role: role,
+    email: `${role}_${userId}@load-test.com`,
     iat: Math.floor(Date.now() / 1000),
     exp: Math.floor(Date.now() / 1000) + 3600
   };
@@ -31,10 +32,10 @@ function generateMockToken(userId, role = 'user') {
 }
 
 /**
- * Generate random string for request IDs
+ * Generate admin token for admin scenarios
  */
-function generateRandomString(length) {
-  return crypto.randomBytes(Math.ceil(length / 2)).toString('hex').slice(0, length);
+function generateAdminToken() {
+  return generateMockToken('admin_user', 'admin');
 }
 
 /**
@@ -106,6 +107,7 @@ module.exports = {
       email: `user_${generateRandomString(8)}@load-test.com`,
       creatorEmail: `creator_${generateRandomString(8)}@load-test.com`,
       subscriberEmail: `subscriber_${generateRandomString(8)}@load-test.com`,
+      adminEmail: 'admin@test.com',
       contentTitle: `Content_${generateRandomString(8)}`,
       searchTerm: Math.random() > 0.5 ? 'tutorial' : 'music'
     };
