@@ -48,6 +48,16 @@ npm run performance:analyze:concurrent  # Analyze results
 npm run performance:monitor  # Start monitoring dashboard
 ```
 
+## Deployment
+
+The platform uses automated CI/CD pipelines for deployment to production.
+
+- **Contracts**: Deployed to mainnet on push to main branch.
+- **Backend**: Dockerized and deployed to production servers.
+- **Frontend**: Deployed to Vercel.
+
+See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for details.
+
 ### Test Scenarios
 - Content viewers browsing and streaming
 - Creators publishing and managing content
