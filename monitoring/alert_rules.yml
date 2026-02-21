@@ -1,0 +1,29 @@
+groups:
+  - name: example
+    rules:
+    - alert: BackendDown
+      expr: up{job="backend"} == 0
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Backend is down"
+        description: "Backend has been down for more than 1 minute."
+
+    - alert: FrontendDown
+      expr: up{job="frontend"} == 0
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Frontend is down"
+        description: "Frontend has been down for more than 1 minute."
+
+    - alert: MongoDBDown
+      expr: up{job="mongodb"} == 0
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        summary: "MongoDB is down"
+        description: "MongoDB has been down for more than 1 minute."
