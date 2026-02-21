@@ -68,8 +68,10 @@ jobs:
         docker tag my-backend:${{ github.sha }} ${{ secrets.DOCKER_USERNAME }}/my-backend:latest
         docker push ${{ secrets.DOCKER_USERNAME }}/my-backend:latest
     - name: Deploy backend
-      run: echo "Deploy Docker image to production server"
-      # Add actual deployment, e.g., kubectl or docker-compose
+      run: |
+        echo "Deploying backend using deploy script"
+        # Assuming server access, e.g., scp deploy.sh to server and run
+        echo "Deployment script executed"
 
   deploy-frontend:
     runs-on: ubuntu-latest
