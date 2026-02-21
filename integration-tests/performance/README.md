@@ -1,11 +1,12 @@
-# Content Delivery Performance Testing Suite
+# Content Delivery and Concurrent User Load Testing Suite
 
-This directory contains comprehensive performance testing tools for content streaming endpoints in the Web3 Content Monetization platform.
+This directory contains comprehensive performance testing tools for content streaming endpoints and concurrent user load testing in the Web3 Content Monetization platform.
 
 ## Overview
 
 The performance testing suite provides:
 - **Load Testing**: Artillery-based load tests for content delivery endpoints
+- **Concurrent User Testing**: Comprehensive concurrent user load testing with multiple scenarios
 - **Video Streaming Tests**: Specialized tests for video content delivery
 - **Locust Load Tests**: Python-based load testing with Locust for content streaming
 - **Real-time Monitoring**: Live performance dashboard and metrics
@@ -33,6 +34,13 @@ The performance testing suite provides:
 - **Multiple Tasks**: Stream content and fetch metadata with different weights
 - **Error Handling**: Built-in response validation and failure detection
 - **Scalable**: Easy to configure user count and test duration
+
+### Concurrent User Load Test (`concurrent-users-artillery.yml`)
+- **High Concurrent Load**: Testing system behavior under high concurrent user load
+- **Multiple Scenarios**: Content viewers, creators, and admin users
+- **Load Phases**: Warm-up, ramp-up, sustained, peak, and recovery phases
+- **Realistic Behavior**: Simulates user interactions with think times and error handling
+- **Comprehensive Metrics**: Response times, throughput, error rates, and custom metrics
 
 ## Quick Start
 
