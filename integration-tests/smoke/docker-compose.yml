@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  smoke-tests:
+    build:
+      context: ..
+      dockerfile: integration-tests/smoke/Dockerfile
+    environment:
+      - DEPLOYMENT_URL=${DEPLOYMENT_URL:-http://host.docker.internal:5000}
+      - NODE_ENV=${NODE_ENV:-staging}
+      - SMOKE_TIMEOUT=${SMOKE_TIMEOUT:-60000}
+      - SMOKE_RETRIES=${SMOKE_RETRIES:-3}
+    networks:
+      - smoke-test-network
+    depends_on:
+      - wait-for-deployment
+    command: ["--url=${DEPLOYMENT_URL}"]
+
+  wait-for-deployment:
+    image: curlimages/curl:latest
+    command: >
+      sh -c "
+        echo 'Waiting for deployment to be ready...';
+        for i in $$(seq 1 60); do
+          if curl -f -s ${DEPLOYMENT_URL}/api/health > /dev/null 2>&1; then
+            echo 'Deployment is ready!';
+            exit 0;
+          fi;
+          echo \"Attempt $$i failed, retrying in 10 seconds...\";
+          sleep 10;
+        done;
+        echo 'Deployment did not become ready within timeout';
+        exit 1;
+      "
+    networks:
+      - smoke-test-network
+
+networks:
+  smoke-test-network:
+    driver: bridge
