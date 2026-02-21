@@ -49,6 +49,20 @@ const { initializePinningService } = require('./services/pinningManager');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Prometheus metrics
+const promClient = require('prom-client');
+const register = new promClient.Registry();
+promClient.collectDefaultMetrics({ register });
+
+// Custom metrics
+const httpRequestDuration = new promClient.Histogram({
+  name: 'http_request_duration_seconds',
+  help: 'Duration of HTTP requests in seconds',
+  labelNames: ['method', 'route', 'status_code'],
+  buckets: [0.1, 0.5, 1, 2, 5]
+});
+register.registerMetric(httpRequestDuration);
+
 // Security middleware
 app.use(helmet());
 app.use(cors({
@@ -58,6 +72,18 @@ app.use(cors({
 
 // Logging middleware
 app.use(morgan('combined'));
+
+// Metrics middleware
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = (Date.now() - start) / 1000;
+    httpRequestDuration
+      .labels(req.method, req.route?.path || req.path, res.statusCode.toString())
+      .observe(duration);
+  });
+  next();
+});
 
 // Body parsing middleware
 app.use(express.json({ limit: '50mb' }));
@@ -92,6 +118,17 @@ app.use('/api/collaborators', collaboratorRoutes);
 app.use('/api/licensing', licensingRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/transactions', transactionRoutes);
+
+// Metrics endpoint
+app.get('/metrics', async (req, res) => {
+  res.set('Content-Type', register.contentType);
+  res.end(await register.metrics());
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 app.use('/api/refunds', refundRoutes);
 app.use('/api/royalties', royaltyRoutes);
 app.use('/api/profile', profileRoutes);
