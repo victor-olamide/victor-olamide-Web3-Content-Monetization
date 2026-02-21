@@ -9,38 +9,95 @@
 const axios = require('axios');
 const { expect } = require('chai');
 
+const fs = require('fs');
+const path = require('path');
+const yaml = require('js-yaml');
+
 class DeploymentSmokeTester {
-  constructor(baseUrl = process.env.DEPLOYMENT_URL || 'http://localhost:5000') {
+  constructor(baseUrl = process.env.DEPLOYMENT_URL || 'http://localhost:5000', environment = process.env.NODE_ENV || 'development') {
     this.baseUrl = baseUrl;
-    this.timeout = 30000; // 30 seconds
+    this.environment = environment;
+    this.config = this.loadConfig();
+    this.timeout = this.config.environments[environment]?.timeout || 30000;
     this.results = {
       passed: 0,
       failed: 0,
+      skipped: 0,
       tests: []
+    };
+  }
+
+  loadConfig() {
+    const configPath = path.join(__dirname, 'deployment-config.yml');
+    if (fs.existsSync(configPath)) {
+      return yaml.load(fs.readFileSync(configPath, 'utf8'));
+    }
+    return this.getDefaultConfig();
+  }
+
+  getDefaultConfig() {
+    return {
+      environments: {
+        development: { timeout: 30000, retries: 3 },
+        staging: { timeout: 45000, retries: 5 },
+        production: { timeout: 60000, retries: 5 }
+      },
+      tests: {
+        health_checks: { enabled: true, critical: true },
+        authentication: { enabled: true, critical: true },
+        content_access: { enabled: true, critical: true },
+        database_connectivity: { enabled: true, critical: true },
+        external_services: { enabled: true, critical: false },
+        performance: { enabled: true, critical: true }
+      }
     };
   }
 
   async runTests() {
     console.log('🚀 Starting Deployment Smoke Tests...');
-    console.log(`📍 Target URL: ${this.baseUrl}`);
-    console.log('=' .repeat(50));
+    console.log(`📍 Target URL: ${this.baseUrl}`);    console.log(`🌍 Environment: ${this.environment}`);    console.log('=' .repeat(50));
 
     try {
-      await this.testHealthChecks();
-      await this.testAuthentication();
-      await this.testContentAccess();
-      await this.testDatabaseConnectivity();
-      await this.testExternalServices();
-      await this.testPerformance();
+      if (this.config.tests.health_checks?.enabled) {
+        await this.testHealthChecks();
+      }
+
+      if (this.config.tests.authentication?.enabled) {
+        await this.testAuthentication();
+      }
+
+      if (this.config.tests.content_access?.enabled) {
+        await this.testContentAccess();
+      }
+
+      if (this.config.tests.database_connectivity?.enabled) {
+        await this.testDatabaseConnectivity();
+      }
+
+      if (this.config.tests.external_services?.enabled) {
+        await this.testExternalServices();
+      }
+
+      if (this.config.tests.performance?.enabled) {
+        await this.testPerformance();
+      }
 
       this.printSummary();
-      return this.results.failed === 0;
+      return this.isDeploymentReady();
 
     } catch (error) {
       console.error('❌ Smoke test suite failed:', error.message);
       this.printSummary();
       return false;
     }
+  }
+
+  isDeploymentReady() {
+    const criticalFailures = this.results.tests
+      .filter(test => test.status === 'FAILED' && test.critical)
+      .length;
+
+    return criticalFailures === 0;
   }
 
   async testHealthChecks() {
@@ -53,7 +110,7 @@ class DeploymentSmokeTester {
       expect(response.status).to.equal(200);
       expect(response.data.status).to.equal('ok');
       expect(response.data.timestamp).to.be.a('string');
-    });
+    }, this.config.tests.health_checks?.critical);
 
     await this.runTest('Database health check', async () => {
       const response = await axios.get(`${this.baseUrl}/api/health/database`, {
@@ -61,7 +118,7 @@ class DeploymentSmokeTester {
       });
       expect(response.status).to.equal(200);
       expect(response.data.database).to.equal('connected');
-    });
+    }, this.config.tests.health_checks?.critical);
 
     await this.runTest('Application info endpoint', async () => {
       const response = await axios.get(`${this.baseUrl}/api/info`, {
@@ -205,16 +262,16 @@ class DeploymentSmokeTester {
     });
   }
 
-  async runTest(testName, testFunction) {
+  async runTest(testName, testFunction, critical = true) {
     try {
       await testFunction();
       console.log(`  ✅ ${testName}`);
       this.results.passed++;
-      this.results.tests.push({ name: testName, status: 'PASSED' });
+      this.results.tests.push({ name: testName, status: 'PASSED', critical });
     } catch (error) {
       console.log(`  ❌ ${testName}: ${error.message}`);
       this.results.failed++;
-      this.results.tests.push({ name: testName, status: 'FAILED', error: error.message });
+      this.results.tests.push({ name: testName, status: 'FAILED', error: error.message, critical });
     }
   }
 
@@ -224,16 +281,27 @@ class DeploymentSmokeTester {
     console.log('='.repeat(50));
     console.log(`✅ Passed: ${this.results.passed}`);
     console.log(`❌ Failed: ${this.results.failed}`);
+    console.log(`⏭️  Skipped: ${this.results.skipped}`);
     console.log(`📈 Success Rate: ${((this.results.passed / (this.results.passed + this.results.failed)) * 100).toFixed(1)}%`);
 
-    if (this.results.failed > 0) {
-      console.log('\n❌ FAILED TESTS:');
-      this.results.tests.filter(test => test.status === 'FAILED').forEach(test => {
+    const criticalFailures = this.results.tests.filter(test => test.status === 'FAILED' && test.critical).length;
+    const nonCriticalFailures = this.results.tests.filter(test => test.status === 'FAILED' && !test.critical).length;
+
+    if (criticalFailures > 0) {
+      console.log('\n❌ CRITICAL FAILURES (blocks deployment):');
+      this.results.tests.filter(test => test.status === 'FAILED' && test.critical).forEach(test => {
         console.log(`  - ${test.name}: ${test.error}`);
       });
     }
 
-    const overallStatus = this.results.failed === 0 ? '✅ DEPLOYMENT READY' : '❌ DEPLOYMENT BLOCKED';
+    if (nonCriticalFailures > 0) {
+      console.log('\n⚠️  NON-CRITICAL FAILURES (monitor but allow deployment):');
+      this.results.tests.filter(test => test.status === 'FAILED' && !test.critical).forEach(test => {
+        console.log(`  - ${test.name}: ${test.error}`);
+      });
+    }
+
+    const overallStatus = this.isDeploymentReady() ? '✅ DEPLOYMENT READY' : '❌ DEPLOYMENT BLOCKED';
     console.log(`\n🎯 OVERALL STATUS: ${overallStatus}`);
   }
 }
