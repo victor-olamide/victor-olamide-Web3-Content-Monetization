@@ -5,6 +5,7 @@ const Content = require('../models/Content');
 const Purchase = require('../models/Purchase');
 const { uploadToIPFS } = require('../services/storageService');
 const { uploadFileToIPFS, uploadMetadataToIPFS, getGatewayUrl } = require('../services/ipfsService');
+const { pinningManager } = require('../services/pinningManager');
 const { addContentToContract, removeContentFromContract } = require('../services/contractService');
 const { verifyCreatorOwnership, checkContentNotRemoved } = require('../middleware/creatorAuth');
 const { initiateRefund, getPendingRefundsForCreator } = require('../services/refundService');
@@ -176,6 +177,16 @@ router.post('/upload-and-register', (req, res) => {
       });
       const newContent = await content.save();
 
+      // 4. Pin content for reliability
+      try {
+        console.log(`[Content Creation] Starting to pin content ${contentId}`);
+        await pinningManager.pinContent(newContent, req.file.buffer, req.file.originalname);
+        console.log(`[Content Creation] Successfully pinned content ${contentId}`);
+      } catch (pinningError) {
+        console.error(`[Content Creation] Failed to pin content ${contentId}:`, pinningError.message);
+        // Don't fail the entire operation if pinning fails, but log it
+      }
+
       res.status(201).json({
         message: 'Content uploaded and registered successfully',
         content: newContent,
@@ -261,7 +272,17 @@ router.post('/:contentId/remove', verifyCreatorOwnership, async (req, res) => {
     content.removalReason = reason;
     await content.save();
 
-    // 3. Find all purchases for this content
+    // 3. Unpin content from IPFS providers
+    try {
+      console.log(`[Content Removal] Starting to unpin content ${contentId}`);
+      await pinningManager.unpinContent(content);
+      console.log(`[Content Removal] Successfully unpinned content ${contentId}`);
+    } catch (unpinningError) {
+      console.error(`[Content Removal] Failed to unpin content ${contentId}:`, unpinningError.message);
+      // Don't fail the entire operation if unpinning fails, but log it
+    }
+
+    // 4. Find all purchases for this content
     const purchases = await Purchase.find({ contentId: parseInt(contentId) });
 
     // 4. Initiate refunds for eligible purchases
