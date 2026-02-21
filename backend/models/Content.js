@@ -21,6 +21,24 @@ const contentSchema = new mongoose.Schema({
   refundable: { type: Boolean, default: true },
   refundWindowDays: { type: Number, default: 30 },
   
+  // IPFS Pinning information
+  pinningInfo: {
+    primaryHash: { type: String }, // Main IPFS hash
+    replicas: [{
+      provider: { type: String }, // Pinning service provider
+      hash: { type: String }, // Hash on this provider
+      url: { type: String }, // Full IPFS URL
+      timestamp: { type: Date }, // When it was pinned
+      size: { type: Number } // File size in bytes
+    }],
+    redundancyLevel: { type: Number, default: 2 }, // How many providers it's pinned to
+    pinnedAt: { type: Date }, // When initially pinned
+    unpinnedAt: { type: Date }, // When unpinned (if removed)
+    unpinningResults: [{ type: Object }], // Results of unpinning operations
+    errors: [{ type: Object }], // Any pinning errors
+    isRepair: { type: Boolean, default: false } // Whether this was a repair operation
+  },
+  
   // Preview content integration
   hasPreview: { type: Boolean, default: false },
   previewEnabled: { type: Boolean, default: true },

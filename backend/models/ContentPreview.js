@@ -59,6 +59,34 @@ const contentPreviewSchema = new mongoose.Schema({
     averageWatchTime: { type: Number, default: 0, min: 0 } // in seconds for videos
   },
   
+  // IPFS Pinning information for preview assets
+  pinningInfo: {
+    thumbnail: {
+      primaryHash: { type: String },
+      replicas: [{
+        provider: { type: String },
+        hash: { type: String },
+        url: { type: String },
+        timestamp: { type: Date },
+        size: { type: Number }
+      }],
+      pinnedAt: { type: Date }
+    },
+    trailer: {
+      primaryHash: { type: String },
+      replicas: [{
+        provider: { type: String },
+        hash: { type: String },
+        url: { type: String },
+        timestamp: { type: Date },
+        size: { type: Number }
+      }],
+      pinnedAt: { type: Date }
+    },
+    pinnedAt: { type: Date }, // Overall pinning timestamp
+    errors: [{ type: Object }] // Any pinning errors
+  },
+  
   // Timestamps
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
