@@ -10,6 +10,7 @@ interface ToastContextType {
   showInfo: (title: string, message?: string) => void;
   showWarning: (title: string, message?: string) => void;
   dismiss: (id: string) => void;
+  dismissAll: () => void;
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
@@ -36,6 +37,10 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
+  const dismissAll = useCallback(() => {
+    setToasts([]);
+  }, []);
+
   return (
     <ToastContext.Provider
       value={{
@@ -44,6 +49,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         showInfo: (title, message) => add('info', title, message),
         showWarning: (title, message) => add('warning', title, message),
         dismiss,
+        dismissAll,
       }}
     >
       {children}
