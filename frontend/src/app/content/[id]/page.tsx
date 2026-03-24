@@ -187,10 +187,14 @@ export default function ContentView({ params }: { params: { id: string } }) {
                   </div>
                 )}
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <button 
+                  <button
                     onClick={handlePurchase}
-                    disabled={purchasing}
-                    className={`bg-orange-500 text-white font-bold py-3 px-8 rounded-lg ${purchasing ? 'opacity-50 cursor-not-allowed' : 'hover:bg-orange-600'} transition flex items-center gap-2`}
+                    disabled={purchasing || balanceLoading || (!balanceError && stx.available < (content?.price ?? 0))}
+                    className={`bg-orange-500 text-white font-bold py-3 px-8 rounded-lg ${
+                      purchasing || balanceLoading || (!balanceError && stx.available < (content?.price ?? 0))
+                        ? 'opacity-50 cursor-not-allowed'
+                        : 'hover:bg-orange-600'
+                    } transition flex items-center gap-2`}
                   >
                     {purchasing ? <Loader2 className="animate-spin" size={20} /> : null}
                     {purchasing ? 'Processing...' : 'Purchase Access'}
