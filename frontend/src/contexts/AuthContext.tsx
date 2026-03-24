@@ -4,9 +4,20 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { AppConfig, UserSession, showConnect } from '@stacks/connect';
 import { StacksMainnet } from '@stacks/network';
 
+export interface StacksUserData {
+  profile: {
+    stxAddress: {
+      mainnet: string;
+      testnet: string;
+    };
+    name?: string;
+    image?: string;
+  };
+}
+
 interface AuthContextType {
   userSession: UserSession;
-  userData: any;
+  userData: StacksUserData | null;
   authenticate: () => void;
   logout: () => void;
   isLoggedIn: boolean;
@@ -28,7 +39,7 @@ const APP_ICON = '/logo.png';
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [userData, setUserData] = useState<any>(null);
+  const [userData, setUserData] = useState<StacksUserData | null>(null);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [mounted, setMounted] = useState(false);
 
