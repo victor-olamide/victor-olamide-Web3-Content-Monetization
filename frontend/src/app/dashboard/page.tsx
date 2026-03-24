@@ -12,7 +12,7 @@ import ExportButton from "@/components/ExportButton";
 import UploadContent from "@/components/UploadContent";
 import TokenGating from "@/components/TokenGating";
 import PurchaseHistory from "@/components/PurchaseHistory";
-import ContentList from "@/components/ContentList";
+import ContentList from "@/components/DashboardContentList";
 import DashboardShell from "@/components/DashboardShell";
 import { useEffect } from "react";
 

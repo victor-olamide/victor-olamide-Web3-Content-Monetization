@@ -38,7 +38,7 @@ export interface UseEncryptionReturn {
  * Hook for managing encrypted content access
  */
 export const useEncryption = (initialContentId?: string): UseEncryptionReturn => {
-  const { notify } = useNotification();
+  const { showSuccess, showError, showWarning } = useNotification();
   const [contentState, setContentState] = useState<EncryptedContentState>({
     contentId: initialContentId || '',
     isDecrypted: false,
@@ -107,13 +107,7 @@ export const useEncryption = (initialContentId?: string): UseEncryptionReturn =>
           lastAccessedAt: new Date().toISOString()
         }));
 
-        notify({
-          type: 'success',
-          title: 'Content Unlocked',
-          message: `Your content is accessible until ${formatExpirationDate(
-            decrypted.expiresAt
-          )}`
-        });
+        showSuccess('Content Unlocked', `Your content is accessible until ${formatExpirationDate(decrypted.expiresAt)}`);
 
         return decrypted.contentUrl;
       } catch (error) {
@@ -126,16 +120,13 @@ export const useEncryption = (initialContentId?: string): UseEncryptionReturn =>
           isDecrypted: false
         }));
 
-        notify({
-          type: 'error',
-          title: 'Decryption Failed',
-          message: errorMessage
-        });
+        showError('Decryption Failed', errorMessage
+        );
 
         throw error;
       }
     },
-    [notify]
+    [showSuccess, showError, showWarning]
   );
 
   /**
@@ -221,11 +212,8 @@ export const useEncryption = (initialContentId?: string): UseEncryptionReturn =>
           : null
       }));
 
-      notify({
-        type: 'success',
-        title: 'Access Revoked',
-        message: 'Content access has been revoked'
-      });
+      showSuccess('Access Revoked', 'Content access has been revoked'
+      );
 
       return true;
     } catch (error) {
@@ -237,15 +225,12 @@ export const useEncryption = (initialContentId?: string): UseEncryptionReturn =>
         error: errorMessage
       }));
 
-      notify({
-        type: 'error',
-        title: 'Revocation Failed',
-        message: errorMessage
-      });
+      showError('Revocation Failed', errorMessage
+      );
 
       return false;
     }
-  }, [notify]);
+  }, [showSuccess, showError, showWarning]);
 
   /**
    * Extend content access
@@ -253,11 +238,8 @@ export const useEncryption = (initialContentId?: string): UseEncryptionReturn =>
   const extendAccess = useCallback(
     async (contentId: string, additionalDays: number): Promise<boolean> => {
       if (additionalDays <= 0) {
-        notify({
-          type: 'warning',
-          title: 'Invalid Duration',
-          message: 'Extension duration must be greater than 0 days'
-        });
+        showWarning('Invalid Duration', 'Extension duration must be greater than 0 days'
+        );
         return false;
       }
 
@@ -277,11 +259,7 @@ export const useEncryption = (initialContentId?: string): UseEncryptionReturn =>
             : null
         }));
 
-        notify({
-          type: 'success',
-          title: 'Access Extended',
-          message: `Access extended for ${additionalDays} days`
-        });
+        showSuccess('Access Extended', `Access extended for ${additionalDays} days`);
 
         return true;
       } catch (error) {
@@ -293,16 +271,13 @@ export const useEncryption = (initialContentId?: string): UseEncryptionReturn =>
           error: errorMessage
         }));
 
-        notify({
-          type: 'error',
-          title: 'Extension Failed',
-          message: errorMessage
-        });
+        showError('Extension Failed', errorMessage
+        );
 
         return false;
       }
     },
-    [notify]
+    [showSuccess, showError, showWarning]
   );
 
   /**

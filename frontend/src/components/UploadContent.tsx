@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import { Upload, FileText, CheckCircle, Loader2 } from 'lucide-react';
 import { useStorage } from '@/hooks/useStorage';
 import { useAuth } from '@/contexts/AuthContext';
-import { validateMetadata } from '@/utils/metadata';
 import { usePayPerView } from '@/hooks/usePayPerView';
 
 const UploadContent: React.FC = () => {

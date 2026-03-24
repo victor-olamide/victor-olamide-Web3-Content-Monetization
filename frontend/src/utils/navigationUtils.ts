@@ -178,7 +178,7 @@ export function formatBreadcrumbPath(path: string): string[] {
  */
 export function buildBreadcrumbsFromPath(path: string) {
   const segments = path.split('/').filter(Boolean);
-  const breadcrumbs = [{ label: 'Home', path: '/' }];
+  const breadcrumbs: { label: string; path: string; isActive?: boolean }[] = [{ label: 'Home', path: '/' }];
 
   let currentPath = '';
   segments.forEach((segment, index) => {
