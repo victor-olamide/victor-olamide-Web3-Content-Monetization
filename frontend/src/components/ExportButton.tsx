@@ -19,6 +19,10 @@ const ExportButton: React.FC = () => {
       const res = await fetch(`${API_URL}/creator/export/${address}`);
       if (res.ok) {
         const data = await res.json();
+        if (!data || data.length === 0) {
+          showWarning('No Data', 'You have no earnings transactions to export yet.');
+          return;
+        }
         
         const csv = [
           ['Type', 'User', 'Amount', 'Timestamp', 'Transaction ID'].join(','),
