@@ -30,6 +30,7 @@ export default function ContentView({ params }: { params: { id: string } }) {
           setTxStatus('success');
           clearInterval(interval);
           refreshAccess();
+          refetchBalance();
         } else if (data.tx_status === 'abort' || data.tx_status === 'failed') {
           setTxStatus('failed');
           clearInterval(interval);
