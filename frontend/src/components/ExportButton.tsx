@@ -3,11 +3,13 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { API_URL } from '@/utils/constants';
+import { useToast } from '@/contexts/ToastContext';
 
 const ExportButton: React.FC = () => {
   const { userData } = useAuth();
   const address = userData?.profile?.stxAddress?.mainnet;
   const [loading, setLoading] = useState(false);
+  const { showSuccess, showError, showWarning } = useToast();
 
   const handleExport = async () => {
     if (!address) return;
@@ -36,9 +38,11 @@ const ExportButton: React.FC = () => {
         a.download = `earnings-${Date.now()}.csv`;
         a.click();
         window.URL.revokeObjectURL(url);
+        showSuccess('Export Complete', 'Your earnings data has been downloaded as a CSV file.');
       }
     } catch (err) {
       console.error('Export failed', err);
+      showError('Export Failed', 'Could not export data. Please try again.');
     } finally {
       setLoading(false);
     }
