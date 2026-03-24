@@ -142,7 +142,7 @@ export const Toast: React.FC<ToastProps> = ({
 /**
  * Toast variants for quick creation
  */
-export const ToastSuccesss: React.FC<Omit<ToastProps, 'type'>> = (props) => (
+export const ToastSuccess: React.FC<Omit<ToastProps, 'type'>> = (props) => (
   <Toast {...props} type="success" />
 );
 
