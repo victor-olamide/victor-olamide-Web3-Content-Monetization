@@ -24,8 +24,7 @@ export const exportProfileAsJson = async (profileData: any) => {
  */
 export const exportPurchasesAsCsv = async (purchases: any[]) => {
   if (purchases.length === 0) {
-    alert('No purchases to export');
-    return;
+    throw new Error('No purchases to export');
   }
 
   // Define CSV headers
@@ -279,7 +278,7 @@ export const exportUserData = async (options: ExportOptions, data: any) => {
         if (options.includePurchases) {
           await exportPurchasesAsCsv(data.purchases);
         } else {
-          alert('CSV export is only available for purchase data');
+          throw new Error('CSV export is only available for purchase data');
         }
         break;
       }
