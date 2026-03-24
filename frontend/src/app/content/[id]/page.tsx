@@ -51,11 +51,20 @@ export default function ContentView({ params }: { params: { id: string } }) {
     
     setPurchaseError(null);
     setTxStatus(null);
-    // Simple balance check (mock)
-    // In a real app, you would fetch the balance from the API/Contract
-    const mockBalance = 1000; 
-    if (mockBalance < content.price) {
-      setPurchaseError("Insufficient STX balance");
+
+    // Real balance check against Stacks API
+    if (balanceLoading) {
+      setPurchaseError("Fetching wallet balance, please try again.");
+      return;
+    }
+    if (balanceError) {
+      setPurchaseError(`Could not verify balance: ${balanceError}`);
+      return;
+    }
+    if (stx.available < content.price) {
+      setPurchaseError(
+        `Insufficient STX balance. You have ${stx.available.toFixed(2)} STX available but need ${content.price} STX.`
+      );
       return;
     }
     
