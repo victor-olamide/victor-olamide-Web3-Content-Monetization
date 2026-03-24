@@ -14,6 +14,7 @@ import TokenGating from "@/components/TokenGating";
 import PurchaseHistory from "@/components/PurchaseHistory";
 import ContentList from "@/components/DashboardContentList";
 import DashboardShell from "@/components/DashboardShell";
+import WalletBalanceCard from "@/components/WalletBalanceCard";
 import { useEffect } from "react";
 
 export default function Dashboard() {
@@ -41,7 +42,8 @@ export default function Dashboard() {
           <StatsOverview />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <WalletBalanceCard />
           <EarningsCard />
           <SubscribersCard />
           <RevenueChart />
