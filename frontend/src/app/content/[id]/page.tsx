@@ -13,7 +13,7 @@ export default function ContentView({ params }: { params: { id: string } }) {
   const { isLoggedIn, stxAddress } = useAuth();
   const { content, hasAccess, loading, error, refreshAccess } = useContentAccess(params.id);
   const { purchaseContent } = usePayPerView();
-  const { showInfo } = useToast();
+  const { showInfo, showSuccess, showError } = useToast();
   const [purchasing, setPurchasing] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
@@ -85,11 +85,14 @@ export default function ContentView({ params }: { params: { id: string } }) {
         console.warn("Failed to notify backend:", backendErr);
       }
 
+      showSuccess('Purchase Submitted', 'Your transaction is being processed on the blockchain.');
       pollTransaction(result as string);
     } catch (err: any) {
       console.error(err);
       setTxId(null);
-      setPurchaseError(err.message || "Purchase failed");
+      const errMsg = err.message || "Purchase failed";
+      setPurchaseError(errMsg);
+      showError('Purchase Failed', errMsg);
     } finally {
       setPurchasing(false);
     }
