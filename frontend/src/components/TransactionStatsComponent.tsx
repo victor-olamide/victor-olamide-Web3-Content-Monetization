@@ -264,7 +264,7 @@ export const TransactionStatsComponent: React.FC = () => {
             {summary?.byType ? (
               <>
                 <p className="text-2xl font-bold text-blue-900">
-                  {formatAmount(Math.max(...Object.values(summary.byType as any)))} STX
+                  {formatAmount(Math.max(...(Object.values(summary.byType as any) as number[])))} STX
                 </p>
               </>
             ) : (

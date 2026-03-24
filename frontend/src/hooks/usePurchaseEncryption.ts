@@ -41,7 +41,7 @@ export interface UsePurchaseEncryptionReturn {
  * Hook for managing purchase-related content encryption
  */
 export const usePurchaseEncryption = (): UsePurchaseEncryptionReturn => {
-  const { notify } = useNotification();
+  const { showSuccess, showError, showWarning } = useNotification();
   const { decryptContent, extendAccess, revokeAccess } = useEncryption();
   const purchaseState = useRef<PurchaseEncryptionState>({
     isPurchasing: false,
@@ -79,11 +79,7 @@ export const usePurchaseEncryption = (): UsePurchaseEncryptionReturn => {
         purchaseState.current.purchaseTransactionId = purchaseTransactionId;
         purchaseState.current.isEncrypting = false;
 
-        notify({
-          type: 'success',
-          title: 'Content Encrypted',
-          message: 'Your purchased content is now securely encrypted'
-        });
+        showSuccess('Content Encrypted', 'Your purchased content is now securely encrypted');
 
         return encrypted.id;
       } catch (error) {
@@ -91,16 +87,12 @@ export const usePurchaseEncryption = (): UsePurchaseEncryptionReturn => {
         purchaseState.current.encryptionError = errorMessage;
         purchaseState.current.isEncrypting = false;
 
-        notify({
-          type: 'error',
-          title: 'Encryption Failed',
-          message: errorMessage
-        });
+        showError('Encryption Failed', errorMessage);
 
         throw error;
       }
     },
-    [notify]
+    [showSuccess, showError, showWarning]
   );
 
   /**
@@ -135,11 +127,7 @@ export const usePurchaseEncryption = (): UsePurchaseEncryptionReturn => {
 
         purchaseState.current.isPurchasing = false;
 
-        notify({
-          type: 'success',
-          title: 'Purchase Complete',
-          message: 'Your content is ready to access for 30 days'
-        });
+        showSuccess('Purchase Complete', 'Your content is ready to access for 30 days');
 
         return true;
       } catch (error) {
@@ -147,16 +135,12 @@ export const usePurchaseEncryption = (): UsePurchaseEncryptionReturn => {
         purchaseState.current.purchaseError = errorMessage;
         purchaseState.current.isPurchasing = false;
 
-        notify({
-          type: 'error',
-          title: 'Purchase Processing Failed',
-          message: errorMessage
-        });
+        showError('Purchase Processing Failed', errorMessage);
 
         return false;
       }
     },
-    [encryptPurchasedContent, decryptContent, notify]
+    [encryptPurchasedContent, decryptContent, showSuccess, showError, showWarning]
   );
 
   /**
@@ -180,11 +164,7 @@ export const usePurchaseEncryption = (): UsePurchaseEncryptionReturn => {
 
         purchaseState.current.isPurchasing = false;
 
-        notify({
-          type: 'success',
-          title: 'Refund Processed',
-          message: 'Your access to the content has been revoked'
-        });
+        showSuccess('Refund Processed', 'Your access to the content has been revoked');
 
         return true;
       } catch (error) {
@@ -192,16 +172,12 @@ export const usePurchaseEncryption = (): UsePurchaseEncryptionReturn => {
         purchaseState.current.purchaseError = errorMessage;
         purchaseState.current.isPurchasing = false;
 
-        notify({
-          type: 'error',
-          title: 'Refund Processing Failed',
-          message: errorMessage
-        });
+        showError('Refund Processing Failed', errorMessage);
 
         return false;
       }
     },
-    [revokeAccess, notify]
+    [revokeAccess, showSuccess, showError, showWarning]
   );
 
   /**
@@ -222,11 +198,7 @@ export const usePurchaseEncryption = (): UsePurchaseEncryptionReturn => {
 
         purchaseState.current.isPurchasing = false;
 
-        notify({
-          type: 'success',
-          title: 'Access Renewed',
-          message: `Your access has been extended for ${renewalDays} days`
-        });
+        showSuccess('Access Renewed', `Your access has been extended for ${renewalDays} days`);
 
         return true;
       } catch (error) {
@@ -234,16 +206,12 @@ export const usePurchaseEncryption = (): UsePurchaseEncryptionReturn => {
         purchaseState.current.purchaseError = errorMessage;
         purchaseState.current.isPurchasing = false;
 
-        notify({
-          type: 'error',
-          title: 'Renewal Failed',
-          message: errorMessage
-        });
+        showError('Renewal Failed', errorMessage);
 
         return false;
       }
     },
-    [extendAccess, notify]
+    [extendAccess, showSuccess, showError, showWarning]
   );
 
   /**

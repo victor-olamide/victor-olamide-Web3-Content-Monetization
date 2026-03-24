@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import useContentSearch from '@/hooks/useContentSearch';
+import { useContentSearchFilters as useContentSearch } from '@/hooks/useContentSearch';
 import ContentList from '@/components/ContentList';
 import { Search } from 'lucide-react';
 

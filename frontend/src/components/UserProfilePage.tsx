@@ -272,7 +272,7 @@ export const UserProfilePage: React.FC = () => {
                         {profile.displayName || 'Anonymous User'}
                       </h2>
                       {profile.isVerified && (
-                        <Shield className="w-5 h-5 text-blue-600" title="Verified" />
+                        <span title="Verified"><Shield className="w-5 h-5 text-blue-600" /></span>
                       )}
                     </div>
                     {profile.username && <p className="text-gray-600">@{profile.username}</p>}

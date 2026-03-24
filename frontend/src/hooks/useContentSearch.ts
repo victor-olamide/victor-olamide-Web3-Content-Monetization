@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 export type ContentItem = {
   _id?: string;
@@ -43,7 +43,6 @@ export const useContentSearch = (initialQuery = '') => {
       }
     };
 
-    // debounce simple
     const timer = setTimeout(() => {
       if (query.length === 0 || query.length >= 1) fetchResults();
     }, 250);
@@ -54,20 +53,10 @@ export const useContentSearch = (initialQuery = '') => {
     };
   }, [query, page]);
 
-  return {
-    query,
-    setQuery,
-    results,
-    loading,
-    page,
-    setPage,
-    total,
-    error
-  };
+  return { query, setQuery, results, loading, page, setPage, total, error };
 };
 
 export default useContentSearch;
-import { useState, useEffect, useCallback } from 'react';
 
 export interface SearchFilters {
   q?: string;
@@ -81,7 +70,7 @@ export interface SearchFilters {
   sortDir?: 'asc' | 'desc';
 }
 
-export const useContentSearch = (initialFilters: SearchFilters = {}) => {
+export const useContentSearchFilters = (initialFilters: SearchFilters = {}) => {
   const [filters, setFilters] = useState<SearchFilters>({ ...initialFilters });
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<any[]>([]);
@@ -92,9 +81,7 @@ export const useContentSearch = (initialFilters: SearchFilters = {}) => {
     const params = new URLSearchParams();
     Object.keys(obj).forEach((k) => {
       const v = (obj as any)[k];
-      if (typeof v !== 'undefined' && v !== null && v !== '') {
-        params.append(k, String(v));
-      }
+      if (typeof v !== 'undefined' && v !== null && v !== '') params.append(k, String(v));
     });
     return params.toString();
   };
@@ -116,30 +103,12 @@ export const useContentSearch = (initialFilters: SearchFilters = {}) => {
   }, []);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchResults(filters);
-    }, 250);
+    const timer = setTimeout(() => { fetchResults(filters); }, 250);
     return () => clearTimeout(timer);
   }, [filters, fetchResults]);
 
-  const setFilter = (patch: Partial<SearchFilters>) => {
-    setFilters(prev => ({ ...prev, ...patch }));
-  };
+  const setFilter = (patch: Partial<SearchFilters>) => setFilters(prev => ({ ...prev, ...patch }));
+  const clearFilters = () => setFilters({});
 
-  const clearFilters = () => {
-    setFilters({});
-  };
-
-  return {
-    filters,
-    setFilter,
-    clearFilters,
-    results,
-    loading,
-    error,
-    pageInfo,
-    fetchResults
-  };
+  return { filters, setFilter, clearFilters, results, loading, error, pageInfo, fetchResults };
 };
-
-export default useContentSearch;
