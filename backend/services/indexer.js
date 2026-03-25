@@ -6,7 +6,12 @@ const GatingRule = require('../models/GatingRule');
 
 class Indexer {
   constructor() {
-    this.apiUrl = process.env.STACKS_API_URL || 'https://stacks-node-api.mainnet.stacks.co';
+    const network = process.env.STACKS_NETWORK || 'testnet';
+    const defaultApiUrl =
+      network === 'mainnet'
+        ? 'https://stacks-node-api.mainnet.stacks.co'
+        : 'https://stacks-node-api.testnet.stacks.co';
+    this.apiUrl = process.env.STACKS_API_URL || defaultApiUrl;
     this.contractAddress = process.env.CONTRACT_ADDRESS;
     this.lastProcessedBlock = 0;
   }
