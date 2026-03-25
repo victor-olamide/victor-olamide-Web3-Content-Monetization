@@ -9,6 +9,7 @@ const { pinningManager } = require('../services/pinningManager');
 const { addContentToContract, removeContentFromContract } = require('../services/contractService');
 const { verifyCreatorOwnership, checkContentNotRemoved } = require('../middleware/creatorAuth');
 const { initiateRefund, getPendingRefundsForCreator } = require('../services/refundService');
+const { validateContentBody } = require('../middleware/inputValidation');
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
