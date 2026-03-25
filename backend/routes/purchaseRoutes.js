@@ -62,6 +62,15 @@ router.get('/check/:user/:contentId', async (req, res) => {
 router.post('/', validatePurchaseBody, async (req, res) => {
   const { contentId, user, txId, amount, creator } = req.validatedBody;
 
+  try {
+    const existing = await Purchase.findOne({ txId });
+    if (existing) {
+      return res.status(409).json({ message: 'Purchase with this txId already exists' });
+    }
+  } catch (err) {
+    return res.status(500).json({ message: 'Failed to check for duplicate transaction' });
+  }
+
   const purchase = new Purchase({
     contentId,
     user,
