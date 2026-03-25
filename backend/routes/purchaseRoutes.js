@@ -20,9 +20,9 @@ router.get('/platform-fee', async (req, res) => {
 });
 
 // Calculate platform fee for a specific amount
-router.get('/calculate-fee/:amount', async (req, res) => {
+router.get('/calculate-fee/:amount', validateAmountParam, async (req, res) => {
   try {
-    const amount = parseInt(req.params.amount);
+    const amount = req.parsedAmount;
     const fee = await calculatePlatformFee(amount);
     const creatorAmount = amount - fee;
     res.json({ 
