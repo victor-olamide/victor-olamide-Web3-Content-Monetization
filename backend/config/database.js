@@ -2,6 +2,7 @@
 // Production-ready database configuration for MongoDB cluster
 
 const mongoose = require('mongoose');
+const logger = require('../utils/logger');
 
 // MongoDB connection options for replica set
 const mongoOptions = {
@@ -107,22 +108,23 @@ class DatabaseConnection {
     try {
       const mongoURI = process.env.MONGODB_URI || buildMongoURI();
 
-      console.log('Connecting to MongoDB replica set...');
-      console.log(`Hosts: ${process.env.MONGO_HOSTS || 'mongodb-primary:27017,mongodb-secondary1:27017,mongodb-secondary2:27017'}`);
-      console.log(`Replica Set: ${mongoOptions.replicaSet}`);
-      console.log(`Database: ${process.env.MONGO_DATABASE || 'web3content'}`);
+      logger.info('Connecting to MongoDB replica set', {
+        hosts: process.env.MONGO_HOSTS || 'mongodb-primary:27017,mongodb-secondary1:27017,mongodb-secondary2:27017',
+        replicaSet: mongoOptions.replicaSet,
+        database: process.env.MONGO_DATABASE || 'web3content',
+      });
 
       this.connection = await mongoose.connect(mongoURI, mongoOptions);
 
       this.isConnected = true;
-      console.log('✅ Successfully connected to MongoDB replica set');
+      logger.info('Connected to MongoDB replica set');
 
       // Set up connection event handlers
       this.setupEventHandlers();
 
       return this.connection;
     } catch (error) {
-      console.error('❌ Failed to connect to MongoDB replica set:', error);
+      logger.error('Failed to connect to MongoDB replica set', { err: error });
       throw error;
     }
   }
@@ -130,30 +132,30 @@ class DatabaseConnection {
   // Set up connection event handlers
   setupEventHandlers() {
     mongoose.connection.on('connected', () => {
-      console.log('📊 MongoDB connected');
+      logger.info('MongoDB connected');
     });
 
     mongoose.connection.on('error', (err) => {
-      console.error('❌ MongoDB connection error:', err);
+      logger.error('MongoDB connection error', { err });
     });
 
     mongoose.connection.on('disconnected', () => {
-      console.log('📊 MongoDB disconnected');
+      logger.warn('MongoDB disconnected');
       this.isConnected = false;
     });
 
     mongoose.connection.on('reconnected', () => {
-      console.log('📊 MongoDB reconnected');
+      logger.info('MongoDB reconnected');
       this.isConnected = true;
     });
 
     // Replica set events
     mongoose.connection.on('replicaSetInitiated', () => {
-      console.log('📊 Replica set initiated');
+      logger.info('Replica set initiated');
     });
 
     mongoose.connection.on('replicaSetReconfigured', () => {
-      console.log('📊 Replica set reconfigured');
+      logger.info('Replica set reconfigured');
     });
   }
 
@@ -162,9 +164,9 @@ class DatabaseConnection {
     try {
       await mongoose.connection.close();
       this.isConnected = false;
-      console.log('✅ Successfully disconnected from MongoDB');
+      logger.info('Disconnected from MongoDB');
     } catch (error) {
-      console.error('❌ Error disconnecting from MongoDB:', error);
+      logger.error('Error disconnecting from MongoDB', { err: error });
       throw error;
     }
   }
@@ -219,13 +221,13 @@ const dbConnection = new DatabaseConnection();
 
 // Graceful shutdown
 process.on('SIGINT', async () => {
-  console.log('Received SIGINT, gracefully shutting down...');
+  logger.info('SIGINT received, gracefully shutting down');
   await dbConnection.disconnect();
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
-  console.log('Received SIGTERM, gracefully shutting down...');
+  logger.info('SIGTERM received, gracefully shutting down');
   await dbConnection.disconnect();
   process.exit(0);
 });
