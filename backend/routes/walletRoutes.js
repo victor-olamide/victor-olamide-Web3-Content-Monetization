@@ -19,6 +19,7 @@ const {
   checkSessionExpiration,
   attachClientMetadata
 } = require('../middleware/walletAuth');
+const { validateAddressParam, isValidStxAddress } = require('../middleware/inputValidation');
 
 // Apply middleware to all routes
 router.use(attachClientMetadata);
@@ -54,6 +55,13 @@ router.post('/connect', validateWalletType, async (req, res) => {
       return res.status(400).json({
         success: false,
         error: 'Missing required fields: address, publicKey, signature'
+      });
+    }
+
+    if (!isValidStxAddress(address)) {
+      return res.status(400).json({
+        success: false,
+        error: 'address must be a valid Stacks wallet address (SP… or ST…)',
       });
     }
 
@@ -156,7 +164,7 @@ router.get(
 
 // GET /api/wallet/:address
 // Get wallet connection details (with optional wallet auth)
-router.get('/:address', optionalWalletAuth, async (req, res) => {
+router.get('/:address', validateAddressParam, optionalWalletAuth, async (req, res) => {
   try {
     const { address } = req.params;
     const { walletType } = req.query;
@@ -261,6 +269,7 @@ router.post('/disconnect', validateWalletType, async (req, res) => {
 // Disconnect authenticated wallet
 router.post(
   '/disconnect/:address',
+  validateAddressParam,
   verifyWalletAuth,
   async (req, res) => {
     try {
