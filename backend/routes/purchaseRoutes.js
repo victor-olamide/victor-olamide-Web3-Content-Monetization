@@ -36,7 +36,7 @@ router.get('/calculate-fee/:amount', validateAmountParam, async (req, res) => {
 });
 
 // Get purchase history for a user
-router.get('/user/:address', async (req, res) => {
+router.get('/user/:address', validateAddressParam, async (req, res) => {
   try {
     const purchases = await Purchase.find({ user: req.params.address }).sort({ timestamp: -1 });
     res.json(purchases);
