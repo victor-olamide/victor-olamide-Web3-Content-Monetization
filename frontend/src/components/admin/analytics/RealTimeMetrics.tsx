@@ -13,9 +13,10 @@ import {
   ShoppingCart,
   Clock,
 } from 'lucide-react';
+import type { RealTimeMetricData } from '@/types/analytics';
 
 interface RealTimeMetricsProps {
-  data: any;
+  data: RealTimeMetricData;
   loading: boolean;
 }
 

@@ -31,11 +31,12 @@ import {
   DollarSign,
   Activity,
 } from 'lucide-react';
+import type { ChartDataPoint, CountryDataPoint, AnalyticsInsights, AnalyticsSummary } from '@/types/analytics';
 
 interface AnalyticsChartsProps {
-  data: any[];
-  insights: any;
-  summary: any;
+  data: ChartDataPoint[];
+  insights: AnalyticsInsights;
+  summary: AnalyticsSummary;
   loading: boolean;
 }
 
@@ -82,7 +83,7 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({
 
   // Top countries data
   const countryData = data.length > 0 ? data[data.length - 1].metrics?.topCountries || [] : [];
-  const countryChartData = countryData.slice(0, 5).map((item: any) => ({
+  const countryChartData = countryData.slice(0, 5).map((item: CountryDataPoint) => ({
     name: item.country,
     value: item.count,
   }));
@@ -242,7 +243,7 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={(props: any) => `${props.name} ${((props.percent ?? 0) * 100).toFixed(0)}%`}
+                  label={(props: { name?: string; percent?: number }) => `${props.name ?? ''} ${((props.percent ?? 0) * 100).toFixed(0)}%`}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
@@ -266,7 +267,7 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {countryData.slice(0, 5).map((country: any, index: number) => (
+              {countryData.slice(0, 5).map((country: CountryDataPoint, index: number) => (
                 <div key={country.country} className="flex items-center justify-between">
                   <div className="flex items-center">
                     <Badge variant="outline" className="mr-3">
