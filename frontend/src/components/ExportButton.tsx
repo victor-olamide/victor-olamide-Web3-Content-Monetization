@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { API_URL } from '@/utils/constants';
 import { useToast } from '@/contexts/ToastContext';
+import type { EarningRecord } from '@/types/content';
 
 const ExportButton: React.FC = () => {
   const { userData } = useAuth();
@@ -33,7 +34,7 @@ const ExportButton: React.FC = () => {
         
         const csv = [
           ['Type', 'User', 'Amount', 'Timestamp', 'Transaction ID'].join(','),
-          ...data.map((tx: any) => [
+          ...data.map((tx: EarningRecord) => [
             tx.type,
             tx.user,
             tx.amount,
