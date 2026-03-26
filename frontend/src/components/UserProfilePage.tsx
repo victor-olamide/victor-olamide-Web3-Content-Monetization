@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Edit2, Save, X, Camera, Check, AlertCircle, Shield } from 'lucide-react';
+import type { SocialLinks, UserPreferences, UserSettings } from '@/types/user';
 
 interface ProfileData {
   address: string;
@@ -12,9 +13,9 @@ interface ProfileData {
   totalPurchases?: number;
   totalSpent?: number;
   lastLogin?: string;
-  preferences?: any;
-  settings?: any;
-  socialLinks?: any;
+  preferences?: UserPreferences;
+  settings?: UserSettings;
+  socialLinks?: SocialLinks;
 }
 
 /**
