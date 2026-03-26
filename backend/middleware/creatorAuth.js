@@ -2,6 +2,7 @@
  * Middleware to verify creator ownership of content
  */
 const Content = require('../models/Content');
+const logger = require('../utils/logger');
 
 async function verifyCreatorOwnership(req, res, next) {
   try {
@@ -35,7 +36,7 @@ async function verifyCreatorOwnership(req, res, next) {
     req.creatorAddress = creatorAddress;
     next();
   } catch (err) {
-    console.error('Creator verification middleware error:', err);
+    logger.error('Creator verification middleware error', { err });
     res.status(500).json({
       message: 'Failed to verify creator ownership',
       error: err.message
@@ -69,7 +70,7 @@ async function checkContentNotRemoved(req, res, next) {
     req.content = content;
     next();
   } catch (err) {
-    console.error('Content status check error:', err);
+    logger.error('Content status check error', { err });
     res.status(500).json({
       message: 'Failed to check content status',
       error: err.message
