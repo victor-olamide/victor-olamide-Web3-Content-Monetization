@@ -3,24 +3,38 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { API_URL } from '@/utils/constants';
+import { useToast } from '@/contexts/ToastContext';
+import type { EarningRecord } from '@/types/content';
 
 const ExportButton: React.FC = () => {
   const { userData } = useAuth();
   const address = userData?.profile?.stxAddress?.mainnet;
   const [loading, setLoading] = useState(false);
+  const { showSuccess, showError, showWarning } = useToast();
 
   const handleExport = async () => {
-    if (!address) return;
+    if (!address) {
+      showError('Not Connected', 'Please connect your wallet before exporting data.');
+      return;
+    }
     
     setLoading(true);
     try {
       const res = await fetch(`${API_URL}/creator/export/${address}`);
+      if (!res.ok) {
+        showError('Export Failed', `Server returned an error (${res.status}). Please try again.`);
+        return;
+      }
       if (res.ok) {
         const data = await res.json();
+        if (!data || data.length === 0) {
+          showWarning('No Data', 'You have no earnings transactions to export yet.');
+          return;
+        }
         
         const csv = [
           ['Type', 'User', 'Amount', 'Timestamp', 'Transaction ID'].join(','),
-          ...data.map((tx: any) => [
+          ...data.map((tx: EarningRecord) => [
             tx.type,
             tx.user,
             tx.amount,
@@ -36,9 +50,11 @@ const ExportButton: React.FC = () => {
         a.download = `earnings-${Date.now()}.csv`;
         a.click();
         window.URL.revokeObjectURL(url);
+        showSuccess('Export Complete', 'Your earnings data has been downloaded as a CSV file.');
       }
     } catch (err) {
       console.error('Export failed', err);
+      showError('Export Failed', 'Could not export data. Please try again.');
     } finally {
       setLoading(false);
     }

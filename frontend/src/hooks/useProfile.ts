@@ -66,9 +66,10 @@ export const useProfile = (options: UseProfileOptions = {}) => {
   const refreshIntervalRef = useRef<NodeJS.Timeout>();
 
   /**
-   * Fetch profile from API
+   * Fetch profile from API.
+   * Accepts an optional AbortSignal so callers can cancel in-flight requests.
    */
-  const fetchProfile = useCallback(async (forceRefresh = false) => {
+  const fetchProfile = useCallback(async (forceRefresh = false, signal?: AbortSignal) => {
     try {
       // Check cache
       const now = Date.now();
@@ -84,6 +85,7 @@ export const useProfile = (options: UseProfileOptions = {}) => {
 
       setIsLoading(true);
       const response = await fetch('/api/profile/me', {
+        signal,
         headers: {
           'X-Session-Id': localStorage.getItem('sessionId') || ''
         }
@@ -102,7 +104,8 @@ export const useProfile = (options: UseProfileOptions = {}) => {
 
       setProfile(profileData);
       setError(null);
-    } catch (err) {
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') return;
       setError(err instanceof Error ? err.message : 'Failed to fetch profile');
       setProfile(null);
     } finally {
@@ -286,10 +289,13 @@ export const useProfile = (options: UseProfileOptions = {}) => {
   }, []);
 
   /**
-   * Initial fetch and auto-refresh setup
+   * Initial fetch and auto-refresh setup.
+   * Uses AbortController so the in-flight request is cancelled if the
+   * component unmounts before it resolves, preventing memory leaks.
    */
   useEffect(() => {
-    fetchProfile();
+    const controller = new AbortController();
+    fetchProfile(false, controller.signal);
 
     if (autoRefresh) {
       refreshIntervalRef.current = setInterval(() => {
@@ -298,6 +304,7 @@ export const useProfile = (options: UseProfileOptions = {}) => {
     }
 
     return () => {
+      controller.abort();
       if (refreshIntervalRef.current) {
         clearInterval(refreshIntervalRef.current);
       }
