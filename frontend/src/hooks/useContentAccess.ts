@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from "@/contexts/AuthContext";
 import type { Content } from '@/types/content';
 
@@ -9,11 +9,26 @@ export const useContentAccess = (contentId: string) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const checkAccess = async () => {
-    setLoading(true);
-    setError(null);
+  // Track whether the hook is still mounted so we never set state on an
+  // unmounted component after an async fetch resolves.
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  const checkAccess = useCallback(async (signal?: AbortSignal) => {
+    if (isMountedRef.current) {
+      setLoading(true);
+      setError(null);
+    }
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/content/${contentId}`);
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/content/${contentId}`,
+        { signal }
+      );
       if (!response.ok) {
         throw new Error('Content not found');
       }
@@ -21,7 +36,9 @@ export const useContentAccess = (contentId: string) => {
       setContent(data);
 
       // Check access: creator or purchased
-      const userAddress = userData?.profile?.stxAddress?.mainnet || userData?.profile?.stxAddress?.testnet;
+      const userAddress =
+        userData?.profile?.stxAddress?.mainnet ||
+        userData?.profile?.stxAddress?.testnet;
       const isCreator = userAddress === data.creator;
 
       if (isCreator) {
@@ -32,6 +49,7 @@ export const useContentAccess = (contentId: string) => {
         const checkData: { hasAccess: boolean } = await checkResp.json();
         setHasAccess(checkData.hasAccess);
       } else {
+        if (!isMountedRef.current) return;
         setHasAccess(false);
       }
 
@@ -41,11 +59,22 @@ export const useContentAccess = (contentId: string) => {
       setError(err instanceof Error ? err.message : 'Failed to check access');
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    if (contentId) checkAccess();
   }, [contentId, userData]);
 
-  return { content, hasAccess, loading, error, refreshAccess: checkAccess };
+  useEffect(() => {
+    if (!contentId) return;
+    const controller = new AbortController();
+    checkAccess(controller.signal);
+    return () => {
+      controller.abort();
+    };
+  }, [contentId, userData, checkAccess]);
+
+  // Expose a manual refresh that creates its own AbortController.
+  const refreshAccess = useCallback(() => {
+    const controller = new AbortController();
+    checkAccess(controller.signal);
+  }, [checkAccess]);
+
+  return { content, hasAccess, loading, error, refreshAccess };
 };
