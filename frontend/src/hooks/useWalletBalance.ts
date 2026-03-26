@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { STACKS_API_BASE } from '@/utils/constants';
 
 export interface WalletBalance {
   stx: {
@@ -15,11 +16,6 @@ export interface WalletBalance {
 }
 
 const STX_DECIMALS = 1_000_000;
-
-const STACKS_API_BASE =
-  process.env.NEXT_PUBLIC_STACKS_NETWORK === 'mainnet'
-    ? 'https://stacks-node-api.mainnet.stacks.co'
-    : 'https://stacks-node-api.testnet.stacks.co';
 
 export function useWalletBalance(): WalletBalance {
   const { stxAddress } = useAuth();
