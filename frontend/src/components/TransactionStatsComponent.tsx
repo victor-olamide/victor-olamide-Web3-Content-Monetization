@@ -12,6 +12,13 @@ interface TransactionStats {
   lastTransactionDate: string | null;
 }
 
+interface TransactionSummary {
+  totalAmount: number;
+  totalUsd: number;
+  byType: Record<string, number>;
+  byCategory: Record<string, number>;
+}
+
 /**
  * Transaction Statistics Component
  * Displays STX transaction statistics and summaries
@@ -20,7 +27,7 @@ export const TransactionStatsComponent: React.FC = () => {
   const [stats, setStats] = useState<TransactionStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [summary, setSummary] = useState<any>(null);
+  const [summary, setSummary] = useState<TransactionSummary | null>(null);
 
   useEffect(() => {
     fetchStats();
@@ -231,7 +238,7 @@ export const TransactionStatsComponent: React.FC = () => {
               <h2 className="text-xl font-semibold text-gray-900 mb-6">Amount by Category</h2>
 
               <div className="space-y-4">
-                {Object.entries(summary.byCategory || {}).map(([category, amount]: any) => (
+                {Object.entries(summary.byCategory || {}).map(([category, amount]) => (
                   <div key={category}>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-gray-700 font-medium capitalize">
@@ -264,7 +271,7 @@ export const TransactionStatsComponent: React.FC = () => {
             {summary?.byType ? (
               <>
                 <p className="text-2xl font-bold text-blue-900">
-                  {formatAmount(Math.max(...(Object.values(summary.byType as any) as number[])))} STX
+                  {formatAmount(Math.max(...(Object.values(summary.byType) as number[])))} STX
                 </p>
               </>
             ) : (
