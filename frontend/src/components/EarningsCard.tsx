@@ -3,11 +3,13 @@
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCreatorData } from '@/hooks/useCreatorData';
+import { useWalletBalance } from '@/hooks/useWalletBalance';
 
 const EarningsCard: React.FC = () => {
   const { userData } = useAuth();
   const address = userData?.profile?.stxAddress?.mainnet;
   const { earnings, loading } = useCreatorData(address);
+  const { stx, loading: balanceLoading } = useWalletBalance();
 
   return (
     <div className="bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
@@ -40,11 +42,21 @@ const EarningsCard: React.FC = () => {
       </div>
       
       {userData && (
-        <div className="mt-4 md:mt-6 pt-4 md:pt-6 border-t border-gray-100">
-          <p className="text-xs text-gray-400 font-medium uppercase mb-2">Creator Address</p>
-          <p className="text-xs md:text-sm font-mono text-gray-600 truncate" title={userData.profile.stxAddress.mainnet}>
-            {userData.profile.stxAddress.mainnet}
-          </p>
+        <div className="mt-4 md:mt-6 pt-4 md:pt-6 border-t border-gray-100 space-y-3">
+          <div>
+            <p className="text-xs text-gray-400 font-medium uppercase mb-1">Wallet Balance</p>
+            {balanceLoading ? (
+              <div className="h-5 w-20 bg-gray-100 animate-pulse rounded" />
+            ) : (
+              <p className="text-base font-bold text-blue-600">{stx.available.toFixed(4)} STX</p>
+            )}
+          </div>
+          <div>
+            <p className="text-xs text-gray-400 font-medium uppercase mb-1">Creator Address</p>
+            <p className="text-xs md:text-sm font-mono text-gray-600 truncate" title={userData.profile.stxAddress.mainnet}>
+              {userData.profile.stxAddress.mainnet}
+            </p>
+          </div>
         </div>
       )}
     </div>
