@@ -4,6 +4,7 @@
  */
 
 const UserProfile = require('../models/UserProfile');
+const logger = require('../utils/logger');
 const Purchase = require('../models/Purchase');
 const PurchaseHistory = require('../models/PurchaseHistory');
 const Content = require('../models/Content');
@@ -25,7 +26,7 @@ class UserProfileService {
 
       return profile;
     } catch (error) {
-      console.error('Error getting/creating profile:', error);
+      logger.error('Error getting/creating profile:', { err: error });
       throw error;
     }
   }
@@ -43,7 +44,7 @@ class UserProfileService {
 
       return profile;
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      logger.error('Error fetching profile:', { err: error });
       throw error;
     }
   }
@@ -85,7 +86,7 @@ class UserProfileService {
 
       return profile;
     } catch (error) {
-      console.error('Error updating profile:', error);
+      logger.error('Error updating profile:', { err: error });
       throw error;
     }
   }
@@ -107,7 +108,7 @@ class UserProfileService {
 
       return profile;
     } catch (error) {
-      console.error('Error updating preferences:', error);
+      logger.error('Error updating preferences:', { err: error });
       throw error;
     }
   }
@@ -129,7 +130,7 @@ class UserProfileService {
 
       return profile;
     } catch (error) {
-      console.error('Error updating settings:', error);
+      logger.error('Error updating settings:', { err: error });
       throw error;
     }
   }
@@ -151,7 +152,7 @@ class UserProfileService {
 
       return profile;
     } catch (error) {
-      console.error('Error updating social links:', error);
+      logger.error('Error updating social links:', { err: error });
       throw error;
     }
   }
@@ -178,7 +179,7 @@ class UserProfileService {
 
       return profile;
     } catch (error) {
-      console.error('Error updating tier:', error);
+      logger.error('Error updating tier:', { err: error });
       throw error;
     }
   }
@@ -218,7 +219,7 @@ class UserProfileService {
 
       return purchaseHistory;
     } catch (error) {
-      console.error('Error recording purchase:', error);
+      logger.error('Error recording purchase:', { err: error });
       throw error;
     }
   }
@@ -248,7 +249,7 @@ class UserProfileService {
         limit
       };
     } catch (error) {
-      console.error('Error fetching purchase history:', error);
+      logger.error('Error fetching purchase history:', { err: error });
       throw error;
     }
   }
@@ -280,7 +281,7 @@ class UserProfileService {
         limit
       };
     } catch (error) {
-      console.error('Error fetching favorites:', error);
+      logger.error('Error fetching favorites:', { err: error });
       throw error;
     }
   }
@@ -305,7 +306,7 @@ class UserProfileService {
 
       return purchase;
     } catch (error) {
-      console.error('Error toggling favorite:', error);
+      logger.error('Error toggling favorite:', { err: error });
       throw error;
     }
   }
@@ -343,7 +344,7 @@ class UserProfileService {
         ratedCount
       };
     } catch (error) {
-      console.error('Error getting profile stats:', error);
+      logger.error('Error getting profile stats:', { err: error });
       throw error;
     }
   }
@@ -371,7 +372,7 @@ class UserProfileService {
       await purchase.save();
       return purchase;
     } catch (error) {
-      console.error('Error adding rating:', error);
+      logger.error('Error adding rating:', { err: error });
       throw error;
     }
   }
@@ -401,7 +402,7 @@ class UserProfileService {
       await purchase.save();
       return purchase;
     } catch (error) {
-      console.error('Error recording access:', error);
+      logger.error('Error recording access:', { err: error });
       throw error;
     }
   }
@@ -425,7 +426,7 @@ class UserProfileService {
 
       return purchase;
     } catch (error) {
-      console.error('Error updating completion:', error);
+      logger.error('Error updating completion:', { err: error });
       throw error;
     }
   }
@@ -448,7 +449,7 @@ class UserProfileService {
 
       return profile;
     } catch (error) {
-      console.error('Error blocking user:', error);
+      logger.error('Error blocking user:', { err: error });
       throw error;
     }
   }
@@ -471,7 +472,7 @@ class UserProfileService {
 
       return profile;
     } catch (error) {
-      console.error('Error unblocking user:', error);
+      logger.error('Error unblocking user:', { err: error });
       throw error;
     }
   }
@@ -489,7 +490,7 @@ class UserProfileService {
 
       return profile;
     } catch (error) {
-      console.error('Error updating last login:', error);
+      logger.error('Error updating last login:', { err: error });
       throw error;
     }
   }
