@@ -2,27 +2,54 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import type { Content } from '@/types/content';
 
 const DashboardContentList: React.FC = () => {
-  const [contentItems, setContentItems] = useState<any[]>([]);
+  const [contentItems, setContentItems] = useState<Content[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
+    const controller = new AbortController();
+
     const fetchContent = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/content`);
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/content`,
+          { signal: controller.signal }
+        );
+        if (!response.ok) {
+          throw new Error(`Failed to load content (HTTP ${response.status})`);
+        }
         const data = await response.json();
         setContentItems(data);
-      } catch (err) {
-        console.error("Failed to fetch content:", err);
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === 'AbortError') return;
+        console.error('Failed to fetch content:', err);
+        setFetchError(err instanceof Error ? err.message : 'Failed to load content');
       } finally {
         setLoading(false);
       }
     };
+
     fetchContent();
+
+    // Cancel the in-flight request if the component unmounts before it resolves.
+    return () => {
+      controller.abort();
+    };
   }, []);
 
   if (loading) return <div>Loading content...</div>;
+
+  if (fetchError) {
+    return (
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 col-span-1 md:col-span-2">
+        <h3 className="text-lg font-bold mb-4">Your Content</h3>
+        <p className="text-red-600 text-sm">{fetchError}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 col-span-1 md:col-span-2">

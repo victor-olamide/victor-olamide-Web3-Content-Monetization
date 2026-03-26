@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardShell from "@/components/DashboardShell";
 import { Lock, Unlock, PlayCircle, ChevronLeft, Loader2, ExternalLink } from 'lucide-react';
@@ -19,7 +19,6 @@ export default function ContentView({ params }: { params: { id: string } }) {
   const [verifying, setVerifying] = useState(false);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
   const [txId, setTxId] = useState<string | null>(null);
-  const [txStatus, setTxStatus] = useState<'pending' | 'success' | 'failed' | null>(null);
 
   const pollTransaction = async (id: string) => {
     setTxStatus('pending');
@@ -50,7 +49,7 @@ export default function ContentView({ params }: { params: { id: string } }) {
 
   const handlePurchase = async () => {
     if (!content || !stxAddress) return;
-    
+
     setPurchaseError(null);
     setTxStatus(null);
 
@@ -71,15 +70,17 @@ export default function ContentView({ params }: { params: { id: string } }) {
     }
     
     setPurchasing(true);
+
     try {
       const result = await purchaseContent(
-        parseInt(params.id), 
-        content.price, 
+        parseInt(params.id),
+        content.price,
         content.creator
       );
-      setTxId(result as string);
-      
-      // Notify backend about the purchase
+      const newTxId = result as string;
+      setTxId(newTxId);
+
+      // Notify backend about the purchase — non-critical, failures are warned only.
       try {
         await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/purchases`, {
           method: 'POST',
@@ -88,12 +89,12 @@ export default function ContentView({ params }: { params: { id: string } }) {
             contentId: parseInt(params.id),
             user: stxAddress,
             creator: content.creator,
-            txId: result,
-            amount: content.price
-          })
+            txId: newTxId,
+            amount: content.price,
+          }),
         });
       } catch (backendErr) {
-        console.warn("Failed to notify backend:", backendErr);
+        console.warn('Failed to notify backend:', backendErr);
       }
 
       showSuccess('Purchase Submitted', 'Your transaction is being processed on the blockchain.');
@@ -148,8 +149,8 @@ export default function ContentView({ params }: { params: { id: string } }) {
   return (
     <DashboardShell>
       <div className="p-8 max-w-4xl mx-auto">
-        <Link 
-          href="/dashboard" 
+        <Link
+          href="/dashboard"
           className="flex items-center gap-1 text-gray-500 hover:text-gray-700 mb-6 transition"
         >
           <ChevronLeft size={20} />
@@ -164,7 +165,7 @@ export default function ContentView({ params }: { params: { id: string } }) {
             </div>
             <h1 className="text-3xl font-bold mb-4">{content?.title}</h1>
             <p className="text-gray-600 mb-6">{content?.description}</p>
-            
+
             {!hasAccess ? (
               <div className="bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl p-12 text-center">
                 <Lock size={48} className="mx-auto text-orange-500 mb-4" />
@@ -221,36 +222,43 @@ export default function ContentView({ params }: { params: { id: string } }) {
 
                 {txId && (
                   <div className={`mt-4 p-4 rounded-lg flex flex-col items-center gap-2 ${
-                    txStatus === 'success' ? 'bg-green-50 text-green-700' : 
-                    txStatus === 'failed' ? 'bg-red-50 text-red-700' : 
+                    txStatus === 'success' ? 'bg-green-50 text-green-700' :
+                    txStatus === 'failed' ? 'bg-red-50 text-red-700' :
                     'bg-blue-50 text-blue-700'
                   }`}>
                     <p className="font-medium text-sm flex items-center gap-2">
                       {txStatus === 'pending' && <Loader2 className="animate-spin" size={16} />}
                       {txStatus === 'success' && <Unlock size={16} />}
                       {txStatus === 'failed' && <Lock size={16} />}
-                      {txStatus === 'pending' ? 'Transaction pending...' : 
-                       txStatus === 'success' ? 'Purchase confirmed! Access Granted' : 
-                       'Transaction failed'}
+                      {txStatus === 'pending'
+                        ? `Transaction pending... (attempt ${attempts}/30)`
+                        : txStatus === 'success'
+                        ? 'Purchase confirmed! Access Granted'
+                        : 'Transaction failed'}
                     </p>
                     {txStatus === 'success' && (
-                      <button 
+                      <button
                         onClick={() => window.location.reload()}
                         className="text-xs font-bold text-green-800 underline mt-1"
                       >
                         Refresh Content
                       </button>
                     )}
-                    <a 
-                      href={`${STACKS_EXPLORER_BASE}/txid/${txId}?chain=${STACKS_CHAIN}`}
-                      target="_blank" 
+                    <a
+                      href={`${EXPLORER_BASE}/txid/${txId}?chain=${EXPLORER_CHAIN}`}
+                      target="_blank"
                       rel="noopener noreferrer"
                       className="text-xs flex items-center gap-1 hover:underline"
                     >
                       View on Explorer <ExternalLink size={12} />
                     </a>
                     {txStatus === 'pending' && (
-                      <p className="text-[10px] text-blue-500 mt-1">Access will be granted once the transaction is confirmed.</p>
+                      <p className="text-[10px] text-blue-500 mt-1">
+                        Access will be granted once the transaction is confirmed.
+                      </p>
+                    )}
+                    {pollingError && (
+                      <p className="text-[10px] text-red-500 mt-1">{pollingError}</p>
                     )}
                   </div>
                 )}
@@ -258,14 +266,14 @@ export default function ContentView({ params }: { params: { id: string } }) {
                 {content?.tokenGating?.enabled && (
                   <div className="mt-6 pt-6 border-t border-gray-100">
                     <p className="text-sm text-gray-500 mb-4">
-                      OR hold at least <strong>{content.tokenGating.minBalance}</strong> 
+                      OR hold at least <strong>{content.tokenGating.minBalance}</strong>
                       {content.tokenGating.tokenType === 'sip-009' ? ' NFT(s)' : ' tokens'} from:
                       <br />
                       <span className="font-mono text-[10px] bg-gray-100 p-1 rounded inline-block mt-1">
                         {content.tokenGating.tokenContract}
                       </span>
                     </p>
-                    <button 
+                    <button
                       onClick={handleVerifyAccess}
                       disabled={verifying}
                       className="text-gray-700 font-semibold py-2 px-6 rounded-lg border border-gray-300 hover:bg-gray-50 transition flex items-center gap-2 mx-auto"
@@ -290,7 +298,7 @@ export default function ContentView({ params }: { params: { id: string } }) {
               </div>
             )}
           </div>
-          
+
           <div className="bg-gray-50 p-6 border-t border-gray-100 flex items-center justify-between">
             <div className="text-sm text-gray-500">
               Creator: <span className="font-mono text-gray-700">{content?.creator}</span>

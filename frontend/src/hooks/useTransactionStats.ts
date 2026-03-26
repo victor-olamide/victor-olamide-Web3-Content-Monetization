@@ -42,8 +42,8 @@ export const useTransactionStats = (
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch stats and summary
-  const fetchStats = useCallback(async () => {
+  // Fetch stats and summary — accepts optional AbortSignal for cleanup.
+  const fetchStats = useCallback(async (signal?: AbortSignal) => {
     try {
       setIsLoading(true);
       setError(null);
@@ -52,6 +52,7 @@ export const useTransactionStats = (
 
       // Fetch stats
       const statsResponse = await fetch('/api/transactions/stats', {
+        signal,
         headers: {
           'Content-Type': 'application/json',
           'X-Session-Id': sessionId
@@ -67,6 +68,7 @@ export const useTransactionStats = (
 
       // Fetch summary
       const summaryResponse = await fetch('/api/transactions/summary', {
+        signal,
         headers: {
           'Content-Type': 'application/json',
           'X-Session-Id': sessionId
@@ -77,7 +79,8 @@ export const useTransactionStats = (
         const summaryData = await summaryResponse.json();
         setSummary(summaryData.data || null);
       }
-    } catch (err) {
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') return;
       setError(err instanceof Error ? err.message : 'Failed to fetch statistics');
       setStats(null);
       setSummary(null);
@@ -86,9 +89,13 @@ export const useTransactionStats = (
     }
   }, []);
 
-  // Initial fetch
+  // Initial fetch — cancel on unmount.
   useEffect(() => {
-    fetchStats();
+    const controller = new AbortController();
+    fetchStats(controller.signal);
+    return () => {
+      controller.abort();
+    };
   }, [fetchStats]);
 
   // Auto-refresh interval

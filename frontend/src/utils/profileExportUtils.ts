@@ -3,6 +3,9 @@
  * Provides functionality to export user profile and purchase data in various formats
  */
 
+import type { UserProfile, PurchaseStats } from '@/types/user';
+import type { Purchase } from '@/hooks/usePurchaseHistory';
+
 interface ExportOptions {
   format: 'json' | 'csv' | 'pdf';
   includeProfile: boolean;
@@ -13,7 +16,7 @@ interface ExportOptions {
 /**
  * Export profile data as JSON
  */
-export const exportProfileAsJson = async (profileData: any) => {
+export const exportProfileAsJson = async (profileData: UserProfile) => {
   const dataStr = JSON.stringify(profileData, null, 2);
   const dataBlob = new Blob([dataStr], { type: 'application/json' });
   downloadFile(dataBlob, `profile_${new Date().getTime()}.json`);
@@ -22,7 +25,7 @@ export const exportProfileAsJson = async (profileData: any) => {
 /**
  * Export purchases as CSV
  */
-export const exportPurchasesAsCsv = async (purchases: any[]) => {
+export const exportPurchasesAsCsv = async (purchases: Purchase[]) => {
   if (purchases.length === 0) {
     throw new Error('No purchases to export');
   }
@@ -76,7 +79,7 @@ export const exportPurchasesAsCsv = async (purchases: any[]) => {
 /**
  * Export purchases as JSON
  */
-export const exportPurchasesAsJson = async (purchases: any[]) => {
+export const exportPurchasesAsJson = async (purchases: Purchase[]) => {
   const dataStr = JSON.stringify(purchases, null, 2);
   const dataBlob = new Blob([dataStr], { type: 'application/json' });
   downloadFile(dataBlob, `purchases_${new Date().getTime()}.json`);
@@ -86,9 +89,9 @@ export const exportPurchasesAsJson = async (purchases: any[]) => {
  * Export complete user data archive
  */
 export const exportCompleteDataArchive = async (
-  profileData: any,
-  purchaseData: any[],
-  purchaseStats: any
+  profileData: UserProfile,
+  purchaseData: Purchase[],
+  purchaseStats: PurchaseStats
 ) => {
   const archive = {
     exportDate: new Date().toISOString(),
@@ -110,7 +113,7 @@ export const exportCompleteDataArchive = async (
 /**
  * Generate HTML report for profile data
  */
-export const generateProfileReport = (profileData: any, purchaseStats: any): string => {
+export const generateProfileReport = (profileData: UserProfile, purchaseStats: PurchaseStats): string => {
   return `
     <!DOCTYPE html>
     <html>
@@ -256,7 +259,13 @@ const downloadFile = (blob: Blob, filename: string) => {
 /**
  * Export data in specified format
  */
-export const exportUserData = async (options: ExportOptions, data: any) => {
+interface ExportData {
+  profile: UserProfile;
+  purchases: Purchase[];
+  stats: PurchaseStats;
+}
+
+export const exportUserData = async (options: ExportOptions, data: ExportData) => {
   try {
     switch (options.format) {
       case 'json': {

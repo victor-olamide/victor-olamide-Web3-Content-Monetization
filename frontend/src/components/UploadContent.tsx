@@ -82,7 +82,7 @@ const UploadContent: React.FC = () => {
         contentId: parseInt(contentId)
       };
 
-      const metadataUrl = await uploadMetadata(metadata, storageType as any);
+      const metadataUrl = await uploadMetadata(metadata, storageType as 'gaia' | 'ipfs');
       console.log("Metadata uploaded:", metadataUrl);
 
       // Call contract to register content
@@ -126,10 +126,10 @@ const UploadContent: React.FC = () => {
       setPrice('');
       setTags('');
       setFile(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
       setContractPending(false);
-      const msg = err.message || 'Upload failed. Please try again.';
+      const msg = err instanceof Error ? err.message : 'Upload failed. Please try again.';
       setError(msg);
       showError('Upload Failed', msg);
     }
@@ -257,7 +257,7 @@ const UploadContent: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700">Token Type</label>
                   <select
                     value={tokenType}
-                    onChange={(e) => setTokenType(e.target.value as any)}
+                    onChange={(e) => setTokenType(e.target.value as 'sip-009' | 'sip-010')}
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-orange-500 focus:border-orange-500"
                   >
                     <option value="sip-009">SIP-009 (NFT)</option>
