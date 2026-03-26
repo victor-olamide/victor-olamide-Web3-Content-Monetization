@@ -19,9 +19,10 @@ import {
   Music,
 } from 'lucide-react';
 import { useContentAnalytics } from '@/hooks/admin/useAnalyticsData';
+import type { DateRange } from '@/types/analytics';
 
 interface ContentAnalyticsProps {
-  dateRange: any;
+  dateRange: DateRange;
   granularity: string;
 }
 
