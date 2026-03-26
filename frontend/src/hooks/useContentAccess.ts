@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from "@/contexts/AuthContext";
+import type { Content } from '@/types/content';
 
 export const useContentAccess = (contentId: string) => {
   const { userData } = useAuth();
-  const [content, setContent] = useState<any>(null);
+  const [content, setContent] = useState<Content | null>(null);
   const [hasAccess, setHasAccess] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,9 +32,7 @@ export const useContentAccess = (contentId: string) => {
       if (!response.ok) {
         throw new Error('Content not found');
       }
-      const data = await response.json();
-
-      if (!isMountedRef.current) return;
+      const data: Content = await response.json();
       setContent(data);
 
       // Check access: creator or purchased
@@ -46,28 +45,18 @@ export const useContentAccess = (contentId: string) => {
         setHasAccess(true);
       } else if (userAddress) {
         // Check access from unified backend endpoint (PPV + Token Gating)
-        const checkResp = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/access/verify/${userAddress}/${contentId}`,
-          { signal }
-        );
-        if (!checkResp.ok) {
-          throw new Error('Failed to verify access');
-        }
-        const checkData = await checkResp.json();
-        if (!isMountedRef.current) return;
+        const checkResp = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/access/verify/${userAddress}/${contentId}`);
+        const checkData: { hasAccess: boolean } = await checkResp.json();
         setHasAccess(checkData.hasAccess);
       } else {
         if (!isMountedRef.current) return;
         setHasAccess(false);
       }
 
-      if (isMountedRef.current) setLoading(false);
+      setLoading(false);
     } catch (err: unknown) {
-      if (!isMountedRef.current) return;
-      // AbortError is expected when the effect cleans up — not a real error.
-      if (err instanceof Error && err.name === 'AbortError') return;
       console.error(err);
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : 'Failed to check access');
       setLoading(false);
     }
   }, [contentId, userData]);

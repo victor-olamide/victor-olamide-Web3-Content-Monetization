@@ -16,9 +16,10 @@ import {
   Target,
 } from 'lucide-react';
 import { useRevenueAnalytics } from '@/hooks/admin/useAnalyticsData';
+import type { DateRange } from '@/types/analytics';
 
 interface RevenueAnalyticsProps {
-  dateRange: any;
+  dateRange: DateRange;
   granularity: string;
 }
 
