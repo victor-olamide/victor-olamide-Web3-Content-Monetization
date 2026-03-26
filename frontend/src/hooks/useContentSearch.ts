@@ -86,25 +86,33 @@ export const useContentSearchFilters = (initialFilters: SearchFilters = {}) => {
     return params.toString();
   };
 
-  const fetchResults = useCallback(async (currentFilters: SearchFilters) => {
+  const fetchResults = useCallback(async (currentFilters: SearchFilters, signal?: AbortSignal) => {
     setLoading(true);
     setError(null);
     try {
       const qs = buildQueryString(currentFilters);
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/content/search?${qs}`);
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/content/search?${qs}`,
+        { signal }
+      );
       const data = await res.json();
       setResults(data.results || []);
       setPageInfo({ page: data.page || 1, limit: data.limit || 20, total: data.total || 0, pages: data.pages || 0 });
-    } catch (err: any) {
-      setError(err.message || 'Search failed');
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') return;
+      setError(err instanceof Error ? err.message : 'Search failed');
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    const timer = setTimeout(() => { fetchResults(filters); }, 250);
-    return () => clearTimeout(timer);
+    const controller = new AbortController();
+    const timer = setTimeout(() => { fetchResults(filters, controller.signal); }, 250);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [filters, fetchResults]);
 
   const setFilter = (patch: Partial<SearchFilters>) => setFilters(prev => ({ ...prev, ...patch }));
