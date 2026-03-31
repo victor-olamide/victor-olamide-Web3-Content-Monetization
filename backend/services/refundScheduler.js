@@ -7,6 +7,7 @@ const { autoProcessRefundsForRemovedContent } = require('./refundService');
  */
 
 let schedulerInstance = null;
+let initialTimeout = null;
 let isRunning = false;
 
 /**
@@ -22,9 +23,10 @@ function initializeScheduler(intervalMs = 3600000) {
   console.log(`Initializing refund scheduler with interval: ${intervalMs}ms`);
   
   // Run immediately on startup (with delay to ensure DB connection)
-  setTimeout(async () => {
+  const timeoutId = setTimeout(async () => {
     await processRefunds();
   }, 5000);
+  initialTimeout = timeoutId;
 
   // Schedule recurring processing
   schedulerInstance = setInterval(async () => {
@@ -62,9 +64,13 @@ function stopScheduler() {
   if (schedulerInstance) {
     clearInterval(schedulerInstance);
     schedulerInstance = null;
-    isRunning = false;
-    console.log('Refund scheduler stopped');
   }
+  if (initialTimeout) {
+    clearTimeout(initialTimeout);
+    initialTimeout = null;
+  }
+  isRunning = false;
+  console.log('Refund scheduler stopped');
 }
 
 /**
