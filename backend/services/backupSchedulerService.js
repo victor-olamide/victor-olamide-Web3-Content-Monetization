@@ -74,7 +74,7 @@ class BackupSchedulerService {
    * Run all scheduled backups
    */
   async runScheduledBackups() {
-    console.log(`[${new Date().toISOString()}] Running scheduled backups...`);
+    logger.info('Running scheduled backups...', { timestamp: new Date().toISOString() });
 
     const promises = [];
 
@@ -88,9 +88,9 @@ class BackupSchedulerService {
 
     try {
       await Promise.allSettled(promises);
-      console.log(`[${new Date().toISOString()}] Scheduled backups completed`);
+      logger.info('Scheduled backups completed', { timestamp: new Date().toISOString() });
     } catch (error) {
-      console.error(`[${new Date().toISOString()}] Scheduled backups failed:`, error);
+      logger.error('Scheduled backups failed', { timestamp: new Date().toISOString(), error: error.message });
     }
   }
 
