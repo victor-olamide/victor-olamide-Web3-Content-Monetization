@@ -250,8 +250,15 @@ async function markAllAsRead(userId) {
 
 /**
  * Archive notification
+ * @param {string} notificationId - Notification ID (MongoDB ObjectId)
+ * @returns {Promise<Object|null>} Updated notification or null if not found
+ * @throws {Error} When notificationId is invalid or database error occurs
  */
 async function archiveNotification(notificationId) {
+  // Input validation
+  if (!notificationId || typeof notificationId !== 'string') {
+    throw new Error('Invalid notificationId: expected non-empty string');
+  }
   try {
     const notification = await Notification.findByIdAndUpdate(
       notificationId,
