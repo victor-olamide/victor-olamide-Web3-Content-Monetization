@@ -2,6 +2,7 @@ const databaseBackupService = require('./databaseBackupService');
 const contentBackupService = require('./contentBackupService');
 const { backupConfig } = require('../config/backupConfig');
 const { BackupJob, BackupRetention } = require('../models/BackupJob');
+const logger = require('../utils/logger');
 
 /**
  * Backup scheduler service
