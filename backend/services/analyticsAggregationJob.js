@@ -17,7 +17,7 @@ class AnalyticsAggregationJob {
    * Start the analytics aggregation jobs
    */
   start() {
-    console.log('Starting analytics aggregation jobs...');
+    logger.info('Starting analytics aggregation jobs...');
 
     // Hourly aggregation (runs at the top of every hour)
     this.jobs.push(
@@ -66,7 +66,7 @@ class AnalyticsAggregationJob {
 
     // Start all jobs
     this.jobs.forEach(job => job.start());
-    console.log('Analytics aggregation jobs started successfully');
+    logger.info('Analytics aggregation jobs started successfully');
   }
 
   /**
