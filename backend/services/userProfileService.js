@@ -370,10 +370,29 @@ class UserProfileService {
 
   /**
    * Get purchase history for user
+   * @param {string} address - Wallet address
+   * @param {Object} [options={}] - Query options
+   * @param {number} [options.skip=0] - Number of records to skip
+   * @param {number} [options.limit=20] - Number of records to return
+   * @param {string} [options.sortBy='purchaseDate'] - Field to sort by
+   * @returns {Promise<Object>} Purchase history with pagination
+   * @throws {Error} When address is invalid or database error occurs
    */
   async getPurchaseHistory(address, options = {}) {
+    // Input validation
+    if (!address || typeof address !== 'string') {
+      throw new Error('Invalid address: expected non-empty string');
+    }
     try {
       const { skip = 0, limit = 20, sortBy = 'purchaseDate' } = options;
+
+      // Validate pagination options
+      if (typeof skip !== 'number' || skip < 0) {
+        throw new Error('Invalid options.skip: expected non-negative number');
+      }
+      if (typeof limit !== 'number' || limit < 1 || limit > 100) {
+        throw new Error('Invalid options.limit: expected number between 1 and 100');
+      }
 
       const purchases = await PurchaseHistory.find({
         buyerAddress: address.toLowerCase()
@@ -386,6 +405,12 @@ class UserProfileService {
         buyerAddress: address.toLowerCase()
       });
 
+      logger.info('Purchase history retrieved', { 
+        address: address.toLowerCase(),
+        count: purchases.length,
+        total
+      });
+
       return {
         data: purchases,
         total,
@@ -393,7 +418,11 @@ class UserProfileService {
         limit
       };
     } catch (error) {
-      logger.error('Error fetching purchase history:', { err: error });
+      logger.error('Failed to fetch purchase history', { 
+        address: address.toLowerCase(),
+        error: error.message,
+        code: error.code || 'UNKNOWN'
+      });
       throw error;
     }
   }
