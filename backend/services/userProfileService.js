@@ -12,8 +12,15 @@ const Content = require('../models/Content');
 class UserProfileService {
   /**
    * Get or create user profile
+   * @param {string} address - Wallet address
+   * @returns {Promise<Object>} User profile
+   * @throws {Error} When address is invalid or database error occurs
    */
   async getOrCreateProfile(address) {
+    // Input validation
+    if (!address || typeof address !== 'string') {
+      throw new Error('Invalid address: expected non-empty string');
+    }
     try {
       let profile = await UserProfile.findOne({ address: address.toLowerCase() });
 
@@ -22,12 +29,17 @@ class UserProfileService {
           address: address.toLowerCase()
         });
         await profile.save();
+        logger.info('Created new user profile', { address: address.toLowerCase() });
       }
 
       return profile;
     } catch (error) {
-      logger.error('Error getting/creating profile:', { err: error });
-      throw error;
+      logger.error('Failed to get or create user profile', { 
+        address: address.toLowerCase(),
+        error: error.message,
+        code: error.code || 'UNKNOWN'
+      });
+      throw new Error(`Failed to get or create profile: ${error.message}`);
     }
   }
 
