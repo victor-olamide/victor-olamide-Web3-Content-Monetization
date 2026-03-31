@@ -622,8 +622,15 @@ async function notifySystem(userId, systemData) {
 
 /**
  * Clear old notifications (older than 30 days)
+ * @param {number} [daysOld=30] - Number of days to consider old (default: 30)
+ * @returns {Promise<Object>} MongoDB delete result
+ * @throws {Error} When daysOld is invalid or database error occurs
  */
 async function clearOldNotifications(daysOld = 30) {
+  // Input validation
+  if (typeof daysOld !== 'number' || daysOld < 1 || !Number.isInteger(daysOld)) {
+    throw new Error('Invalid daysOld: expected positive integer');
+  }
   try {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysOld);
