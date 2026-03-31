@@ -321,9 +321,37 @@ async function deleteMultiple(notificationIds) {
 }
 
 /**
+ * Purchase data object
+ * @typedef {Object} PurchaseData
+ * @property {string} contentId - Content ID
+ * @property {string} contentTitle - Content title
+ * @property {number} price - Purchase price
+ * @property {string} transactionId - Transaction ID
+ * @property {string} [email] - User email
+ * @property {string} [userEmail] - Alternative user email
+ */
+
+/**
  * Create purchase success notification
+ * @param {string} userId - User ID
+ * @param {PurchaseData} purchaseData - Purchase data
+ * @returns {Promise<Object>} Created notification
+ * @throws {Error} When userId or purchaseData is invalid
  */
 async function notifyPurchaseSuccess(userId, purchaseData) {
+  // Input validation
+  if (!userId || typeof userId !== 'string') {
+    throw new Error('Invalid userId: expected non-empty string');
+  }
+  if (!purchaseData || typeof purchaseData !== 'object') {
+    throw new Error('Invalid purchaseData: expected object');
+  }
+  if (!purchaseData.contentId || typeof purchaseData.contentId !== 'string') {
+    throw new Error('Invalid purchaseData.contentId: expected non-empty string');
+  }
+  if (!purchaseData.contentTitle || typeof purchaseData.contentTitle !== 'string') {
+    throw new Error('Invalid purchaseData.contentTitle: expected non-empty string');
+  }
   try {
     const notification = await createNotification({
       userId,
