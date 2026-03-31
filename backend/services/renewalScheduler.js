@@ -11,6 +11,7 @@ const Subscription = require('../models/Subscription');
  */
 
 let schedulerInstance = null;
+let initialTimeout = null;
 let isRunning = false;
 
 /**
@@ -26,9 +27,10 @@ function initializeRenewalScheduler(intervalMs = 3600000) {
   console.log(`Initializing renewal scheduler with interval: ${intervalMs}ms`);
   
   // Run immediately on startup (with delay to ensure DB connection)
-  setTimeout(async () => {
+  const timeoutId = setTimeout(async () => {
     await processRenewals();
   }, 5000);
+  initialTimeout = timeoutId;
 
   // Schedule recurring processing
   schedulerInstance = setInterval(async () => {
@@ -196,9 +198,13 @@ function stopRenewalScheduler() {
   if (schedulerInstance) {
     clearInterval(schedulerInstance);
     schedulerInstance = null;
-    isRunning = false;
-    console.log('Renewal scheduler stopped');
   }
+  if (initialTimeout) {
+    clearTimeout(initialTimeout);
+    initialTimeout = null;
+  }
+  isRunning = false;
+  console.log('Renewal scheduler stopped');
 }
 
 /**
