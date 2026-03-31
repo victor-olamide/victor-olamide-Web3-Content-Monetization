@@ -99,12 +99,12 @@ class BackupSchedulerService {
    */
   async runDatabaseBackup() {
     if (activeBackups.has('database')) {
-      console.log('Database backup already running, skipping...');
+      logger.info('Database backup already running, skipping...');
       return;
     }
 
     if (this.getActiveBackupCount() >= this.config.maxConcurrentBackups) {
-      console.log('Maximum concurrent backups reached, skipping database backup...');
+      logger.info('Maximum concurrent backups reached, skipping database backup...');
       return;
     }
 
