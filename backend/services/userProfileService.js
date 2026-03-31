@@ -596,8 +596,27 @@ class UserProfileService {
 
   /**
    * Add rating and review
+   * @param {string} address - Wallet address
+   * @param {string} purchaseId - Purchase record ID
+   * @param {number} rating - Rating score (0-5)
+   * @param {string} review - Review text
+   * @returns {Promise<Object>} Updated purchase record
+   * @throws {Error} When inputs are invalid, out of range, or purchase not found
    */
   async addRating(address, purchaseId, rating, review) {
+    // Input validation
+    if (!address || typeof address !== 'string') {
+      throw new Error('Invalid address: expected non-empty string');
+    }
+    if (!purchaseId || typeof purchaseId !== 'string') {
+      throw new Error('Invalid purchaseId: expected non-empty string');
+    }
+    if (typeof rating !== 'number' || rating < 0 || rating > 5) {
+      throw new Error('Invalid rating: expected number between 0 and 5');
+    }
+    if (review && typeof review !== 'string') {
+      throw new Error('Invalid review: expected string');
+    }
     try {
       const purchase = await PurchaseHistory.findOne({
         _id: purchaseId,
@@ -605,6 +624,10 @@ class UserProfileService {
       });
 
       if (!purchase) {
+        logger.warn('Purchase not found for rating', { 
+          address: address.toLowerCase(),
+          purchaseId 
+        });
         throw new Error('Purchase not found');
       }
 
@@ -615,9 +638,22 @@ class UserProfileService {
       };
 
       await purchase.save();
+
+      logger.info('Rating added successfully', { 
+        address: address.toLowerCase(),
+        purchaseId,
+        rating
+      });
+
       return purchase;
     } catch (error) {
-      logger.error('Error adding rating:', { err: error });
+      logger.error('Failed to add rating', { 
+        address: address.toLowerCase(),
+        purchaseId,
+        rating,
+        error: error.message,
+        code: error.code || 'UNKNOWN'
+      });
       throw error;
     }
   }
