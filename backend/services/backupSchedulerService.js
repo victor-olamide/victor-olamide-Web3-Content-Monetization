@@ -47,7 +47,7 @@ class BackupSchedulerService {
         await this.runDatabaseBackup();
       }, this.databaseInterval);
 
-      console.log(`Database backup scheduler initialized with interval: ${this.databaseInterval}ms`);
+      logger.info(`Database backup scheduler initialized with interval: ${this.databaseInterval}ms`);
     }
 
     // Schedule recurring content backups
@@ -60,14 +60,14 @@ class BackupSchedulerService {
         await this.runContentBackup();
       }, this.contentInterval);
 
-      console.log(`Content backup scheduler initialized with interval: ${this.contentInterval}ms`);
+      logger.info(`Content backup scheduler initialized with interval: ${this.contentInterval}ms`);
     }
 
     // Schedule retention cleanup
     this.scheduleRetentionCleanup();
 
     isRunning = true;
-    console.log('Backup scheduler initialized successfully');
+    logger.info('Backup scheduler initialized successfully');
   }
 
   /**
