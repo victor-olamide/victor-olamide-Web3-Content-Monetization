@@ -73,13 +73,13 @@ class AnalyticsAggregationJob {
    * Stop all analytics aggregation jobs
    */
   stop() {
-    console.log('Stopping analytics aggregation jobs...');
+    logger.info('Stopping analytics aggregation jobs...');
 
     this.jobs.forEach(job => job.stop());
     this.jobs = [];
     this.isRunning = false;
 
-    console.log('Analytics aggregation jobs stopped');
+    logger.info('Analytics aggregation jobs stopped');
   }
 
   /**
