@@ -134,8 +134,19 @@ class UserProfileService {
 
   /**
    * Update user preferences
+   * @param {string} address - Wallet address
+   * @param {Object} preferences - Preferences object
+   * @returns {Promise<Object>} Updated profile
+   * @throws {Error} When address is invalid or profile not found
    */
   async updatePreferences(address, preferences) {
+    // Input validation
+    if (!address || typeof address !== 'string') {
+      throw new Error('Invalid address: expected non-empty string');
+    }
+    if (!preferences || typeof preferences !== 'object') {
+      throw new Error('Invalid preferences: expected object');
+    }
     try {
       const profile = await UserProfile.findOneAndUpdate(
         { address: address.toLowerCase() },
@@ -144,12 +155,18 @@ class UserProfileService {
       );
 
       if (!profile) {
+        logger.warn('Profile not found for preferences update', { address: address.toLowerCase() });
         throw new Error('Profile not found');
       }
 
+      logger.info('Preferences updated successfully', { address: address.toLowerCase() });
       return profile;
     } catch (error) {
-      logger.error('Error updating preferences:', { err: error });
+      logger.error('Failed to update user preferences', { 
+        address: address.toLowerCase(),
+        error: error.message,
+        code: error.code || 'UNKNOWN'
+      });
       throw error;
     }
   }
