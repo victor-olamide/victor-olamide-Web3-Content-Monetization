@@ -244,7 +244,7 @@ class BackupSchedulerService {
           deletedIds.push(backup.backupId);
 
         } catch (error) {
-          console.error(`Failed to delete ${type} backup ${backup.backupId}:`, error);
+          logger.error(`Failed to delete ${type} backup`, { backupId: backup.backupId, error: error.message });
         }
       }
 
@@ -254,10 +254,10 @@ class BackupSchedulerService {
       retentionPolicy.totalCleaned += deletedIds.length;
       await retentionPolicy.save();
 
-      console.log(`Cleaned up ${deletedIds.length} old ${type} backups`);
+      logger.info(`Cleaned up ${deletedIds.length} old ${type} backups`);
 
     } catch (error) {
-      console.error(`Failed to cleanup ${type} backups:`, error);
+      logger.error(`Failed to cleanup ${type} backups`, { error: error.message });
     }
   }
 
