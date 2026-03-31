@@ -274,8 +274,15 @@ async function archiveNotification(notificationId) {
 
 /**
  * Delete notification
+ * @param {string} notificationId - Notification ID (MongoDB ObjectId)
+ * @returns {Promise<void>}
+ * @throws {Error} When notificationId is invalid or database error occurs
  */
 async function deleteNotification(notificationId) {
+  // Input validation
+  if (!notificationId || typeof notificationId !== 'string') {
+    throw new Error('Invalid notificationId: expected non-empty string');
+  }
   try {
     await Notification.findByIdAndDelete(notificationId);
     logger.info(`Notification ${notificationId} deleted`);
