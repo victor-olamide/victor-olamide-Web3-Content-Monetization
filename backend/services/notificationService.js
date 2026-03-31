@@ -468,9 +468,39 @@ async function notifyPurchaseError(userId, errorData) {
 }
 
 /**
+ * Refund data object
+ * @typedef {Object} RefundData
+ * @property {string} contentId - Content ID
+ * @property {string} contentTitle - Content title
+ * @property {number} refundAmount - Refund amount
+ * @property {string} [reason] - Refund reason
+ * @property {string} [transactionId] - Transaction ID
+ */
+
+/**
  * Create refund notification
+ * @param {string} userId - User ID
+ * @param {RefundData} refundData - Refund data
+ * @returns {Promise<Object>} Created notification
+ * @throws {Error} When userId or refundData is invalid
  */
 async function notifyRefund(userId, refundData) {
+  // Input validation
+  if (!userId || typeof userId !== 'string') {
+    throw new Error('Invalid userId: expected non-empty string');
+  }
+  if (!refundData || typeof refundData !== 'object') {
+    throw new Error('Invalid refundData: expected object');
+  }
+  if (!refundData.contentId || typeof refundData.contentId !== 'string') {
+    throw new Error('Invalid refundData.contentId: expected non-empty string');
+  }
+  if (!refundData.contentTitle || typeof refundData.contentTitle !== 'string') {
+    throw new Error('Invalid refundData.contentTitle: expected non-empty string');
+  }
+  if (typeof refundData.refundAmount !== 'number') {
+    throw new Error('Invalid refundData.refundAmount: expected number');
+  }
   try {
     const notification = await createNotification({
       userId,
