@@ -74,11 +74,14 @@ function stopScheduler() {
 }
 
 /**
- * Get scheduler status
+ * Get scheduler status with interval tracking information
+ * @returns {Object} Scheduler status with interval details
  */
 function getSchedulerStatus() {
   return {
     isRunning,
+    schedulerActive: schedulerInstance !== null,
+    initialTimeoutActive: initialTimeout !== null,
     lastRun: null,
     nextRun: null
   };
