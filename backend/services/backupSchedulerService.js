@@ -111,13 +111,13 @@ class BackupSchedulerService {
     activeBackups.add('database');
 
     try {
-      console.log(`[${new Date().toISOString()}] Starting scheduled database backup...`);
+      logger.info('Starting scheduled database backup...', { timestamp: new Date().toISOString() });
       const result = await databaseBackupService.createBackup({ triggeredBy: 'scheduler' });
 
       if (result.success) {
-        console.log(`[${new Date().toISOString()}] Scheduled database backup completed: ${result.backupId}`);
+        logger.info('Scheduled database backup completed', { timestamp: new Date().toISOString(), backupId: result.backupId });
       } else {
-        console.error(`[${new Date().toISOString()}] Scheduled database backup failed:`, result.error);
+        logger.error('Scheduled database backup failed', { timestamp: new Date().toISOString(), error: result.error });
       }
     } catch (error) {
       console.error(`[${new Date().toISOString()}] Scheduled database backup error:`, error);
