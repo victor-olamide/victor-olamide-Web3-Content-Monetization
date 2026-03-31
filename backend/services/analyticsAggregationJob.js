@@ -87,13 +87,13 @@ class AnalyticsAggregationJob {
    */
   async runHourlyAggregation() {
     if (this.isRunning) {
-      console.log('Hourly aggregation already running, skipping...');
+      logger.info('Hourly aggregation already running, skipping...');
       return;
     }
 
     try {
       this.isRunning = true;
-      console.log('Starting hourly analytics aggregation...');
+      logger.info('Starting hourly analytics aggregation...');
 
       const now = new Date();
       const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
