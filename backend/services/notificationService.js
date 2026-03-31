@@ -294,8 +294,21 @@ async function deleteNotification(notificationId) {
 
 /**
  * Delete multiple notifications
+ * @param {Array<string>} notificationIds - Array of notification IDs
+ * @returns {Promise<Object>} MongoDB delete result
+ * @throws {Error} When notificationIds is invalid or database error occurs
  */
 async function deleteMultiple(notificationIds) {
+  // Input validation
+  if (!Array.isArray(notificationIds)) {
+    throw new Error('Invalid notificationIds: expected array');
+  }
+  if (notificationIds.length === 0) {
+    return { deletedCount: 0 };
+  }
+  if (!notificationIds.every(id => typeof id === 'string' && id.length > 0)) {
+    throw new Error('Invalid notificationIds: expected array of non-empty strings');
+  }
   try {
     const result = await Notification.deleteMany({
       _id: { $in: notificationIds }
