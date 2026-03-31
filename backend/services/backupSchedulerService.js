@@ -120,7 +120,7 @@ class BackupSchedulerService {
         logger.error('Scheduled database backup failed', { timestamp: new Date().toISOString(), error: result.error });
       }
     } catch (error) {
-      console.error(`[${new Date().toISOString()}] Scheduled database backup error:`, error);
+      logger.error('Scheduled database backup error', { timestamp: new Date().toISOString(), error: error.message });
     } finally {
       activeBackups.delete('database');
     }
