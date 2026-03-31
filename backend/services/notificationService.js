@@ -227,8 +227,15 @@ async function markMultipleAsRead(notificationIds) {
 
 /**
  * Mark all notifications as read for user
+ * @param {string} userId - User ID
+ * @returns {Promise<Object>} MongoDB update result
+ * @throws {Error} When userId is invalid or database error occurs
  */
 async function markAllAsRead(userId) {
+  // Input validation
+  if (!userId || typeof userId !== 'string') {
+    throw new Error('Invalid userId: expected non-empty string');
+  }
   try {
     const result = await Notification.updateMany(
       { userId, isRead: false },
