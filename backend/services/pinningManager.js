@@ -418,8 +418,8 @@ class PinningManager {
   }
 
   /**
-   * Get service status
-   * @returns {Object} Status
+   * Get service status with monitoring interval tracking
+   * @returns {Object} Status with interval details
    */
   getStatus() {
     return {
@@ -427,6 +427,8 @@ class PinningManager {
       redundancyLevel: this.redundancyLevel,
       autoRepinEnabled: this.autoRepinEnabled,
       monitoringInterval: this.monitoringInterval,
+      monitoringActive: this.monitoringIntervalId !== null,
+      initialHealthCheckActive: this.initialHealthCheckTimeout !== null,
       pinningService: this.pinningService.getHealthStatus()
     };
   }
