@@ -649,9 +649,26 @@ async function clearOldNotifications(daysOld = 30) {
 }
 
 /**
+ * Notification statistics result
+ * @typedef {Object} NotificationStats
+ * @property {number} total - Total notifications
+ * @property {number} unread - Unread notifications
+ * @property {number} archived - Archived notifications
+ * @property {number} read - Read notifications
+ * @property {Object} typeBreakdown - Count by type
+ */
+
+/**
  * Get notification statistics for user
+ * @param {string} userId - User ID
+ * @returns {Promise<NotificationStats>} Notification statistics
+ * @throws {Error} When userId is invalid or database error occurs
  */
 async function getUserNotificationStats(userId) {
+  // Input validation
+  if (!userId || typeof userId !== 'string') {
+    throw new Error('Invalid userId: expected non-empty string');
+  }
   try {
     const total = await Notification.countDocuments({ userId });
     const unread = await Notification.countDocuments({ userId, isRead: false });
