@@ -42,8 +42,10 @@ class Indexer {
   getStatus() {
     return {
       status: this.status,
+      pollingActive: this.pollingIntervalId !== null,
       lastProcessedBlock: this.lastProcessedBlock,
-      contractAddress: this.contractAddress
+      contractAddress: this.contractAddress,
+      apiUrl: this.apiUrl
     };
   }
 
