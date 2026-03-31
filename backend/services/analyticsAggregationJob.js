@@ -100,9 +100,9 @@ class AnalyticsAggregationJob {
 
       await analyticsService.aggregateData(oneHourAgo, now, 'hourly');
 
-      console.log('Hourly analytics aggregation completed');
+      logger.info('Hourly analytics aggregation completed');
     } catch (error) {
-      console.error('Error in hourly analytics aggregation:', error);
+      logger.error('Error in hourly analytics aggregation', { error: error.message });
     } finally {
       this.isRunning = false;
     }
