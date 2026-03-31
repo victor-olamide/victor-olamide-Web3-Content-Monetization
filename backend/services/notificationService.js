@@ -150,8 +150,15 @@ async function getUserNotifications(userId, options = {}) {
 
 /**
  * Get unread notification count
+ * @param {string} userId - User ID
+ * @returns {Promise<number>} Count of unread notifications
+ * @throws {Error} When userId is invalid or database error occurs
  */
 async function getUnreadCount(userId) {
+  // Input validation
+  if (!userId || typeof userId !== 'string') {
+    throw new Error('Invalid userId: expected non-empty string');
+  }
   try {
     const count = await Notification.countDocuments({
       userId,
