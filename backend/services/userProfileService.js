@@ -212,8 +212,19 @@ class UserProfileService {
 
   /**
    * Update social links
+   * @param {string} address - Wallet address
+   * @param {Object} socialLinks - Social links object
+   * @returns {Promise<Object>} Updated profile
+   * @throws {Error} When address is invalid or profile not found
    */
   async updateSocialLinks(address, socialLinks) {
+    // Input validation
+    if (!address || typeof address !== 'string') {
+      throw new Error('Invalid address: expected non-empty string');
+    }
+    if (!socialLinks || typeof socialLinks !== 'object') {
+      throw new Error('Invalid socialLinks: expected object');
+    }
     try {
       const profile = await UserProfile.findOneAndUpdate(
         { address: address.toLowerCase() },
@@ -222,12 +233,18 @@ class UserProfileService {
       );
 
       if (!profile) {
+        logger.warn('Profile not found for social links update', { address: address.toLowerCase() });
         throw new Error('Profile not found');
       }
 
+      logger.info('Social links updated successfully', { address: address.toLowerCase() });
       return profile;
     } catch (error) {
-      logger.error('Error updating social links:', { err: error });
+      logger.error('Failed to update social links', { 
+        address: address.toLowerCase(),
+        error: error.message,
+        code: error.code || 'UNKNOWN'
+      });
       throw error;
     }
   }
