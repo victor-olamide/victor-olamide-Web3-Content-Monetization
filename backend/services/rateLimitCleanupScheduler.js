@@ -81,8 +81,8 @@ function stopCleanupScheduler() {
 }
 
 /**
- * Get cleanup scheduler statistics
- * @returns {Object} Scheduler stats
+ * Get scheduler status with interval tracking information
+ * @returns {Object} Scheduler status with interval details
  */
 function getCleanupSchedulerStats() {
   return {
@@ -90,7 +90,8 @@ function getCleanupSchedulerStats() {
     lastCleanupAt,
     lastCleanupCount,
     totalCleanedUp,
-    schedulerActive: cleanupInterval !== null
+    schedulerActive: cleanupInterval !== null,
+    timeoutActive: cleanupTimeout !== null
   };
 }
 
