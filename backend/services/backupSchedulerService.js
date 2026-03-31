@@ -25,16 +25,16 @@ class BackupSchedulerService {
    */
   initializeScheduler() {
     if (schedulerInstance) {
-      console.warn('Backup scheduler already initialized');
+      logger.warn('Backup scheduler already initialized');
       return;
     }
 
     if (!this.config.enabled) {
-      console.log('Backup scheduler disabled in configuration');
+      logger.info('Backup scheduler disabled in configuration');
       return;
     }
 
-    console.log('Initializing backup scheduler...');
+    logger.info('Initializing backup scheduler...');
 
     // Run initial backups (with delay to ensure DB connection)
     setTimeout(async () => {
