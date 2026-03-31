@@ -356,7 +356,7 @@ class BackupSchedulerService {
       }
 
     } catch (error) {
-      console.error('Failed to get backup status:', error);
+      logger.error('Failed to get backup status', { error: error.message });
     }
 
     return stats;
@@ -371,7 +371,7 @@ class BackupSchedulerService {
       schedulerInstance = null;
       isRunning = false;
       activeBackups.clear();
-      console.log('Backup scheduler stopped');
+      logger.info('Backup scheduler stopped');
     }
   }
 
