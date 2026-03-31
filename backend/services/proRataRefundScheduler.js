@@ -215,13 +215,15 @@ const processSubscriptionRefund = async (subscriptionId) => {
 };
 
 /**
- * Get scheduler statistics
- * @returns {Object} Current statistics
+ * Get scheduler statistics with interval tracking information
+ * @returns {Object} Scheduler stats with interval details
  */
 const getRefundSchedulerStats = () => {
   return {
     isRunning: isSchedulerRunning,
     ...schedulerStats,
+    intervalActive: refundSchedulerInterval !== null,
+    timeoutActive: refundSchedulerTimeout !== null,
     nextRun: refundSchedulerInterval ? 'Scheduled' : 'Not scheduled'
   };
 };
