@@ -489,8 +489,19 @@ class UserProfileService {
 
   /**
    * Toggle favorite status
+   * @param {string} address - Wallet address
+   * @param {string} purchaseId - Purchase record ID
+   * @returns {Promise<Object>} Updated purchase record
+   * @throws {Error} When inputs are invalid or purchase not found
    */
   async toggleFavorite(address, purchaseId) {
+    // Input validation
+    if (!address || typeof address !== 'string') {
+      throw new Error('Invalid address: expected non-empty string');
+    }
+    if (!purchaseId || typeof purchaseId !== 'string') {
+      throw new Error('Invalid purchaseId: expected non-empty string');
+    }
     try {
       const purchase = await PurchaseHistory.findOne({
         _id: purchaseId,
@@ -498,6 +509,10 @@ class UserProfileService {
       });
 
       if (!purchase) {
+        logger.warn('Purchase not found for favorite toggle', { 
+          address: address.toLowerCase(),
+          purchaseId 
+        });
         throw new Error('Purchase not found');
       }
 
@@ -505,9 +520,20 @@ class UserProfileService {
       purchase.favoriteDate = purchase.isFavorite ? new Date() : null;
       await purchase.save();
 
+      logger.info('Favorite status toggled', { 
+        address: address.toLowerCase(),
+        purchaseId,
+        isFavorite: purchase.isFavorite
+      });
+
       return purchase;
     } catch (error) {
-      logger.error('Error toggling favorite:', { err: error });
+      logger.error('Failed to toggle favorite status', { 
+        address: address.toLowerCase(),
+        purchaseId,
+        error: error.message,
+        code: error.code || 'UNKNOWN'
+      });
       throw error;
     }
   }
