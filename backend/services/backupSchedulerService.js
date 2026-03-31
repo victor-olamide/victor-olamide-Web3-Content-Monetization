@@ -275,7 +275,7 @@ class BackupSchedulerService {
    * @returns {Promise<Object>} Backup result
    */
   async triggerManualBackup(type) {
-    console.log(`[${new Date().toISOString()}] Manual backup triggered: ${type}`);
+    logger.info('Manual backup triggered', { timestamp: new Date().toISOString(), type });
 
     switch (type) {
       case 'database':
