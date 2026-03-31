@@ -173,7 +173,7 @@ class BackupSchedulerService {
       await this.runRetentionCleanup();
     }, cleanupInterval);
 
-    console.log(`Retention cleanup scheduler initialized with interval: ${cleanupInterval}ms`);
+    logger.info(`Retention cleanup scheduler initialized with interval: ${cleanupInterval}ms`);
   }
 
   /**
