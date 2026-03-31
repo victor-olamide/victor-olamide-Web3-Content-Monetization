@@ -297,11 +297,34 @@ class UserProfileService {
 
   /**
    * Record purchase history
+   * @param {string} buyerAddress - Buyer wallet address
+   * @param {string} contentId - Content ID
+   * @param {Object} purchaseData - Purchase data
+   * @param {number} purchaseData.price - Purchase price
+   * @param {string} [purchaseData.currency] - Purchase currency
+   * @param {string} [purchaseData.transactionHash] - Transaction hash
+   * @param {string} [purchaseData.status] - Transaction status
+   * @returns {Promise<Object>} Purchase history record
+   * @throws {Error} When inputs are invalid or content not found
    */
   async recordPurchase(buyerAddress, contentId, purchaseData) {
+    // Input validation
+    if (!buyerAddress || typeof buyerAddress !== 'string') {
+      throw new Error('Invalid buyerAddress: expected non-empty string');
+    }
+    if (!contentId || typeof contentId !== 'string') {
+      throw new Error('Invalid contentId: expected non-empty string');
+    }
+    if (!purchaseData || typeof purchaseData !== 'object') {
+      throw new Error('Invalid purchaseData: expected object');
+    }
+    if (typeof purchaseData.price !== 'number' || purchaseData.price < 0) {
+      throw new Error('Invalid purchaseData.price: expected non-negative number');
+    }
     try {
       const content = await Content.findOne({ contentId });
       if (!content) {
+        logger.warn('Content not found for purchase recording', { contentId });
         throw new Error('Content not found');
       }
 
@@ -328,9 +351,19 @@ class UserProfileService {
         await profile.save();
       }
 
+      logger.info('Purchase recorded successfully', { 
+        buyerAddress: buyerAddress.toLowerCase(),
+        contentId,
+        price: purchaseData.price
+      });
       return purchaseHistory;
     } catch (error) {
-      logger.error('Error recording purchase:', { err: error });
+      logger.error('Failed to record purchase', { 
+        buyerAddress: buyerAddress.toLowerCase(),
+        contentId,
+        error: error.message,
+        code: error.code || 'UNKNOWN'
+      });
       throw error;
     }
   }
