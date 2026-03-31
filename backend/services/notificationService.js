@@ -524,9 +524,34 @@ async function notifyRefund(userId, refundData) {
 }
 
 /**
+ * Listing data object
+ * @typedef {Object} ListingData
+ * @property {string} contentId - Content ID
+ * @property {string} title - Content title
+ * @property {string} [updateType] - Update type ('price_change', 'metadata_update', 'availability_change')
+ */
+
+/**
  * Create listing update notification
+ * @param {string} userId - User ID
+ * @param {ListingData} listingData - Listing data
+ * @returns {Promise<Object>} Created notification
+ * @throws {Error} When userId or listingData is invalid
  */
 async function notifyListingUpdate(userId, listingData) {
+  // Input validation
+  if (!userId || typeof userId !== 'string') {
+    throw new Error('Invalid userId: expected non-empty string');
+  }
+  if (!listingData || typeof listingData !== 'object') {
+    throw new Error('Invalid listingData: expected object');
+  }
+  if (!listingData.contentId || typeof listingData.contentId !== 'string') {
+    throw new Error('Invalid listingData.contentId: expected non-empty string');
+  }
+  if (!listingData.title || typeof listingData.title !== 'string') {
+    throw new Error('Invalid listingData.title: expected non-empty string');
+  }
   try {
     const notification = await createNotification({
       userId,
