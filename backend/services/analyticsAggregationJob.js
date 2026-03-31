@@ -5,6 +5,7 @@
 
 const cron = require('node-cron');
 const analyticsService = require('../services/analyticsService');
+const logger = require('../utils/logger');
 
 class AnalyticsAggregationJob {
   constructor() {
