@@ -9,6 +9,9 @@ const { BackupJob, BackupRetention } = require('../models/BackupJob');
  */
 
 let schedulerInstance = null;
+let contentSchedulerInstance = null;
+let retentionCleanupInstance = null;
+let retentionCleanupTimeout = null;
 let isRunning = false;
 let activeBackups = new Set();
 
@@ -58,6 +61,9 @@ class BackupSchedulerService {
       const contentScheduler = setInterval(async () => {
         await this.runContentBackup();
       }, this.contentInterval);
+      
+      // Store content scheduler instance for cleanup
+      contentSchedulerInstance = contentScheduler;
 
       console.log(`Content backup scheduler initialized with interval: ${this.contentInterval}ms`);
     }
@@ -164,13 +170,15 @@ class BackupSchedulerService {
     // Run retention cleanup daily
     const cleanupInterval = 24 * 60 * 60 * 1000; // 24 hours
 
-    setTimeout(async () => {
+    const timeoutId = setTimeout(async () => {
       await this.runRetentionCleanup();
     }, 30000); // Initial delay
+    retentionCleanupTimeout = timeoutId;
 
-    setInterval(async () => {
+    const intervalId = setInterval(async () => {
       await this.runRetentionCleanup();
     }, cleanupInterval);
+    retentionCleanupInstance = intervalId;
 
     console.log(`Retention cleanup scheduler initialized with interval: ${cleanupInterval}ms`);
   }
@@ -368,10 +376,22 @@ class BackupSchedulerService {
     if (schedulerInstance) {
       clearInterval(schedulerInstance);
       schedulerInstance = null;
-      isRunning = false;
-      activeBackups.clear();
-      console.log('Backup scheduler stopped');
     }
+    if (contentSchedulerInstance) {
+      clearInterval(contentSchedulerInstance);
+      contentSchedulerInstance = null;
+    }
+    if (retentionCleanupInstance) {
+      clearInterval(retentionCleanupInstance);
+      retentionCleanupInstance = null;
+    }
+    if (retentionCleanupTimeout) {
+      clearTimeout(retentionCleanupTimeout);
+      retentionCleanupTimeout = null;
+    }
+    isRunning = false;
+    activeBackups.clear();
+    console.log('Backup scheduler stopped');
   }
 
   /**
