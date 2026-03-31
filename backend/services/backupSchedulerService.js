@@ -181,7 +181,7 @@ class BackupSchedulerService {
    */
   async runRetentionCleanup() {
     try {
-      console.log(`[${new Date().toISOString()}] Running retention cleanup...`);
+      logger.info('Running retention cleanup...', { timestamp: new Date().toISOString() });
 
       // Cleanup database backups
       if (backupConfig.database.enabled) {
@@ -193,9 +193,9 @@ class BackupSchedulerService {
         await this.cleanupBackupsByRetention('content');
       }
 
-      console.log(`[${new Date().toISOString()}] Retention cleanup completed`);
+      logger.info('Retention cleanup completed', { timestamp: new Date().toISOString() });
     } catch (error) {
-      console.error(`[${new Date().toISOString()}] Retention cleanup failed:`, error);
+      logger.error('Retention cleanup failed', { timestamp: new Date().toISOString(), error: error.message });
     }
   }
 
