@@ -53,7 +53,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children, maxToast
       }}
     >
       {children}
-      <ToastContainer toasts={toasts} onDismiss={dismiss} position={position} maxToasts={maxToasts} />
+      <ToastContainer toasts={toasts} onDismiss={dismiss} onDismissAll={dismissAll} position={position} maxToasts={maxToasts} />
     </ToastContext.Provider>
   );
 };
