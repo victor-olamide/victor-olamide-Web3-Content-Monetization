@@ -33,7 +33,7 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({
   const displayedToasts = toasts.slice(0, maxToasts);
 
   const getPositionClasses = () => {
-    const base = 'fixed pointer-events-none z-50';
+    const base = 'fixed pointer-events-none z-[9999]';
     const positions = {
       'top-left': 'top-4 left-4 flex flex-col gap-2',
       'top-right': 'top-4 right-4 flex flex-col gap-2',
