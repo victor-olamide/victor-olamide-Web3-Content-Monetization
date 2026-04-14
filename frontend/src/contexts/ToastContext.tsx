@@ -1,6 +1,8 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
+import { ToastContainer, ToastMessage } from '@/components/ToastContainer';
+import { ToastType, TOAST_DURATIONS } from '@/components/Toast';
 import { ToastContainer, ToastMessage, NOTIFICATION_DEFAULTS } from '@/components/ToastContainer';
 import { ToastType } from '@/components/Toast';
 
@@ -14,10 +16,23 @@ interface ToastContextType {
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
+ToastContext.displayName = 'ToastContext';
 
 let idCounter = 0;
 const generateId = () => `toast-${++idCounter}-${Date.now()}`;
 
+interface ToastProviderProps {
+  children: React.ReactNode;
+  maxToasts?: number;
+  position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'top-center';
+}
+
+export const ToastProvider: React.FC<ToastProviderProps> = ({ children, maxToasts = 5, position = 'top-right' }) => {
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const add = useCallback((type: ToastType, title: string, message?: string) => {
+    const id = generateId();
+    setToasts(prev => [...prev, { id, type, title, message, duration: TOAST_DURATIONS[type] }]);
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
@@ -53,6 +68,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }}
     >
       {children}
+      <ToastContainer toasts={toasts} onDismiss={dismiss} onDismissAll={dismissAll} position={position} maxToasts={maxToasts} />
       <ToastContainer toasts={toasts} onDismiss={dismiss} position="top-right" />
     </ToastContext.Provider>
   );
@@ -63,3 +79,14 @@ export const useToast = (): ToastContextType => {
   if (!ctx) throw new Error('useToast must be used within a ToastProvider');
   return ctx;
 };
+
+/**
+ * Convenience hook that returns only the show* methods and dismissAll.
+ * Useful when you only need to trigger toasts without reading state.
+ */
+export const useToastActions = () => {
+  const { showSuccess, showError, showInfo, showWarning, dismissAll } = useToast();
+  return { showSuccess, showError, showInfo, showWarning, dismissAll };
+};
+
+export type { ToastContextType };

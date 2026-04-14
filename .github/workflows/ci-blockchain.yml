@@ -1,0 +1,55 @@
+name: CI Blockchain
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'blockchain/**'
+      - 'solidity-contracts/**'
+      - 'contracts/**'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'blockchain/**'
+      - 'solidity-contracts/**'
+      - 'contracts/**'
+
+jobs:
+  test-solidity:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: solidity-contracts/package-lock.json
+    - name: Install dependencies
+      run: npm ci
+      working-directory: solidity-contracts
+    - name: Compile contracts
+      run: npx hardhat compile
+      working-directory: solidity-contracts
+    - name: Run tests
+      run: npx hardhat test
+      working-directory: solidity-contracts
+
+  test-clarity:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: contracts/package-lock.json
+    - name: Install dependencies
+      run: npm ci
+      working-directory: contracts
+    - name: Run tests
+      run: npm test
+      working-directory: contracts

@@ -17,6 +17,7 @@ const ExportButton: React.FC = () => {
       showError('Not Connected', 'Please connect your wallet before exporting data.');
       return;
     }
+
     
     setLoading(true);
     try {
@@ -25,6 +26,31 @@ const ExportButton: React.FC = () => {
         showError('Export Failed', `Server returned an error (${res.status}). Please try again.`);
         return;
       }
+      const data = await res.json();
+      if (!data || data.length === 0) {
+        showWarning('No Data', 'You have no earnings transactions to export yet.');
+        return;
+      }
+
+      const headers = ['Type', 'User', 'Amount', 'Timestamp', 'Transaction ID'];
+      const rows = data.map((tx: EarningRecord) => [
+        tx.type,
+        tx.user,
+        tx.amount,
+        new Date(tx.timestamp).toISOString(),
+        tx.txId || tx.transactionId,
+      ]);
+
+      const csv = [headers.join(','), ...rows.map((r: (string | number)[]) => r.join(','))].join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `earnings-${Date.now()}.csv`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      showSuccess('Export Complete', `${data.length} transaction(s) exported as CSV.`);
       if (res.ok) {
         const data = await res.json();
         if (!data || data.length === 0) {
