@@ -73,7 +73,7 @@ export const Toast: React.FC<ToastProps> = ({
   };
 
   return (
-    <div className={getStyles()} role="alert" aria-live="polite">
+    <div className={getStyles()} role="alert" aria-live="assertive" aria-atomic="true">
       <div className="flex-shrink-0">{getIcon()}</div>
       <div className="flex-1 min-w-0">
         <p className="font-semibold text-sm">{title}</p>
