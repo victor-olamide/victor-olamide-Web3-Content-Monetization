@@ -31,16 +31,16 @@ const ExportButton: React.FC = () => {
         return;
       }
 
-      const csv = [
-        ['Type', 'User', 'Amount', 'Timestamp', 'Transaction ID'].join(','),
-        ...data.map((tx: EarningRecord) => [
-          tx.type,
-          tx.user,
-          tx.amount,
-          new Date(tx.timestamp).toISOString(),
-          tx.txId || tx.transactionId,
-        ].join(','))
-      ].join('\n');
+      const headers = ['Type', 'User', 'Amount', 'Timestamp', 'Transaction ID'];
+      const rows = data.map((tx: EarningRecord) => [
+        tx.type,
+        tx.user,
+        tx.amount,
+        new Date(tx.timestamp).toISOString(),
+        tx.txId || tx.transactionId,
+      ]);
+
+      const csv = [headers.join(','), ...rows.map((r: (string | number)[]) => r.join(','))].join('\n');
 
       const blob = new Blob([csv], { type: 'text/csv' });
       const url = window.URL.createObjectURL(blob);
@@ -49,7 +49,7 @@ const ExportButton: React.FC = () => {
       a.download = `earnings-${Date.now()}.csv`;
       a.click();
       window.URL.revokeObjectURL(url);
-      showSuccess('Export Complete', 'Your earnings data has been downloaded as a CSV file.');
+      showSuccess('Export Complete', `${data.length} transaction(s) exported as CSV.`);
     } catch (err) {
       console.error('Export failed', err);
       showError('Export Failed', 'Could not export data. Please try again.');
