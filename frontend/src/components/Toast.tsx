@@ -94,3 +94,6 @@ export const ToastSuccess: React.FC<Omit<ToastProps, 'type'>> = (props) => <Toas
 export const ToastError: React.FC<Omit<ToastProps, 'type'>> = (props) => <Toast {...props} type="error" />;
 export const ToastInfo: React.FC<Omit<ToastProps, 'type'>> = (props) => <Toast {...props} type="info" />;
 export const ToastWarning: React.FC<Omit<ToastProps, 'type'>> = (props) => <Toast {...props} type="warning" />;
+
+/** @deprecated Use ToastSuccess instead */
+export const ToastSuccesss = ToastSuccess;
