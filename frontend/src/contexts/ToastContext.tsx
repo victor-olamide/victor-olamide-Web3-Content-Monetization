@@ -19,7 +19,13 @@ ToastContext.displayName = 'ToastContext';
 let idCounter = 0;
 const generateId = () => `toast-${++idCounter}-${Date.now()}`;
 
-export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+interface ToastProviderProps {
+  children: React.ReactNode;
+  maxToasts?: number;
+  position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'top-center';
+}
+
+export const ToastProvider: React.FC<ToastProviderProps> = ({ children, maxToasts = 5, position = 'top-right' }) => {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const DURATIONS: Record<ToastType, number> = {
@@ -54,7 +60,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }}
     >
       {children}
-      <ToastContainer toasts={toasts} onDismiss={dismiss} position="top-right" />
+      <ToastContainer toasts={toasts} onDismiss={dismiss} position={position} maxToasts={maxToasts} />
     </ToastContext.Provider>
   );
 };
