@@ -3,6 +3,8 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { ToastContainer, ToastMessage } from '@/components/ToastContainer';
 import { ToastType, TOAST_DURATIONS } from '@/components/Toast';
+import { ToastContainer, ToastMessage, NOTIFICATION_DEFAULTS } from '@/components/ToastContainer';
+import { ToastType } from '@/components/Toast';
 
 interface ToastContextType {
   showSuccess: (title: string, message?: string) => void;
@@ -31,6 +33,19 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children, maxToast
   const add = useCallback((type: ToastType, title: string, message?: string) => {
     const id = generateId();
     setToasts(prev => [...prev, { id, type, title, message, duration: TOAST_DURATIONS[type] }]);
+export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const DURATIONS: Record<ToastType, number> = {
+    success: NOTIFICATION_DEFAULTS.SUCCESS_DURATION,
+    error: NOTIFICATION_DEFAULTS.ERROR_DURATION,
+    info: NOTIFICATION_DEFAULTS.INFO_DURATION,
+    warning: NOTIFICATION_DEFAULTS.WARNING_DURATION,
+  };
+
+  const add = useCallback((type: ToastType, title: string, message?: string) => {
+    const id = generateId();
+    setToasts(prev => [...prev, { id, type, title, message, duration: DURATIONS[type] }]);
   }, []);
 
   const dismiss = useCallback((id: string) => {
@@ -54,6 +69,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children, maxToast
     >
       {children}
       <ToastContainer toasts={toasts} onDismiss={dismiss} onDismissAll={dismissAll} position={position} maxToasts={maxToasts} />
+      <ToastContainer toasts={toasts} onDismiss={dismiss} position="top-right" />
     </ToastContext.Provider>
   );
 };
