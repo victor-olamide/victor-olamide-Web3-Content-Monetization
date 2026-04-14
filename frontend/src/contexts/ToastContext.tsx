@@ -14,6 +14,7 @@ interface ToastContextType {
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
+ToastContext.displayName = 'ToastContext';
 
 let idCounter = 0;
 const generateId = () => `toast-${++idCounter}-${Date.now()}`;
