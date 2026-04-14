@@ -10,6 +10,13 @@ interface ExportOptions {
   includePurchaseStats: boolean;
 }
 
+interface NotificationHandlers {
+  showSuccess?: (message: string) => void;
+  showError?: (message: string) => void;
+  showWarning?: (message: string) => void;
+  showInfo?: (message: string) => void;
+}
+
 /**
  * Export profile data as JSON
  */
@@ -22,9 +29,9 @@ export const exportProfileAsJson = async (profileData: any) => {
 /**
  * Export purchases as CSV
  */
-export const exportPurchasesAsCsv = async (purchases: any[]) => {
+export const exportPurchasesAsCsv = async (purchases: any[], notifications?: NotificationHandlers) => {
   if (purchases.length === 0) {
-    alert('No purchases to export');
+    notifications?.showWarning?.('No purchases to export');
     return;
   }
 
@@ -257,7 +264,7 @@ const downloadFile = (blob: Blob, filename: string) => {
 /**
  * Export data in specified format
  */
-export const exportUserData = async (options: ExportOptions, data: any) => {
+export const exportUserData = async (options: ExportOptions, data: any, notifications?: NotificationHandlers) => {
   try {
     switch (options.format) {
       case 'json': {
@@ -277,9 +284,9 @@ export const exportUserData = async (options: ExportOptions, data: any) => {
 
       case 'csv': {
         if (options.includePurchases) {
-          await exportPurchasesAsCsv(data.purchases);
+          await exportPurchasesAsCsv(data.purchases, notifications);
         } else {
-          alert('CSV export is only available for purchase data');
+          notifications?.showError?.('CSV export is only available for purchase data');
         }
         break;
       }

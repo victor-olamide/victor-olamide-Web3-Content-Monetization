@@ -2,6 +2,7 @@
  * ToastContainer Component
  * Container for managing and displaying multiple toast notifications
  */
+'use client';
 
 import React, { ReactNode } from 'react';
 import { Toast, ToastType } from './Toast';

@@ -6,6 +6,7 @@ import { useStorage } from '@/hooks/useStorage';
 import { useAuth } from '@/contexts/AuthContext';
 import { validateMetadata } from '@/utils/metadata';
 import { usePayPerView } from '@/hooks/usePayPerView';
+import { useNotificationContext } from '@/context/NotificationContext';
 
 const UploadContent: React.FC = () => {
   const [title, setTitle] = useState('');
@@ -24,6 +25,7 @@ const UploadContent: React.FC = () => {
   const { uploadToGaia, uploadToIPFS, uploadMetadata, uploading: storageUploading } = useStorage();
   const { addContent } = usePayPerView();
   const { stxAddress } = useAuth();
+  const { showWarning, showError } = useNotificationContext();
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadStep, setUploadStep] = useState<'idle' | 'storage' | 'metadata' | 'contract'>('idle');
@@ -35,7 +37,7 @@ const UploadContent: React.FC = () => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
       if (selectedFile.size > 10 * 1024 * 1024) { // 10MB limit
-        alert("File size exceeds 10MB limit");
+        showWarning("File size exceeds 10MB limit");
         e.target.value = '';
         return;
       }
@@ -46,7 +48,7 @@ const UploadContent: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file || !stxAddress) {
-      alert("Please select a file and ensure you are connected");
+      showError("Please select a file and ensure you are connected");
       return;
     }
 

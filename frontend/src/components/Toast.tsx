@@ -2,6 +2,7 @@
  * Toast Component
  * Notification display component with multiple types and animations
  */
+'use client';
 
 import React, { useEffect, useState } from 'react';
 import { X, Check, AlertCircle, Info, AlertTriangle } from 'lucide-react';

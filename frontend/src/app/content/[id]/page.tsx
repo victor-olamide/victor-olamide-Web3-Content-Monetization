@@ -7,11 +7,13 @@ import { Lock, Unlock, PlayCircle, ChevronLeft, Loader2, ExternalLink } from 'lu
 import Link from 'next/link';
 import { useContentAccess } from '@/hooks/useContentAccess';
 import { usePayPerView } from '@/hooks/usePayPerView';
+import { useNotificationContext } from '@/context/NotificationContext';
 
 export default function ContentView({ params }: { params: { id: string } }) {
   const { isLoggedIn, stxAddress } = useAuth();
   const { content, hasAccess, loading, error, refreshAccess } = useContentAccess(params.id);
   const { purchaseContent } = usePayPerView();
+  const { showInfo } = useNotificationContext();
   const [purchasing, setPurchasing] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
@@ -166,7 +168,7 @@ export default function ContentView({ params }: { params: { id: string } }) {
                     {purchasing ? 'Processing...' : 'Purchase Access'}
                   </button>
                   <button 
-                    onClick={() => alert('Initiating subscription...')}
+                    onClick={() => showInfo('Initiating subscription...')}
                     disabled={purchasing}
                     className="bg-gray-800 text-white font-bold py-3 px-8 rounded-lg hover:bg-gray-900 transition disabled:opacity-50"
                   >
