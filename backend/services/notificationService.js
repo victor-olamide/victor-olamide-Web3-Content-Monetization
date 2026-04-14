@@ -1,6 +1,7 @@
 /**
  * Notification Service
  * Manages user notifications for purchases, errors, and system events
+ * @module services/notificationService
  */
 
 const Notification = require('../models/Notification');
@@ -10,9 +11,40 @@ const { sendEmail } = require('./emailService');
 const { emailConfig } = require('../config/emailConfig');
 
 /**
+ * Notification data object
+ * @typedef {Object} NotificationData
+ * @property {string} userId - User ID to notify
+ * @property {string} type - Notification type ('purchase_success', 'purchase_error', 'refund', 'listing_update', 'system')
+ * @property {string} title - Notification title
+ * @property {string} message - Notification message
+ * @property {string} [icon] - Optional icon identifier
+ * @property {string} [actionUrl] - Optional action URL
+ * @property {Object} [metadata] - Optional metadata object
+ */
+
+/**
  * Create a new notification
+ * @param {NotificationData} data - Notification data
+ * @returns {Promise<Object>} Created notification
+ * @throws {Error} When validation fails or database error occurs
  */
 async function createNotification(data) {
+  // Input validation
+  if (!data || typeof data !== 'object') {
+    throw new Error('Invalid notification data: expected object');
+  }
+  if (!data.userId || typeof data.userId !== 'string') {
+    throw new Error('Invalid userId: expected non-empty string');
+  }
+  if (!data.type || typeof data.type !== 'string') {
+    throw new Error('Invalid type: expected non-empty string');
+  }
+  if (!data.title || typeof data.title !== 'string') {
+    throw new Error('Invalid title: expected non-empty string');
+  }
+  if (!data.message || typeof data.message !== 'string') {
+    throw new Error('Invalid message: expected non-empty string');
+  }
   try {
     const notification = new Notification({
       userId: data.userId,
@@ -36,9 +68,41 @@ async function createNotification(data) {
 }
 
 /**
+ * Pagination options object
+ * @typedef {Object} PaginationOptions
+ * @property {number} [page=1] - Page number (default: 1)
+ * @property {number} [limit=20] - Items per page (default: 20)
+ * @property {boolean} [unreadOnly=false] - Filter unread only (default: false)
+ * @property {string} [type] - Filter by notification type
+ * @property {string} [sort='-createdAt'] - Sort order (default: '-createdAt')
+ */
+
+/**
+ * Paginated notifications result
+ * @typedef {Object} PaginatedNotifications
+ * @property {Array<Object>} notifications - Array of notification objects
+ * @property {Object} pagination - Pagination info
+ * @property {number} pagination.page - Current page
+ * @property {number} pagination.limit - Items per page
+ * @property {number} pagination.total - Total items
+ * @property {number} pagination.pages - Total pages
+ */
+
+/**
  * Get user notifications with pagination
+ * @param {string} userId - User ID
+ * @param {PaginationOptions} [options={}] - Pagination options
+ * @returns {Promise<PaginatedNotifications>} Paginated notifications
+ * @throws {Error} When userId is invalid or database error occurs
  */
 async function getUserNotifications(userId, options = {}) {
+  // Input validation
+  if (!userId || typeof userId !== 'string') {
+    throw new Error('Invalid userId: expected non-empty string');
+  }
+  if (options && typeof options !== 'object') {
+    throw new Error('Invalid options: expected object');
+  }
   try {
     const {
       page = 1,
@@ -86,8 +150,15 @@ async function getUserNotifications(userId, options = {}) {
 
 /**
  * Get unread notification count
+ * @param {string} userId - User ID
+ * @returns {Promise<number>} Count of unread notifications
+ * @throws {Error} When userId is invalid or database error occurs
  */
 async function getUnreadCount(userId) {
+  // Input validation
+  if (!userId || typeof userId !== 'string') {
+    throw new Error('Invalid userId: expected non-empty string');
+  }
   try {
     const count = await Notification.countDocuments({
       userId,
@@ -103,8 +174,15 @@ async function getUnreadCount(userId) {
 
 /**
  * Mark notification as read
+ * @param {string} notificationId - Notification ID (MongoDB ObjectId)
+ * @returns {Promise<Object|null>} Updated notification or null if not found
+ * @throws {Error} When notificationId is invalid or database error occurs
  */
 async function markAsRead(notificationId) {
+  // Input validation
+  if (!notificationId || typeof notificationId !== 'string') {
+    throw new Error('Invalid notificationId: expected non-empty string');
+  }
   try {
     const notification = await Notification.findByIdAndUpdate(
       notificationId,
@@ -120,8 +198,21 @@ async function markAsRead(notificationId) {
 
 /**
  * Mark multiple notifications as read
+ * @param {Array<string>} notificationIds - Array of notification IDs
+ * @returns {Promise<Object>} MongoDB update result
+ * @throws {Error} When notificationIds is invalid or database error occurs
  */
 async function markMultipleAsRead(notificationIds) {
+  // Input validation
+  if (!Array.isArray(notificationIds)) {
+    throw new Error('Invalid notificationIds: expected array');
+  }
+  if (notificationIds.length === 0) {
+    throw new Error('Invalid notificationIds: expected non-empty array');
+  }
+  if (!notificationIds.every(id => typeof id === 'string' && id.length > 0)) {
+    throw new Error('Invalid notificationIds: expected array of non-empty strings');
+  }
   try {
     const result = await Notification.updateMany(
       { _id: { $in: notificationIds } },
@@ -136,8 +227,15 @@ async function markMultipleAsRead(notificationIds) {
 
 /**
  * Mark all notifications as read for user
+ * @param {string} userId - User ID
+ * @returns {Promise<Object>} MongoDB update result
+ * @throws {Error} When userId is invalid or database error occurs
  */
 async function markAllAsRead(userId) {
+  // Input validation
+  if (!userId || typeof userId !== 'string') {
+    throw new Error('Invalid userId: expected non-empty string');
+  }
   try {
     const result = await Notification.updateMany(
       { userId, isRead: false },
@@ -152,8 +250,15 @@ async function markAllAsRead(userId) {
 
 /**
  * Archive notification
+ * @param {string} notificationId - Notification ID (MongoDB ObjectId)
+ * @returns {Promise<Object|null>} Updated notification or null if not found
+ * @throws {Error} When notificationId is invalid or database error occurs
  */
 async function archiveNotification(notificationId) {
+  // Input validation
+  if (!notificationId || typeof notificationId !== 'string') {
+    throw new Error('Invalid notificationId: expected non-empty string');
+  }
   try {
     const notification = await Notification.findByIdAndUpdate(
       notificationId,
@@ -169,8 +274,15 @@ async function archiveNotification(notificationId) {
 
 /**
  * Delete notification
+ * @param {string} notificationId - Notification ID (MongoDB ObjectId)
+ * @returns {Promise<void>}
+ * @throws {Error} When notificationId is invalid or database error occurs
  */
 async function deleteNotification(notificationId) {
+  // Input validation
+  if (!notificationId || typeof notificationId !== 'string') {
+    throw new Error('Invalid notificationId: expected non-empty string');
+  }
   try {
     await Notification.findByIdAndDelete(notificationId);
     logger.info(`Notification ${notificationId} deleted`);
@@ -182,8 +294,21 @@ async function deleteNotification(notificationId) {
 
 /**
  * Delete multiple notifications
+ * @param {Array<string>} notificationIds - Array of notification IDs
+ * @returns {Promise<Object>} MongoDB delete result
+ * @throws {Error} When notificationIds is invalid or database error occurs
  */
 async function deleteMultiple(notificationIds) {
+  // Input validation
+  if (!Array.isArray(notificationIds)) {
+    throw new Error('Invalid notificationIds: expected array');
+  }
+  if (notificationIds.length === 0) {
+    return { deletedCount: 0 };
+  }
+  if (!notificationIds.every(id => typeof id === 'string' && id.length > 0)) {
+    throw new Error('Invalid notificationIds: expected array of non-empty strings');
+  }
   try {
     const result = await Notification.deleteMany({
       _id: { $in: notificationIds }
@@ -196,9 +321,37 @@ async function deleteMultiple(notificationIds) {
 }
 
 /**
+ * Purchase data object
+ * @typedef {Object} PurchaseData
+ * @property {string} contentId - Content ID
+ * @property {string} contentTitle - Content title
+ * @property {number} price - Purchase price
+ * @property {string} transactionId - Transaction ID
+ * @property {string} [email] - User email
+ * @property {string} [userEmail] - Alternative user email
+ */
+
+/**
  * Create purchase success notification
+ * @param {string} userId - User ID
+ * @param {PurchaseData} purchaseData - Purchase data
+ * @returns {Promise<Object>} Created notification
+ * @throws {Error} When userId or purchaseData is invalid
  */
 async function notifyPurchaseSuccess(userId, purchaseData) {
+  // Input validation
+  if (!userId || typeof userId !== 'string') {
+    throw new Error('Invalid userId: expected non-empty string');
+  }
+  if (!purchaseData || typeof purchaseData !== 'object') {
+    throw new Error('Invalid purchaseData: expected object');
+  }
+  if (!purchaseData.contentId || typeof purchaseData.contentId !== 'string') {
+    throw new Error('Invalid purchaseData.contentId: expected non-empty string');
+  }
+  if (!purchaseData.contentTitle || typeof purchaseData.contentTitle !== 'string') {
+    throw new Error('Invalid purchaseData.contentTitle: expected non-empty string');
+  }
   try {
     const notification = await createNotification({
       userId,
@@ -269,9 +422,30 @@ async function notifyPurchaseSuccess(userId, purchaseData) {
   }
 
 /**
+ * Error data object
+ * @typedef {Object} ErrorData
+ * @property {string} [contentId] - Content ID
+ * @property {string} [contentTitle] - Content title
+ * @property {string} [errorCode] - Error code
+ * @property {boolean} [retryable] - Whether the error is retryable
+ * @property {string} [message] - Error message
+ */
+
+/**
  * Create purchase error notification
+ * @param {string} userId - User ID
+ * @param {ErrorData} errorData - Error data
+ * @returns {Promise<Object>} Created notification
+ * @throws {Error} When userId is invalid
  */
 async function notifyPurchaseError(userId, errorData) {
+  // Input validation
+  if (!userId || typeof userId !== 'string') {
+    throw new Error('Invalid userId: expected non-empty string');
+  }
+  if (errorData && typeof errorData !== 'object') {
+    throw new Error('Invalid errorData: expected object');
+  }
   try {
     const notification = await createNotification({
       userId,
@@ -294,9 +468,39 @@ async function notifyPurchaseError(userId, errorData) {
 }
 
 /**
+ * Refund data object
+ * @typedef {Object} RefundData
+ * @property {string} contentId - Content ID
+ * @property {string} contentTitle - Content title
+ * @property {number} refundAmount - Refund amount
+ * @property {string} [reason] - Refund reason
+ * @property {string} [transactionId] - Transaction ID
+ */
+
+/**
  * Create refund notification
+ * @param {string} userId - User ID
+ * @param {RefundData} refundData - Refund data
+ * @returns {Promise<Object>} Created notification
+ * @throws {Error} When userId or refundData is invalid
  */
 async function notifyRefund(userId, refundData) {
+  // Input validation
+  if (!userId || typeof userId !== 'string') {
+    throw new Error('Invalid userId: expected non-empty string');
+  }
+  if (!refundData || typeof refundData !== 'object') {
+    throw new Error('Invalid refundData: expected object');
+  }
+  if (!refundData.contentId || typeof refundData.contentId !== 'string') {
+    throw new Error('Invalid refundData.contentId: expected non-empty string');
+  }
+  if (!refundData.contentTitle || typeof refundData.contentTitle !== 'string') {
+    throw new Error('Invalid refundData.contentTitle: expected non-empty string');
+  }
+  if (typeof refundData.refundAmount !== 'number') {
+    throw new Error('Invalid refundData.refundAmount: expected number');
+  }
   try {
     const notification = await createNotification({
       userId,
@@ -320,9 +524,34 @@ async function notifyRefund(userId, refundData) {
 }
 
 /**
+ * Listing data object
+ * @typedef {Object} ListingData
+ * @property {string} contentId - Content ID
+ * @property {string} title - Content title
+ * @property {string} [updateType] - Update type ('price_change', 'metadata_update', 'availability_change')
+ */
+
+/**
  * Create listing update notification
+ * @param {string} userId - User ID
+ * @param {ListingData} listingData - Listing data
+ * @returns {Promise<Object>} Created notification
+ * @throws {Error} When userId or listingData is invalid
  */
 async function notifyListingUpdate(userId, listingData) {
+  // Input validation
+  if (!userId || typeof userId !== 'string') {
+    throw new Error('Invalid userId: expected non-empty string');
+  }
+  if (!listingData || typeof listingData !== 'object') {
+    throw new Error('Invalid listingData: expected object');
+  }
+  if (!listingData.contentId || typeof listingData.contentId !== 'string') {
+    throw new Error('Invalid listingData.contentId: expected non-empty string');
+  }
+  if (!listingData.title || typeof listingData.title !== 'string') {
+    throw new Error('Invalid listingData.title: expected non-empty string');
+  }
   try {
     const notification = await createNotification({
       userId,
@@ -344,9 +573,36 @@ async function notifyListingUpdate(userId, listingData) {
 }
 
 /**
+ * System data object
+ * @typedef {Object} SystemData
+ * @property {string} title - Notification title
+ * @property {string} message - Notification message
+ * @property {string} [icon] - Icon identifier (default: 'info')
+ * @property {string} [actionUrl] - Action URL
+ * @property {Object} [metadata] - Additional metadata
+ */
+
+/**
  * Create system notification
+ * @param {string} userId - User ID
+ * @param {SystemData} systemData - System data
+ * @returns {Promise<Object>} Created notification
+ * @throws {Error} When userId or systemData is invalid
  */
 async function notifySystem(userId, systemData) {
+  // Input validation
+  if (!userId || typeof userId !== 'string') {
+    throw new Error('Invalid userId: expected non-empty string');
+  }
+  if (!systemData || typeof systemData !== 'object') {
+    throw new Error('Invalid systemData: expected object');
+  }
+  if (!systemData.title || typeof systemData.title !== 'string') {
+    throw new Error('Invalid systemData.title: expected non-empty string');
+  }
+  if (!systemData.message || typeof systemData.message !== 'string') {
+    throw new Error('Invalid systemData.message: expected non-empty string');
+  }
   try {
     const notification = await createNotification({
       userId,
@@ -366,8 +622,15 @@ async function notifySystem(userId, systemData) {
 
 /**
  * Clear old notifications (older than 30 days)
+ * @param {number} [daysOld=30] - Number of days to consider old (default: 30)
+ * @returns {Promise<Object>} MongoDB delete result
+ * @throws {Error} When daysOld is invalid or database error occurs
  */
 async function clearOldNotifications(daysOld = 30) {
+  // Input validation
+  if (typeof daysOld !== 'number' || daysOld < 1 || !Number.isInteger(daysOld)) {
+    throw new Error('Invalid daysOld: expected positive integer');
+  }
   try {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysOld);
@@ -386,9 +649,26 @@ async function clearOldNotifications(daysOld = 30) {
 }
 
 /**
+ * Notification statistics result
+ * @typedef {Object} NotificationStats
+ * @property {number} total - Total notifications
+ * @property {number} unread - Unread notifications
+ * @property {number} archived - Archived notifications
+ * @property {number} read - Read notifications
+ * @property {Object} typeBreakdown - Count by type
+ */
+
+/**
  * Get notification statistics for user
+ * @param {string} userId - User ID
+ * @returns {Promise<NotificationStats>} Notification statistics
+ * @throws {Error} When userId is invalid or database error occurs
  */
 async function getUserNotificationStats(userId) {
+  // Input validation
+  if (!userId || typeof userId !== 'string') {
+    throw new Error('Invalid userId: expected non-empty string');
+  }
   try {
     const total = await Notification.countDocuments({ userId });
     const unread = await Notification.countDocuments({ userId, isRead: false });
