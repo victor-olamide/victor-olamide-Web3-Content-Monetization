@@ -4,6 +4,7 @@
  */
 
 const UserProfile = require('../models/UserProfile');
+const logger = require('../utils/logger');
 const Purchase = require('../models/Purchase');
 const PurchaseHistory = require('../models/PurchaseHistory');
 const Content = require('../models/Content');
@@ -11,8 +12,15 @@ const Content = require('../models/Content');
 class UserProfileService {
   /**
    * Get or create user profile
+   * @param {string} address - Wallet address
+   * @returns {Promise<Object>} User profile
+   * @throws {Error} When address is invalid or database error occurs
    */
   async getOrCreateProfile(address) {
+    // Input validation
+    if (!address || typeof address !== 'string') {
+      throw new Error('Invalid address: expected non-empty string');
+    }
     try {
       let profile = await UserProfile.findOne({ address: address.toLowerCase() });
 
@@ -21,37 +29,65 @@ class UserProfileService {
           address: address.toLowerCase()
         });
         await profile.save();
+        logger.info('Created new user profile', { address: address.toLowerCase() });
       }
 
       return profile;
     } catch (error) {
-      console.error('Error getting/creating profile:', error);
-      throw error;
+      logger.error('Failed to get or create user profile', { 
+        address: address.toLowerCase(),
+        error: error.message,
+        code: error.code || 'UNKNOWN'
+      });
+      throw new Error(`Failed to get or create profile: ${error.message}`);
     }
   }
 
   /**
    * Get user profile
+   * @param {string} address - Wallet address
+   * @returns {Promise<Object>} User profile
+   * @throws {Error} When address is invalid or profile not found
    */
   async getProfile(address) {
+    // Input validation
+    if (!address || typeof address !== 'string') {
+      throw new Error('Invalid address: expected non-empty string');
+    }
     try {
       const profile = await UserProfile.findOne({ address: address.toLowerCase() });
 
       if (!profile) {
+        logger.warn('Profile not found', { address: address.toLowerCase() });
         throw new Error('Profile not found');
       }
 
       return profile;
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      logger.error('Failed to fetch user profile', { 
+        address: address.toLowerCase(),
+        error: error.message,
+        code: error.code || 'UNKNOWN'
+      });
       throw error;
     }
   }
 
   /**
    * Update user profile
+   * @param {string} address - Wallet address
+   * @param {Object} profileData - Profile data to update
+   * @returns {Promise<Object>} Updated profile
+   * @throws {Error} When address is invalid or profile not found
    */
   async updateProfile(address, profileData) {
+    // Input validation
+    if (!address || typeof address !== 'string') {
+      throw new Error('Invalid address: expected non-empty string');
+    }
+    if (!profileData || typeof profileData !== 'object') {
+      throw new Error('Invalid profileData: expected object');
+    }
     try {
       const allowedFields = [
         'displayName',
@@ -80,20 +116,37 @@ class UserProfileService {
       );
 
       if (!profile) {
+        logger.warn('Profile not found for update', { address: address.toLowerCase() });
         throw new Error('Profile not found');
       }
 
+      logger.info('Profile updated successfully', { address: address.toLowerCase(), fields: Object.keys(updateData) });
       return profile;
     } catch (error) {
-      console.error('Error updating profile:', error);
+      logger.error('Failed to update user profile', { 
+        address: address.toLowerCase(),
+        error: error.message,
+        code: error.code || 'UNKNOWN'
+      });
       throw error;
     }
   }
 
   /**
    * Update user preferences
+   * @param {string} address - Wallet address
+   * @param {Object} preferences - Preferences object
+   * @returns {Promise<Object>} Updated profile
+   * @throws {Error} When address is invalid or profile not found
    */
   async updatePreferences(address, preferences) {
+    // Input validation
+    if (!address || typeof address !== 'string') {
+      throw new Error('Invalid address: expected non-empty string');
+    }
+    if (!preferences || typeof preferences !== 'object') {
+      throw new Error('Invalid preferences: expected object');
+    }
     try {
       const profile = await UserProfile.findOneAndUpdate(
         { address: address.toLowerCase() },
@@ -102,20 +155,37 @@ class UserProfileService {
       );
 
       if (!profile) {
+        logger.warn('Profile not found for preferences update', { address: address.toLowerCase() });
         throw new Error('Profile not found');
       }
 
+      logger.info('Preferences updated successfully', { address: address.toLowerCase() });
       return profile;
     } catch (error) {
-      console.error('Error updating preferences:', error);
+      logger.error('Failed to update user preferences', { 
+        address: address.toLowerCase(),
+        error: error.message,
+        code: error.code || 'UNKNOWN'
+      });
       throw error;
     }
   }
 
   /**
    * Update user settings
+   * @param {string} address - Wallet address
+   * @param {Object} settings - Settings object
+   * @returns {Promise<Object>} Updated profile
+   * @throws {Error} When address is invalid or profile not found
    */
   async updateSettings(address, settings) {
+    // Input validation
+    if (!address || typeof address !== 'string') {
+      throw new Error('Invalid address: expected non-empty string');
+    }
+    if (!settings || typeof settings !== 'object') {
+      throw new Error('Invalid settings: expected object');
+    }
     try {
       const profile = await UserProfile.findOneAndUpdate(
         { address: address.toLowerCase() },
@@ -124,20 +194,37 @@ class UserProfileService {
       );
 
       if (!profile) {
+        logger.warn('Profile not found for settings update', { address: address.toLowerCase() });
         throw new Error('Profile not found');
       }
 
+      logger.info('Settings updated successfully', { address: address.toLowerCase() });
       return profile;
     } catch (error) {
-      console.error('Error updating settings:', error);
+      logger.error('Failed to update user settings', { 
+        address: address.toLowerCase(),
+        error: error.message,
+        code: error.code || 'UNKNOWN'
+      });
       throw error;
     }
   }
 
   /**
    * Update social links
+   * @param {string} address - Wallet address
+   * @param {Object} socialLinks - Social links object
+   * @returns {Promise<Object>} Updated profile
+   * @throws {Error} When address is invalid or profile not found
    */
   async updateSocialLinks(address, socialLinks) {
+    // Input validation
+    if (!address || typeof address !== 'string') {
+      throw new Error('Invalid address: expected non-empty string');
+    }
+    if (!socialLinks || typeof socialLinks !== 'object') {
+      throw new Error('Invalid socialLinks: expected object');
+    }
     try {
       const profile = await UserProfile.findOneAndUpdate(
         { address: address.toLowerCase() },
@@ -146,24 +233,42 @@ class UserProfileService {
       );
 
       if (!profile) {
+        logger.warn('Profile not found for social links update', { address: address.toLowerCase() });
         throw new Error('Profile not found');
       }
 
+      logger.info('Social links updated successfully', { address: address.toLowerCase() });
       return profile;
     } catch (error) {
-      console.error('Error updating social links:', error);
+      logger.error('Failed to update social links', { 
+        address: address.toLowerCase(),
+        error: error.message,
+        code: error.code || 'UNKNOWN'
+      });
       throw error;
     }
   }
 
   /**
    * Update user tier
+   * @param {string} address - Wallet address
+   * @param {string} tier - Tier to set ('free', 'basic', 'premium', 'enterprise', 'admin')
+   * @returns {Promise<Object>} Updated profile
+   * @throws {Error} When address or tier is invalid, or profile not found
    */
   async updateTier(address, tier) {
+    // Input validation
+    if (!address || typeof address !== 'string') {
+      throw new Error('Invalid address: expected non-empty string');
+    }
+    if (!tier || typeof tier !== 'string') {
+      throw new Error('Invalid tier: expected non-empty string');
+    }
     try {
       const allowedTiers = ['free', 'basic', 'premium', 'enterprise', 'admin'];
       if (!allowedTiers.includes(tier)) {
-        throw new Error('Invalid tier');
+        logger.warn('Invalid tier attempted', { address: address.toLowerCase(), tier, allowedTiers });
+        throw new Error(`Invalid tier: must be one of ${allowedTiers.join(', ')}`);
       }
 
       const profile = await UserProfile.findOneAndUpdate(
@@ -173,23 +278,53 @@ class UserProfileService {
       );
 
       if (!profile) {
+        logger.warn('Profile not found for tier update', { address: address.toLowerCase() });
         throw new Error('Profile not found');
       }
 
+      logger.info('User tier updated successfully', { address: address.toLowerCase(), tier });
       return profile;
     } catch (error) {
-      console.error('Error updating tier:', error);
+      logger.error('Failed to update user tier', { 
+        address: address.toLowerCase(),
+        tier,
+        error: error.message,
+        code: error.code || 'UNKNOWN'
+      });
       throw error;
     }
   }
 
   /**
    * Record purchase history
+   * @param {string} buyerAddress - Buyer wallet address
+   * @param {string} contentId - Content ID
+   * @param {Object} purchaseData - Purchase data
+   * @param {number} purchaseData.price - Purchase price
+   * @param {string} [purchaseData.currency] - Purchase currency
+   * @param {string} [purchaseData.transactionHash] - Transaction hash
+   * @param {string} [purchaseData.status] - Transaction status
+   * @returns {Promise<Object>} Purchase history record
+   * @throws {Error} When inputs are invalid or content not found
    */
   async recordPurchase(buyerAddress, contentId, purchaseData) {
+    // Input validation
+    if (!buyerAddress || typeof buyerAddress !== 'string') {
+      throw new Error('Invalid buyerAddress: expected non-empty string');
+    }
+    if (!contentId || typeof contentId !== 'string') {
+      throw new Error('Invalid contentId: expected non-empty string');
+    }
+    if (!purchaseData || typeof purchaseData !== 'object') {
+      throw new Error('Invalid purchaseData: expected object');
+    }
+    if (typeof purchaseData.price !== 'number' || purchaseData.price < 0) {
+      throw new Error('Invalid purchaseData.price: expected non-negative number');
+    }
     try {
       const content = await Content.findOne({ contentId });
       if (!content) {
+        logger.warn('Content not found for purchase recording', { contentId });
         throw new Error('Content not found');
       }
 
@@ -216,19 +351,48 @@ class UserProfileService {
         await profile.save();
       }
 
+      logger.info('Purchase recorded successfully', { 
+        buyerAddress: buyerAddress.toLowerCase(),
+        contentId,
+        price: purchaseData.price
+      });
       return purchaseHistory;
     } catch (error) {
-      console.error('Error recording purchase:', error);
+      logger.error('Failed to record purchase', { 
+        buyerAddress: buyerAddress.toLowerCase(),
+        contentId,
+        error: error.message,
+        code: error.code || 'UNKNOWN'
+      });
       throw error;
     }
   }
 
   /**
    * Get purchase history for user
+   * @param {string} address - Wallet address
+   * @param {Object} [options={}] - Query options
+   * @param {number} [options.skip=0] - Number of records to skip
+   * @param {number} [options.limit=20] - Number of records to return
+   * @param {string} [options.sortBy='purchaseDate'] - Field to sort by
+   * @returns {Promise<Object>} Purchase history with pagination
+   * @throws {Error} When address is invalid or database error occurs
    */
   async getPurchaseHistory(address, options = {}) {
+    // Input validation
+    if (!address || typeof address !== 'string') {
+      throw new Error('Invalid address: expected non-empty string');
+    }
     try {
       const { skip = 0, limit = 20, sortBy = 'purchaseDate' } = options;
+
+      // Validate pagination options
+      if (typeof skip !== 'number' || skip < 0) {
+        throw new Error('Invalid options.skip: expected non-negative number');
+      }
+      if (typeof limit !== 'number' || limit < 1 || limit > 100) {
+        throw new Error('Invalid options.limit: expected number between 1 and 100');
+      }
 
       const purchases = await PurchaseHistory.find({
         buyerAddress: address.toLowerCase()
@@ -241,6 +405,12 @@ class UserProfileService {
         buyerAddress: address.toLowerCase()
       });
 
+      logger.info('Purchase history retrieved', { 
+        address: address.toLowerCase(),
+        count: purchases.length,
+        total
+      });
+
       return {
         data: purchases,
         total,
@@ -248,17 +418,39 @@ class UserProfileService {
         limit
       };
     } catch (error) {
-      console.error('Error fetching purchase history:', error);
+      logger.error('Failed to fetch purchase history', { 
+        address: address.toLowerCase(),
+        error: error.message,
+        code: error.code || 'UNKNOWN'
+      });
       throw error;
     }
   }
 
   /**
    * Get favorite content
+   * @param {string} address - Wallet address
+   * @param {Object} [options={}] - Query options
+   * @param {number} [options.skip=0] - Number of records to skip
+   * @param {number} [options.limit=20] - Number of records to return
+   * @returns {Promise<Object>} Favorites with pagination
+   * @throws {Error} When address is invalid or database error occurs
    */
   async getFavorites(address, options = {}) {
+    // Input validation
+    if (!address || typeof address !== 'string') {
+      throw new Error('Invalid address: expected non-empty string');
+    }
     try {
       const { skip = 0, limit = 20 } = options;
+
+      // Validate pagination options
+      if (typeof skip !== 'number' || skip < 0) {
+        throw new Error('Invalid options.skip: expected non-negative number');
+      }
+      if (typeof limit !== 'number' || limit < 1 || limit > 100) {
+        throw new Error('Invalid options.limit: expected number between 1 and 100');
+      }
 
       const favorites = await PurchaseHistory.find({
         buyerAddress: address.toLowerCase(),
@@ -273,6 +465,12 @@ class UserProfileService {
         isFavorite: true
       });
 
+      logger.info('Favorites retrieved', { 
+        address: address.toLowerCase(),
+        count: favorites.length,
+        total
+      });
+
       return {
         data: favorites,
         total,
@@ -280,15 +478,30 @@ class UserProfileService {
         limit
       };
     } catch (error) {
-      console.error('Error fetching favorites:', error);
+      logger.error('Failed to fetch favorites', { 
+        address: address.toLowerCase(),
+        error: error.message,
+        code: error.code || 'UNKNOWN'
+      });
       throw error;
     }
   }
 
   /**
    * Toggle favorite status
+   * @param {string} address - Wallet address
+   * @param {string} purchaseId - Purchase record ID
+   * @returns {Promise<Object>} Updated purchase record
+   * @throws {Error} When inputs are invalid or purchase not found
    */
   async toggleFavorite(address, purchaseId) {
+    // Input validation
+    if (!address || typeof address !== 'string') {
+      throw new Error('Invalid address: expected non-empty string');
+    }
+    if (!purchaseId || typeof purchaseId !== 'string') {
+      throw new Error('Invalid purchaseId: expected non-empty string');
+    }
     try {
       const purchase = await PurchaseHistory.findOne({
         _id: purchaseId,
@@ -296,6 +509,10 @@ class UserProfileService {
       });
 
       if (!purchase) {
+        logger.warn('Purchase not found for favorite toggle', { 
+          address: address.toLowerCase(),
+          purchaseId 
+        });
         throw new Error('Purchase not found');
       }
 
@@ -303,17 +520,35 @@ class UserProfileService {
       purchase.favoriteDate = purchase.isFavorite ? new Date() : null;
       await purchase.save();
 
+      logger.info('Favorite status toggled', { 
+        address: address.toLowerCase(),
+        purchaseId,
+        isFavorite: purchase.isFavorite
+      });
+
       return purchase;
     } catch (error) {
-      console.error('Error toggling favorite:', error);
+      logger.error('Failed to toggle favorite status', { 
+        address: address.toLowerCase(),
+        purchaseId,
+        error: error.message,
+        code: error.code || 'UNKNOWN'
+      });
       throw error;
     }
   }
 
   /**
    * Get profile statistics
+   * @param {string} address - Wallet address
+   * @returns {Promise<Object>} Profile statistics
+   * @throws {Error} When address is invalid or database error occurs
    */
   async getProfileStats(address) {
+    // Input validation
+    if (!address || typeof address !== 'string') {
+      throw new Error('Invalid address: expected non-empty string');
+    }
     try {
       const address_lower = address.toLowerCase();
 
@@ -336,6 +571,13 @@ class UserProfileService {
         'rating.score': { $ne: null }
       });
 
+      logger.info('Profile stats retrieved', { 
+        address: address_lower,
+        purchaseCount,
+        favoriteCount,
+        ratedCount
+      });
+
       return {
         totalPurchases: purchaseCount,
         totalSpent: totalSpent.length > 0 ? totalSpent[0].total : 0,
@@ -343,15 +585,38 @@ class UserProfileService {
         ratedCount
       };
     } catch (error) {
-      console.error('Error getting profile stats:', error);
+      logger.error('Failed to get profile stats', { 
+        address: address.toLowerCase(),
+        error: error.message,
+        code: error.code || 'UNKNOWN'
+      });
       throw error;
     }
   }
 
   /**
    * Add rating and review
+   * @param {string} address - Wallet address
+   * @param {string} purchaseId - Purchase record ID
+   * @param {number} rating - Rating score (0-5)
+   * @param {string} review - Review text
+   * @returns {Promise<Object>} Updated purchase record
+   * @throws {Error} When inputs are invalid, out of range, or purchase not found
    */
   async addRating(address, purchaseId, rating, review) {
+    // Input validation
+    if (!address || typeof address !== 'string') {
+      throw new Error('Invalid address: expected non-empty string');
+    }
+    if (!purchaseId || typeof purchaseId !== 'string') {
+      throw new Error('Invalid purchaseId: expected non-empty string');
+    }
+    if (typeof rating !== 'number' || rating < 0 || rating > 5) {
+      throw new Error('Invalid rating: expected number between 0 and 5');
+    }
+    if (review && typeof review !== 'string') {
+      throw new Error('Invalid review: expected string');
+    }
     try {
       const purchase = await PurchaseHistory.findOne({
         _id: purchaseId,
@@ -359,6 +624,10 @@ class UserProfileService {
       });
 
       if (!purchase) {
+        logger.warn('Purchase not found for rating', { 
+          address: address.toLowerCase(),
+          purchaseId 
+        });
         throw new Error('Purchase not found');
       }
 
@@ -369,9 +638,22 @@ class UserProfileService {
       };
 
       await purchase.save();
+
+      logger.info('Rating added successfully', { 
+        address: address.toLowerCase(),
+        purchaseId,
+        rating
+      });
+
       return purchase;
     } catch (error) {
-      console.error('Error adding rating:', error);
+      logger.error('Failed to add rating', { 
+        address: address.toLowerCase(),
+        purchaseId,
+        rating,
+        error: error.message,
+        code: error.code || 'UNKNOWN'
+      });
       throw error;
     }
   }
@@ -401,7 +683,7 @@ class UserProfileService {
       await purchase.save();
       return purchase;
     } catch (error) {
-      console.error('Error recording access:', error);
+      logger.error('Error recording access:', { err: error });
       throw error;
     }
   }
@@ -425,7 +707,7 @@ class UserProfileService {
 
       return purchase;
     } catch (error) {
-      console.error('Error updating completion:', error);
+      logger.error('Error updating completion:', { err: error });
       throw error;
     }
   }
@@ -448,7 +730,7 @@ class UserProfileService {
 
       return profile;
     } catch (error) {
-      console.error('Error blocking user:', error);
+      logger.error('Error blocking user:', { err: error });
       throw error;
     }
   }
@@ -471,7 +753,7 @@ class UserProfileService {
 
       return profile;
     } catch (error) {
-      console.error('Error unblocking user:', error);
+      logger.error('Error unblocking user:', { err: error });
       throw error;
     }
   }
@@ -489,7 +771,7 @@ class UserProfileService {
 
       return profile;
     } catch (error) {
-      console.error('Error updating last login:', error);
+      logger.error('Error updating last login:', { err: error });
       throw error;
     }
   }

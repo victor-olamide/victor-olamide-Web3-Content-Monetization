@@ -142,11 +142,10 @@ export const useIPFSUpload = () => {
               uploadedBytes: e.loaded,
               percentComplete: Math.round(percentComplete)
             } : null);
-            options.onProgress?.(prev => prev ? {
-              ...prev,
-              uploadedBytes: e.loaded,
-              percentComplete: Math.round(percentComplete)
-            } : null as any);
+            if (options.onProgress) {
+              const current = { uploadedBytes: e.loaded, percentComplete: Math.round(percentComplete) } as any;
+              options.onProgress(current);
+            }
           }
         });
 

@@ -7,12 +7,12 @@ import {
   makeStandardSTXPostCondition
 } from '@stacks/transactions';
 import { useAuth } from '@/contexts/AuthContext';
-import { CONTRACT_ADDRESS, CONTRACT_NAME } from '@/utils/constants';
+import { CONTRACT_ADDRESS, CONTRACT_NAME, STACKS_NETWORK } from '@/utils/constants';
 import { StacksMainnet, StacksTestnet } from '@stacks/network';
 
 export const usePayPerView = () => {
   const { userSession, stxAddress } = useAuth();
-  const network = process.env.NEXT_PUBLIC_STACKS_NETWORK === 'mainnet' ? new StacksMainnet() : new StacksTestnet();
+  const network = STACKS_NETWORK === 'mainnet' ? new StacksMainnet() : new StacksTestnet();
 
   const addContent = async (contentId: number, priceStx: number, uri: string) => {
     // Convert STX to micro-STX

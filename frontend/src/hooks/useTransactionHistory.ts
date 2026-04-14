@@ -86,8 +86,8 @@ export const useTransactionHistory = (
     return params.toString();
   }, [options]);
 
-  // Fetch transactions
-  const fetchTransactions = useCallback(async () => {
+  // Fetch transactions — accepts optional AbortSignal for cleanup on unmount.
+  const fetchTransactions = useCallback(async (signal?: AbortSignal) => {
     try {
       setIsLoading(true);
       setError(null);
@@ -96,6 +96,7 @@ export const useTransactionHistory = (
       const url = `/api/transactions/history?${queryString}`;
 
       const response = await fetch(url, {
+        signal,
         headers: {
           'Content-Type': 'application/json',
           'X-Session-Id': localStorage.getItem('sessionId') || ''
@@ -111,7 +112,8 @@ export const useTransactionHistory = (
 
       setTransactions(data.data || []);
       setTotal(data.pagination?.total || 0);
-    } catch (err) {
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') return;
       setError(err instanceof Error ? err.message : 'Failed to fetch transactions');
       setTransactions([]);
       setTotal(0);
@@ -120,9 +122,13 @@ export const useTransactionHistory = (
     }
   }, [buildQueryString]);
 
-  // Fetch on mount and when options change
+  // Fetch on mount and when options change; cancel on cleanup.
   useEffect(() => {
-    fetchTransactions();
+    const controller = new AbortController();
+    fetchTransactions(controller.signal);
+    return () => {
+      controller.abort();
+    };
   }, [fetchTransactions]);
 
   // Update filters

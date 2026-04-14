@@ -13,6 +13,8 @@ class PinningManager {
     this.monitoringInterval = 30 * 60 * 1000; // 30 minutes
     this.redundancyLevel = parseInt(process.env.IPFS_PINNING_REDUNDANCY) || 2;
     this.autoRepinEnabled = process.env.IPFS_AUTO_REPIN !== 'false';
+    this.monitoringIntervalId = null;
+    this.initialHealthCheckTimeout = null;
 
     // Start monitoring
     this.startMonitoring();
@@ -260,14 +262,31 @@ class PinningManager {
   startMonitoring() {
     console.log(`[PinningManager] Starting pinning monitoring (interval: ${this.monitoringInterval}ms)`);
 
-    setInterval(async () => {
+    const intervalId = setInterval(async () => {
       await this.performHealthCheck();
     }, this.monitoringInterval);
+    this.monitoringIntervalId = intervalId;
 
     // Initial health check
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       this.performHealthCheck();
     }, 5000);
+    this.initialHealthCheckTimeout = timeoutId;
+  }
+
+  /**
+   * Stop monitoring for pinning health
+   */
+  stopMonitoring() {
+    if (this.monitoringIntervalId) {
+      clearInterval(this.monitoringIntervalId);
+      this.monitoringIntervalId = null;
+    }
+    if (this.initialHealthCheckTimeout) {
+      clearTimeout(this.initialHealthCheckTimeout);
+      this.initialHealthCheckTimeout = null;
+    }
+    console.log('[PinningManager] Monitoring stopped');
   }
 
   /**
@@ -399,8 +418,8 @@ class PinningManager {
   }
 
   /**
-   * Get service status
-   * @returns {Object} Status
+   * Get service status with monitoring interval tracking
+   * @returns {Object} Status with interval details
    */
   getStatus() {
     return {
@@ -408,6 +427,8 @@ class PinningManager {
       redundancyLevel: this.redundancyLevel,
       autoRepinEnabled: this.autoRepinEnabled,
       monitoringInterval: this.monitoringInterval,
+      monitoringActive: this.monitoringIntervalId !== null,
+      initialHealthCheckActive: this.initialHealthCheckTimeout !== null,
       pinningService: this.pinningService.getHealthStatus()
     };
   }
