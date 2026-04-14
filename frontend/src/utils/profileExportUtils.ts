@@ -36,6 +36,13 @@ export const exportPurchasesAsCsv = async (purchases: Purchase[]) => {
     'Rating', 'Review', 'Is Favorite', 'Refunded',
   ];
 
+  const escapeCell = (cell: string | number | boolean) => {
+    const str = String(cell);
+    return str.includes(',') || str.includes('"') || str.includes('\n')
+      ? `"${str.replace(/"/g, '""')}"`
+      : str;
+  };
+
   const rows = purchases.map((purchase) => [
     purchase.contentTitle,
     purchase.contentType,
@@ -46,16 +53,14 @@ export const exportPurchasesAsCsv = async (purchases: Purchase[]) => {
     purchase.engagement?.viewCount || 0,
     purchase.engagement?.completionPercentage || 0,
     purchase.rating?.score || 'N/A',
-    (purchase.rating?.review || '').replace(/"/g, '""'),
+    purchase.rating?.review || '',
     purchase.isFavorite ? 'Yes' : 'No',
     purchase.refundInfo?.refunded ? 'Yes' : 'No',
   ]);
 
   const csvContent = [
     headers.join(','),
-    ...rows.map((row) =>
-      row.map((cell) => (typeof cell === 'string' && cell.includes(',') ? `"${cell}"` : cell)).join(',')
-    ),
+    ...rows.map((row) => row.map(escapeCell).join(',')),
   ].join('\n');
 
   const csvBlob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
