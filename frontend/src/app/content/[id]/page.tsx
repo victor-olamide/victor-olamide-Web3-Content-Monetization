@@ -36,6 +36,7 @@ export default function ContentView({ params }: { params: { id: string } }) {
       if (count > 30) {
         clearInterval(interval);
         setPollingError('Transaction confirmation timed out. Please check the explorer.');
+        showError('Transaction Timeout', 'Could not confirm transaction after 5 minutes. Check the explorer for status.');
         return;
       }
       try {
@@ -46,15 +47,17 @@ export default function ContentView({ params }: { params: { id: string } }) {
           clearInterval(interval);
           refreshAccess();
           refetchBalance();
+          showSuccess('Access Granted', 'Your purchase was confirmed on the blockchain!');
         } else if (data.tx_status === 'abort' || data.tx_status === 'failed') {
           setTxStatus('failed');
           clearInterval(interval);
+          showError('Transaction Failed', 'Your transaction was rejected by the blockchain.');
         }
       } catch (err) {
         console.error('Polling error:', err);
       }
     }, 10000);
-  }, [refreshAccess, refetchBalance]);
+  }, [refreshAccess, refetchBalance, showSuccess, showError]);
 
   const handleVerifyAccess = async () => {
     setVerifying(true);
