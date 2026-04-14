@@ -18,6 +18,7 @@ export interface ToastMessage {
 export interface ToastContainerProps {
   toasts: ToastMessage[];
   onDismiss: (id: string) => void;
+  onDismissAll?: () => void;
   position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'top-center';
   maxToasts?: number;
   className?: string;
@@ -26,6 +27,7 @@ export interface ToastContainerProps {
 export const ToastContainer: React.FC<ToastContainerProps> = ({
   toasts,
   onDismiss,
+  onDismissAll,
   position = 'top-right',
   maxToasts = 5,
   className = '',
@@ -59,6 +61,16 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({
           />
         </div>
       ))}
+      {toasts.length > 1 && onDismissAll && (
+        <div className="pointer-events-auto">
+          <button
+            onClick={onDismissAll}
+            className="text-xs text-gray-500 hover:text-gray-700 px-3 py-1 rounded border border-gray-200 bg-white shadow-sm transition"
+          >
+            Dismiss all ({toasts.length})
+          </button>
+        </div>
+      )}
       {toasts.length > maxToasts && (
         <div className="text-xs text-gray-500 px-4 py-2 pointer-events-auto">
           +{toasts.length - maxToasts} more notification{toasts.length - maxToasts !== 1 ? 's' : ''}
