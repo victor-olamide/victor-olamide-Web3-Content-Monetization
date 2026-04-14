@@ -7,6 +7,7 @@ import type { UserProfile, PurchaseStats } from '@/types/user';
 import type { Purchase } from '@/hooks/usePurchaseHistory';
 
 export interface ExportOptions {
+interface ExportOptions {
   format: 'json' | 'csv' | 'pdf';
   includeProfile: boolean;
   includePurchases: boolean;
@@ -25,6 +26,18 @@ export const exportProfileAsJson = async (profileData: UserProfile) => {
   downloadFile(dataBlob, `profile_${Date.now()}.json`);
 };
 
+/**
+ * Export profile data as JSON
+ */
+export const exportProfileAsJson = async (profileData: UserProfile) => {
+  const dataStr = JSON.stringify(profileData, null, 2);
+  const dataBlob = new Blob([dataStr], { type: 'application/json' });
+  downloadFile(dataBlob, `profile_${new Date().getTime()}.json`);
+};
+
+/**
+ * Export purchases as CSV
+ */
 export const exportPurchasesAsCsv = async (purchases: Purchase[]) => {
   if (purchases.length === 0) {
     throw new Error('No purchases to export');
@@ -43,6 +56,23 @@ export const exportPurchasesAsCsv = async (purchases: Purchase[]) => {
       : str;
   };
 
+  // Define CSV headers
+  const headers = [
+    'Content Title',
+    'Content Type',
+    'Creator Address',
+    'Purchase Price',
+    'Purchase Date',
+    'Transaction Status',
+    'Views',
+    'Completion %',
+    'Rating',
+    'Review',
+    'Is Favorite',
+    'Refunded'
+  ];
+
+  // Map purchase data to CSV rows
   const rows = purchases.map((purchase) => [
     purchase.contentTitle,
     purchase.contentType,
@@ -73,6 +103,37 @@ export const exportPurchasesAsJson = async (purchases: Purchase[]) => {
   downloadFile(dataBlob, `purchases_${Date.now()}.json`);
 };
 
+    (purchase.rating?.review || '').replace(/"/g, '""'), // Escape quotes
+    purchase.isFavorite ? 'Yes' : 'No',
+    purchase.refundInfo?.refunded ? 'Yes' : 'No'
+  ]);
+
+  // Generate CSV content
+  const csvContent = [
+    headers.join(','),
+    ...rows.map((row) =>
+      row
+        .map((cell) => (typeof cell === 'string' && cell.includes(',') ? `"${cell}"` : cell))
+        .join(',')
+    )
+  ].join('\n');
+
+  const csvBlob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  downloadFile(csvBlob, `purchases_${new Date().getTime()}.csv`);
+};
+
+/**
+ * Export purchases as JSON
+ */
+export const exportPurchasesAsJson = async (purchases: Purchase[]) => {
+  const dataStr = JSON.stringify(purchases, null, 2);
+  const dataBlob = new Blob([dataStr], { type: 'application/json' });
+  downloadFile(dataBlob, `purchases_${new Date().getTime()}.json`);
+};
+
+/**
+ * Export complete user data archive
+ */
 export const exportCompleteDataArchive = async (
   profileData: UserProfile,
   purchaseData: Purchase[],
@@ -94,6 +155,18 @@ export const exportCompleteDataArchive = async (
   downloadFile(dataBlob, `data_export_${Date.now()}.json`);
 };
 
+      profileCompleteness: profileData.profileCompleteness
+    }
+  };
+
+  const dataStr = JSON.stringify(archive, null, 2);
+  const dataBlob = new Blob([dataStr], { type: 'application/json' });
+  downloadFile(dataBlob, `data_export_${new Date().getTime()}.json`);
+};
+
+/**
+ * Generate HTML report for profile data
+ */
 export const generateProfileReport = (profileData: UserProfile, purchaseStats: PurchaseStats): string => {
   return `
     <!DOCTYPE html>
@@ -116,6 +189,8 @@ export const generateProfileReport = (profileData: UserProfile, purchaseStats: P
         .stat-box { background: #ecf0f1; padding: 15px; border-radius: 5px; text-align: center; }
         .stat-number { font-size: 2em; font-weight: bold; color: #3498db; }
         .stat-label { font-size: 0.9em; color: #555; margin-top: 5px; }
+        .social-links { display: flex; gap: 10px; margin-top: 10px; }
+        .social-link { padding: 8px 12px; background: #3498db; color: white; border-radius: 3px; text-decoration: none; font-size: 0.9em; }
         footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; color: #888; font-size: 0.9em; }
       </style>
     </head>
@@ -140,12 +215,107 @@ export const generateProfileReport = (profileData: UserProfile, purchaseStats: P
           </div>
         </div>
         <footer><p>This report contains your personal profile information. Please keep it secure and confidential.</p></footer>
+
+        <div class="section">
+          <h2>Profile Information</h2>
+          
+          <div class="field">
+            <div class="field-label">Display Name</div>
+            <div class="field-value">${profileData.displayName || 'Not set'}</div>
+          </div>
+
+          <div class="field">
+            <div class="field-label">Username</div>
+            <div class="field-value">@${profileData.username || 'Not set'}</div>
+          </div>
+
+          <div class="field">
+            <div class="field-label">Wallet Address</div>
+            <div class="field-value">${profileData.address}</div>
+          </div>
+
+          <div class="field">
+            <div class="field-label">Bio</div>
+            <div class="field-value">${profileData.bio || 'Not provided'}</div>
+          </div>
+
+          ${
+            profileData.socialLinks && Object.values(profileData.socialLinks).some((v) => !!v)
+              ? `
+          <div class="field">
+            <div class="field-label">Social Links</div>
+            <div class="social-links">
+              ${profileData.socialLinks.twitter ? `<a href="https://twitter.com/${profileData.socialLinks.twitter}" class="social-link" target="_blank">Twitter</a>` : ''}
+              ${profileData.socialLinks.github ? `<a href="https://github.com/${profileData.socialLinks.github}" class="social-link" target="_blank">GitHub</a>` : ''}
+              ${profileData.socialLinks.discord ? `<span class="social-link">Discord: ${profileData.socialLinks.discord}</span>` : ''}
+              ${profileData.socialLinks.website ? `<a href="${profileData.socialLinks.website}" class="social-link" target="_blank">Website</a>` : ''}
+            </div>
+          </div>
+              `
+              : ''
+          }
+        </div>
+
+        <div class="section">
+          <h2>Profile Statistics</h2>
+          <div class="stat-grid">
+            <div class="stat-box">
+              <div class="stat-number">${profileData.profileCompleteness || 0}%</div>
+              <div class="stat-label">Profile Complete</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-number">${purchaseStats?.totalPurchases || 0}</div>
+              <div class="stat-label">Total Purchases</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-number">$${(purchaseStats?.totalSpent || 0).toFixed(2)}</div>
+              <div class="stat-label">Total Spent</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-number">${purchaseStats?.favoriteCount || 0}</div>
+              <div class="stat-label">Favorites</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>Account Settings</h2>
+          ${
+            profileData.settings
+              ? `
+          <div class="field">
+            <div class="field-label">Language</div>
+            <div class="field-value">${profileData.settings.language || 'English'}</div>
+          </div>
+          <div class="field">
+            <div class="field-label">Theme</div>
+            <div class="field-value">${profileData.settings.theme || 'Light'}</div>
+          </div>
+          <div class="field">
+            <div class="field-label">Currency</div>
+            <div class="field-value">${profileData.settings.currency || 'USD'}</div>
+          </div>
+          <div class="field">
+            <div class="field-label">Timezone</div>
+            <div class="field-value">${profileData.settings.timezone || 'UTC'}</div>
+          </div>
+              `
+              : '<p>No settings configured</p>'
+          }
+        </div>
+
+        <footer>
+          <p>This report contains your personal profile information. Please keep it secure and confidential.</p>
+        </footer>
       </div>
     </body>
     </html>
   `;
 };
 
+/**
+ * Download file helper
+ */
 const downloadFile = (blob: Blob, filename: string) => {
   const url = window.URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -157,12 +327,26 @@ const downloadFile = (blob: Blob, filename: string) => {
   window.URL.revokeObjectURL(url);
 };
 
+/**
+ * Export data in specified format
+ */
+interface ExportData {
+  profile: UserProfile;
+  purchases: Purchase[];
+  stats: PurchaseStats;
+}
+
 export const exportUserData = async (options: ExportOptions, data: ExportData) => {
   try {
     switch (options.format) {
       case 'json': {
         if (options.includeProfile && options.includePurchases) {
           await exportCompleteDataArchive(data.profile, data.purchases, data.stats);
+          await exportCompleteDataArchive(
+            data.profile,
+            data.purchases,
+            data.stats
+          );
         } else if (options.includePurchases) {
           await exportPurchasesAsJson(data.purchases);
         } else {
@@ -170,6 +354,7 @@ export const exportUserData = async (options: ExportOptions, data: ExportData) =
         }
         break;
       }
+
       case 'csv': {
         if (options.includePurchases) {
           await exportPurchasesAsCsv(data.purchases);
@@ -178,6 +363,7 @@ export const exportUserData = async (options: ExportOptions, data: ExportData) =
         }
         break;
       }
+
       case 'pdf': {
         if (options.includeProfile) {
           const htmlContent = generateProfileReport(data.profile, data.stats);
@@ -204,6 +390,7 @@ export const profileExportUtils = {
   exportCompleteDataArchive,
   generateProfileReport,
   exportUserData,
+  exportUserData
 };
 
 export default profileExportUtils;

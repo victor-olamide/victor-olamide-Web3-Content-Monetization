@@ -24,6 +24,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <AuthProvider>
           <ToastProvider maxToasts={5} position="top-right">
+          <ToastProvider>
             {children}
           </ToastProvider>
         </AuthProvider>

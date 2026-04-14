@@ -25,6 +25,7 @@ const UploadContent: React.FC = () => {
   const { addContent } = usePayPerView();
   const { stxAddress } = useAuth();
   const { showError, showSuccess, showWarning, showInfo } = useToast();
+  const { showError, showSuccess, showWarning } = useToast();
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadStep, setUploadStep] = useState<'idle' | 'storage' | 'metadata' | 'contract'>('idle');
@@ -38,6 +39,8 @@ const UploadContent: React.FC = () => {
       const MAX_SIZE = 10 * 1024 * 1024; // 10MB
       if (selectedFile.size > MAX_SIZE) {
         showWarning('File Too Large', `File size exceeds the 10MB limit. Your file is ${(selectedFile.size / 1024 / 1024).toFixed(1)}MB.`);
+      if (selectedFile.size > 10 * 1024 * 1024) { // 10MB limit
+        showWarning('File Too Large', 'File size exceeds the 10MB limit. Please choose a smaller file.');
         e.target.value = '';
         return;
       }
@@ -59,6 +62,10 @@ const UploadContent: React.FC = () => {
 
       if (!title || !contentId || !price) {
         setError('Please fill in all required fields');
+      
+      // Preliminary check
+      if (!title || !contentId || !price) {
+        setError("Please fill in all required fields");
         setUploadStep('idle');
         return;
       }
@@ -70,6 +77,7 @@ const UploadContent: React.FC = () => {
         contentUrl = await uploadToIPFS(file);
       }
 
+      
       setUploadStep('metadata');
       const metadata = {
         title,
@@ -90,6 +98,22 @@ const UploadContent: React.FC = () => {
       showInfo('Awaiting Confirmation', 'Please confirm the transaction in your wallet.');
       const txId = await addContent(parseInt(contentId), parseInt(price), metadataUrl);
 
+        tags: tags.split(',').map(t => t.trim()),
+        contentUrl,
+        createdAt: Date.now(),
+        creator: stxAddress,
+        contentId: parseInt(contentId)
+      };
+
+      const metadataUrl = await uploadMetadata(metadata, storageType as 'gaia' | 'ipfs');
+      console.log("Metadata uploaded:", metadataUrl);
+
+      // Call contract to register content
+      setUploadStep('contract');
+      setContractPending(true);
+      const txId = await addContent(parseInt(contentId), parseInt(price), metadataUrl);
+      
+      // 4. Notify backend to store metadata and track transaction
       try {
         await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/content`, {
           method: 'POST',
@@ -112,12 +136,19 @@ const UploadContent: React.FC = () => {
         });
       } catch (backendErr) {
         console.error('Failed to notify backend:', backendErr);
+              minBalance: parseInt(minBalance)
+            }
+          })
+        });
+      } catch (backendErr) {
+        console.error("Failed to notify backend:", backendErr);
       }
 
       setContractPending(false);
       setUploadStep('idle');
       showSuccess('Content Published!', 'Your content has been successfully published to the blockchain.');
       setSuccess(true);
+      // Reset form
       setTitle('');
       setDescription('');
       setContentId('');
@@ -241,6 +272,9 @@ const UploadContent: React.FC = () => {
               <input
                 type="checkbox"
                 className="sr-only peer"
+              <input 
+                type="checkbox" 
+                className="sr-only peer" 
                 checked={isTokenGated}
                 onChange={(e) => setIsTokenGated(e.target.checked)}
               />
@@ -316,6 +350,7 @@ const UploadContent: React.FC = () => {
           </div>
         )}
 
+        
         {success && (
           <div className="flex items-center gap-2 text-green-600 font-medium justify-center mt-2">
             <CheckCircle size={20} />
