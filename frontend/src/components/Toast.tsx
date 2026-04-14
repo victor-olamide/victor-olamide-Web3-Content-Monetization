@@ -5,6 +5,14 @@ import { X, Check, AlertCircle, Info, AlertTriangle } from 'lucide-react';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
+/** Type-appropriate auto-dismiss durations in milliseconds */
+export const TOAST_DURATIONS: Record<ToastType, number> = {
+  success: 4000,
+  error: 6000,
+  info: 5000,
+  warning: 5000,
+};
+
 export interface ToastProps {
   id: string;
   type: ToastType;
