@@ -24,7 +24,7 @@ const UploadContent: React.FC = () => {
   const { uploadToGaia, uploadToIPFS, uploadMetadata, uploading: storageUploading } = useStorage();
   const { addContent } = usePayPerView();
   const { stxAddress } = useAuth();
-  const { showError, showSuccess, showWarning } = useToast();
+  const { showError, showSuccess, showWarning, showInfo } = useToast();
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadStep, setUploadStep] = useState<'idle' | 'storage' | 'metadata' | 'contract'>('idle');
@@ -87,6 +87,7 @@ const UploadContent: React.FC = () => {
 
       setUploadStep('contract');
       setContractPending(true);
+      showInfo('Awaiting Confirmation', 'Please confirm the transaction in your wallet.');
       const txId = await addContent(parseInt(contentId), parseInt(price), metadataUrl);
 
       try {
