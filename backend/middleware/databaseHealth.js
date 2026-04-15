@@ -1,34 +1,35 @@
-// Database Health Check Middleware
-// Provides health check endpoints for MongoDB replica set
+'use strict';
 
-const { dbConnection } = require('../config/database');
+// Database Health Check Middleware
+// Uses the shared database.js module for all connection state and health checks.
+
+const { connectDB, getConnectionStatus, healthCheck, isConnected } = require('../config/database');
+const logger = require('../utils/logger');
 
 /**
- * Database health check endpoint
- * GET /api/health/database
+ * GET /health/database
+ * Returns 200 when MongoDB is reachable, 503 otherwise.
  */
 const databaseHealthCheck = async (req, res) => {
   try {
-    const healthStatus = await dbConnection.healthCheck();
-
-    if (healthStatus.status === 'healthy') {
+    const health = await healthCheck();
+    if (health.status === 'healthy') {
       return res.status(200).json({
         status: 'connected',
         database: 'mongodb',
-        replicaSet: healthStatus.replicaSet,
+        message: health.message,
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
       });
-    } else {
-      return res.status(503).json({
-        status: 'disconnected',
-        database: 'mongodb',
-        error: healthStatus.message,
-        timestamp: new Date().toISOString(),
-      });
     }
+    return res.status(503).json({
+      status: 'disconnected',
+      database: 'mongodb',
+      error: health.message,
+      timestamp: new Date().toISOString(),
+    });
   } catch (error) {
-    console.error('Database health check error:', error);
+    logger.error('Database health check error', { err: error });
     return res.status(503).json({
       status: 'error',
       database: 'mongodb',
@@ -39,17 +40,16 @@ const databaseHealthCheck = async (req, res) => {
 };
 
 /**
- * Detailed database status endpoint
- * GET /api/health/database/status
+ * GET /health/database/status
+ * Returns detailed connection state and environment info.
  */
 const databaseStatusCheck = async (req, res) => {
   try {
-    const status = dbConnection.getStatus();
-    const health = await dbConnection.healthCheck();
-
+    const status = getConnectionStatus();
+    const health = await healthCheck();
     return res.status(200).json({
       connection: status,
-      health: health,
+      health,
       timestamp: new Date().toISOString(),
       environment: {
         nodeVersion: process.version,
@@ -59,7 +59,7 @@ const databaseStatusCheck = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Database status check error:', error);
+    logger.error('Database status check error', { err: error });
     return res.status(500).json({
       error: 'Failed to get database status',
       message: error.message,
@@ -69,29 +69,26 @@ const databaseStatusCheck = async (req, res) => {
 };
 
 /**
- * Database connection middleware
- * Ensures database is connected before processing requests
+ * Middleware — ensures MongoDB is connected before the request proceeds.
+ * Attempts a reconnect if disconnected; returns 503 if unavailable.
  */
 const requireDatabaseConnection = async (req, res, next) => {
   try {
-    if (!dbConnection.isConnected) {
-      // Attempt to reconnect
-      await dbConnection.connect();
+    if (!isConnected) {
+      logger.warn('DB not connected — attempting reconnect');
+      await connectDB();
     }
-
-    // Check if connection is still healthy
-    const health = await dbConnection.healthCheck();
+    const health = await healthCheck();
     if (health.status !== 'healthy') {
       return res.status(503).json({
         error: 'Database temporarily unavailable',
-        message: 'Replica set is not healthy',
+        message: health.message,
         timestamp: new Date().toISOString(),
       });
     }
-
     next();
   } catch (error) {
-    console.error('Database connection middleware error:', error);
+    logger.error('Database connection middleware error', { err: error });
     return res.status(503).json({
       error: 'Database connection failed',
       message: error.message,
