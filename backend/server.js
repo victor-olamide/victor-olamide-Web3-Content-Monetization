@@ -47,6 +47,7 @@ const webhookAdminRoutes = require('./routes/webhookAdminRoutes');
 // Import middleware
 const { subscriptionRateLimiter } = require('./middleware/subscriptionRateLimiter');
 const { errorHandler } = require('./middleware/errorHandler');
+const { databaseHealthCheck, databaseStatusCheck } = require('./middleware/databaseHealth');
 
 // Import services
 const { initializePinningService } = require('./services/pinningManager');
@@ -104,6 +105,10 @@ app.get('/health', (req, res) => {
     uptime: process.uptime(),
   });
 });
+
+// Database health endpoints
+app.get('/health/database', databaseHealthCheck);
+app.get('/health/database/status', databaseStatusCheck);
 
 // Metrics endpoint
 app.get('/metrics', async (req, res) => {
