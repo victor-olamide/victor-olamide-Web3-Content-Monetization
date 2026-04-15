@@ -15,8 +15,6 @@
  *   validatePaginationParams — skip / limit query params
  */
 
-const logger = require('../utils/logger');
-
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 const URL_REGEX = /^https?:\/\/([\w-]+\.)+[\w-]+(\/[\w\-./?%&=]*)?$/i;
