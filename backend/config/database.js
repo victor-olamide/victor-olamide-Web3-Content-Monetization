@@ -12,6 +12,9 @@ const logger = require('../utils/logger');
 
 const DB_URI = process.env.DB_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/stacks_monetization';
 
+const MAX_RETRIES = parseInt(process.env.MONGO_CONNECT_RETRIES, 10) || 3;
+const RETRY_DELAY_MS = parseInt(process.env.MONGO_CONNECT_RETRY_DELAY_MS, 10) || 3000;
+
 const MONGOOSE_OPTIONS = {
   maxPoolSize: parseInt(process.env.MONGO_MAX_POOL_SIZE, 10) || 10,
   minPoolSize: parseInt(process.env.MONGO_MIN_POOL_SIZE, 10) || 2,
@@ -70,8 +73,16 @@ function _redactUri(uri) {
 }
 
 /**
+ * Sleep helper for retry delays.
+ * @param {number} ms
+ */
+function _sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
  * Connect to MongoDB using Mongoose.
- * Throws on failure so the caller (server.js) can decide whether to exit.
+ * Retries up to MAX_RETRIES times before throwing.
  */
 async function connectDB() {
   if (_isConnected) {
@@ -83,9 +94,23 @@ async function connectDB() {
 
   _registerEventHandlers();
 
-  await mongoose.connect(DB_URI, MONGOOSE_OPTIONS);
+  let lastError;
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      await mongoose.connect(DB_URI, MONGOOSE_OPTIONS);
+      _isConnected = true;
+      return;
+    } catch (err) {
+      lastError = err;
+      logger.warn(`MongoDB connection attempt ${attempt}/${MAX_RETRIES} failed`, { err });
+      if (attempt < MAX_RETRIES) {
+        await _sleep(RETRY_DELAY_MS);
+      }
+    }
+  }
 
-  _isConnected = true;
+  logger.error('All MongoDB connection attempts failed', { err: lastError });
+  throw lastError;
 }
 
 /**
