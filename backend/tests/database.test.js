@@ -27,6 +27,13 @@ describe('validateEnv', () => {
     expect(REQUIRED_VARS).toContain('PORT');
   });
 
+  it('error message includes .env.example hint', () => {
+    delete process.env.DB_URI;
+    process.env.JWT_SECRET = 'secret';
+    process.env.PORT = '5000';
+    expect(() => validateEnv()).toThrow(/.env.example/);
+  });
+
   it('does not throw when all required vars are set', () => {
     process.env.DB_URI = 'mongodb://localhost:27017/test';
     process.env.JWT_SECRET = 'supersecret';
