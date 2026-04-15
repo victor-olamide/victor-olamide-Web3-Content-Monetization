@@ -79,4 +79,27 @@ describe('searchService.searchContent', () => {
     expect(result.page).toBe(1);
     expect(result.limit).toBe(10);
   });
+
+  it('defaults page and limit when invalid values are passed', async () => {
+    const cursor = createCursor([{ contentId: 103 }]);
+    Content.find.mockReturnValue(cursor);
+    Content.countDocuments.mockResolvedValue(0);
+    Content.aggregate.mockReturnValue({ exec: jest.fn().mockResolvedValue([]) });
+
+    const result = await searchContent({ page: 'x', limit: 'y' });
+
+    expect(result.page).toBe(1);
+    expect(result.limit).toBe(20);
+  });
+
+  it('sorts by createdAt descending when q is omitted', async () => {
+    const cursor = createCursor([{ contentId: 104 }]);
+    Content.find.mockReturnValue(cursor);
+    Content.countDocuments.mockResolvedValue(1);
+    Content.aggregate.mockReturnValue({ exec: jest.fn().mockResolvedValue([{ _id: 'music', count: 1 }]) });
+
+    await searchContent({ page: '1', limit: '20' });
+
+    expect(cursor.sort).toHaveBeenCalledWith({ createdAt: -1 });
+  });
 });
