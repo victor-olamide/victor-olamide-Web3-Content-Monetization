@@ -22,61 +22,6 @@ function errStatus(err) {
   return err.statusCode || (err.message === 'Profile not found' ? 404 : 500);
 }
 
-// ── GET /profile/:id ──────────────────────────────────────────────────────────
-/**
- * Fetch a user profile by wallet address (:id).
- * Public callers receive a restricted view; authenticated owners see full data.
- */
-router.get('/:id', validateProfileId, async (req, res) => {
-  try {
-    const profile = await userProfileService.getProfileById(req.params.id);
-
-    // If the requester is the owner (wallet auth present and matches), return full profile
-    const isOwner = req.walletAddress && req.walletAddress.toLowerCase() === profile.address;
-    if (isOwner) {
-      return res.json({ success: true, data: profile });
-    }
-
-    // Public view — omit sensitive fields
-    const publicData = {
-      address: profile.address,
-      displayName: profile.displayName,
-      avatar: profile.avatar,
-      username: profile.username,
-      bio: profile.bio,
-      isVerified: profile.isVerified,
-      socialLinks: profile.socialLinks,
-      totalPurchases: profile.totalPurchases,
-      profileCompleteness: profile.profileCompleteness,
-    };
-    return res.json({ success: true, data: publicData });
-  } catch (err) {
-    logger.error('GET /profile/:id failed', { err, id: req.params.id });
-    return res.status(errStatus(err)).json({ success: false, error: err.message });
-  }
-});
-
-// ── PUT /profile/:id ──────────────────────────────────────────────────────────
-/**
- * Update displayName, bio, and/or avatar for the profile identified by :id.
- * Requires wallet authentication; only the profile owner may update.
- */
-router.put('/:id', verifyWalletAuth, validateProfileId, validateProfileUpdate, async (req, res) => {
-  try {
-    // Ownership check — authenticated wallet must match the :id param
-    if (req.walletAddress.toLowerCase() !== req.params.id) {
-      return res.status(403).json({ success: false, error: 'Forbidden: you can only update your own profile' });
-    }
-
-    const { displayName, bio, avatar } = req.body;
-    const profile = await userProfileService.updateProfileById(req.params.id, { displayName, bio, avatar });
-    return res.json({ success: true, data: profile, message: 'Profile updated successfully' });
-  } catch (err) {
-    logger.error('PUT /profile/:id failed', { err, id: req.params.id });
-    return res.status(errStatus(err)).json({ success: false, error: err.message });
-  }
-});
-
 // ── GET /profile/me ───────────────────────────────────────────────────────────
 router.get('/me', verifyWalletAuth, async (req, res) => {
   try {
@@ -228,6 +173,61 @@ router.delete('/block/:blockedAddress', verifyWalletAuth, async (req, res) => {
     return res.json({ success: true, data: profile, message: 'User unblocked successfully' });
   } catch (err) {
     logger.error('DELETE /profile/block/:blockedAddress failed', { err });
+    return res.status(errStatus(err)).json({ success: false, error: err.message });
+  }
+});
+
+// ── GET /profile/:id ──────────────────────────────────────────────────────────
+/**
+ * Fetch a user profile by wallet address (:id).
+ * Public callers receive a restricted view; authenticated owners see full data.
+ */
+router.get('/:id', validateProfileId, async (req, res) => {
+  try {
+    const profile = await userProfileService.getProfileById(req.params.id);
+
+    // If the requester is the owner (wallet auth present and matches), return full profile
+    const isOwner = req.walletAddress && req.walletAddress.toLowerCase() === profile.address;
+    if (isOwner) {
+      return res.json({ success: true, data: profile });
+    }
+
+    // Public view — omit sensitive fields
+    const publicData = {
+      address: profile.address,
+      displayName: profile.displayName,
+      avatar: profile.avatar,
+      username: profile.username,
+      bio: profile.bio,
+      isVerified: profile.isVerified,
+      socialLinks: profile.socialLinks,
+      totalPurchases: profile.totalPurchases,
+      profileCompleteness: profile.profileCompleteness,
+    };
+    return res.json({ success: true, data: publicData });
+  } catch (err) {
+    logger.error('GET /profile/:id failed', { err, id: req.params.id });
+    return res.status(errStatus(err)).json({ success: false, error: err.message });
+  }
+});
+
+// ── PUT /profile/:id ──────────────────────────────────────────────────────────
+/**
+ * Update displayName, bio, and/or avatar for the profile identified by :id.
+ * Requires wallet authentication; only the profile owner may update.
+ */
+router.put('/:id', verifyWalletAuth, validateProfileId, validateProfileUpdate, async (req, res) => {
+  try {
+    // Ownership check — authenticated wallet must match the :id param
+    if (req.walletAddress.toLowerCase() !== req.params.id) {
+      return res.status(403).json({ success: false, error: 'Forbidden: you can only update your own profile' });
+    }
+
+    const { displayName, bio, avatar } = req.body;
+    const profile = await userProfileService.updateProfileById(req.params.id, { displayName, bio, avatar });
+    return res.json({ success: true, data: profile, message: 'Profile updated successfully' });
+  } catch (err) {
+    logger.error('PUT /profile/:id failed', { err, id: req.params.id });
     return res.status(errStatus(err)).json({ success: false, error: err.message });
   }
 });
