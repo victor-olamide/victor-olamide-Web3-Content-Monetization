@@ -4,6 +4,7 @@
 // Uses the shared database.js module for all connection state and health checks.
 
 const { connectDB, getConnectionStatus, healthCheck, isConnected } = require('../config/database');
+const { dbConnection } = require('../config/database');
 const logger = require('../utils/logger');
 
 /**

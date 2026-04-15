@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronPlay, Download, Eye } from 'lucide-react';
+import { Play, Download, Eye } from 'lucide-react';
 
 interface PreviewData {
   contentId: number;
@@ -142,7 +142,7 @@ export const ContentPreview: React.FC<ContentPreviewProps> = ({
               className="absolute inset-0 flex items-center justify-center bg-black/40 hover:bg-black/50 transition-colors group"
             >
               <div className="bg-blue-600 rounded-full p-4 group-hover:bg-blue-700 transition-colors">
-                <ChevronPlay className="w-8 h-8 text-white fill-white" />
+                <Play className="w-8 h-8 text-white fill-white" />
               </div>
             </button>
           )}
@@ -181,7 +181,7 @@ export const ContentPreview: React.FC<ContentPreviewProps> = ({
           {/* Trailer Information */}
           {preview.trailerUrl && (
             <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg mb-4 flex items-center gap-2">
-              <ChevronPlay className="w-4 h-4 text-blue-600" />
+              <Play className="w-4 h-4 text-blue-600" />
               <span className="text-sm text-blue-900">
                 Trailer available - {preview.trailerDuration ? `${Math.floor(preview.trailerDuration / 60)}:${String(preview.trailerDuration % 60).padStart(2, '0')}` : 'View preview'}
               </span>

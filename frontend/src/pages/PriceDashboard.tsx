@@ -1,9 +1,9 @@
 import React from 'react';
-import { PriceDisplay } from './PriceDisplay';
-import { PriceConverter } from './PriceConverter';
-import { PriceTicker } from './PriceTicker';
-import { PriceWidget } from './PriceWidget';
-import { ContentPriceDisplay } from './ContentPriceDisplay';
+import { PriceDisplay } from '../components/PriceDisplay';
+import { PriceConverter } from '../components/PriceConverter';
+import { PriceTicker } from '../components/PriceTicker';
+import { PriceWidget } from '../components/PriceWidget';
+import { ContentPriceDisplay } from '../components/ContentPriceDisplay';
 
 /**
  * Price Dashboard Page

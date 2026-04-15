@@ -7,6 +7,7 @@ const axios = require('axios');
 const FormData = require('form-data');
 const fs = require('fs');
 const path = require('path');
+const logger = require('../utils/logger');
 
 // Configuration
 const PINATA_API_URL = 'https://api.pinata.cloud';
@@ -35,19 +36,19 @@ const uploadFileToIPFS = async (fileBuffer, fileName, options = {}, onProgress =
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`[IPFS Upload] Attempt ${attempt}/${maxRetries} for ${fileName}`);
-      
+      logger.debug('IPFS upload attempt', { attempt, maxRetries, fileName });
+
       const ipfsHash = await _uploadWithProgress(fileBuffer, fileName, metadata, tags, isPublic, onProgress);
-      console.log(`[IPFS Upload] Successfully uploaded ${fileName} to IPFS: ${ipfsHash}`);
-      
+      logger.info('IPFS upload succeeded', { fileName, ipfsHash });
+
       return `ipfs://${ipfsHash}`;
     } catch (err) {
       lastError = err;
-      console.error(`[IPFS Upload] Attempt ${attempt} failed:`, err.message);
-      
+      logger.warn('IPFS upload attempt failed', { attempt, fileName, err });
+
       if (attempt < maxRetries) {
         const delay = RETRY_DELAY * Math.pow(2, attempt - 1); // Exponential backoff
-        console.log(`[IPFS Upload] Retrying in ${delay}ms...`);
+        logger.debug('Retrying IPFS upload', { delayMs: delay });
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
@@ -194,7 +195,7 @@ const listPinnedFiles = async () => {
 
     return response.data.rows || [];
   } catch (err) {
-    console.error('Failed to list pinned files:', err.message);
+    logger.error('Failed to list pinned files', { err });
     throw err;
   }
 };
@@ -215,9 +216,9 @@ const unpinFile = async (ipfsHash) => {
       }
     });
 
-    console.log(`[IPFS] Successfully unpinned: ${hash}`);
+    logger.info('IPFS file unpinned', { hash });
   } catch (err) {
-    console.error('Failed to unpin file:', err.message);
+    logger.error('Failed to unpin file', { err });
     throw err;
   }
 };
@@ -237,7 +238,7 @@ const verifyCredentials = async () => {
 
     return response.status === 200;
   } catch (err) {
-    console.error('Pinata authentication failed:', err.message);
+    logger.warn('Pinata authentication failed', { err });
     return false;
   }
 };
@@ -260,7 +261,7 @@ const getStorageUsage = async () => {
       percentUsed: (response.data.pin_count / (1024 * 1024 * 1024)) * 100 // Convert to GB
     };
   } catch (err) {
-    console.error('Failed to get storage usage:', err.message);
+    logger.error('Failed to get storage usage', { err });
     throw err;
   }
 };
