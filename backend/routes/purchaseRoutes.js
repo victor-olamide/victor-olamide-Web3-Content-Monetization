@@ -3,6 +3,11 @@ const router = express.Router();
 const Purchase = require('../models/Purchase');
 const { getPlatformFee, calculatePlatformFee } = require('../services/contractService');
 const { distributePurchaseRoyalties } = require('../services/royaltyService');
+const {
+  validatePurchaseBody,
+  validateAmountParam,
+  validateAddressParam,
+} = require('../middleware/inputValidation');
 
 // Get platform fee information
 router.get('/platform-fee', async (req, res) => {
@@ -15,9 +20,9 @@ router.get('/platform-fee', async (req, res) => {
 });
 
 // Calculate platform fee for a specific amount
-router.get('/calculate-fee/:amount', async (req, res) => {
+router.get('/calculate-fee/:amount', validateAmountParam, async (req, res) => {
   try {
-    const amount = parseInt(req.params.amount);
+    const amount = req.parsedAmount;
     const fee = await calculatePlatformFee(amount);
     const creatorAmount = amount - fee;
     res.json({ 
@@ -31,7 +36,7 @@ router.get('/calculate-fee/:amount', async (req, res) => {
 });
 
 // Get purchase history for a user
-router.get('/user/:address', async (req, res) => {
+router.get('/user/:address', validateAddressParam, async (req, res) => {
   try {
     const purchases = await Purchase.find({ user: req.params.address }).sort({ timestamp: -1 });
     res.json(purchases);
@@ -54,11 +59,16 @@ router.get('/check/:user/:contentId', async (req, res) => {
 });
 
 // Register a new purchase (usually called by indexer or frontend)
-router.post('/', async (req, res) => {
-  const { contentId, user, txId, amount, creator } = req.body;
-  
-  if (!contentId || !user || !txId || !amount || !creator) {
-    return res.status(400).json({ message: 'Missing required fields' });
+router.post('/', validatePurchaseBody, async (req, res) => {
+  const { contentId, user, txId, amount, creator } = req.validatedBody;
+
+  try {
+    const existing = await Purchase.findOne({ txId });
+    if (existing) {
+      return res.status(409).json({ message: 'Purchase with this txId already exists' });
+    }
+  } catch (err) {
+    return res.status(500).json({ message: 'Failed to check for duplicate transaction' });
   }
 
   const purchase = new Purchase({

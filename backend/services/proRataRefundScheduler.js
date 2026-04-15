@@ -6,6 +6,7 @@ const {
 } = require('./proRataRefundService');
 
 let refundSchedulerInterval = null;
+let refundSchedulerTimeout = null;
 let isSchedulerRunning = false;
 
 // Statistics for monitoring
@@ -33,9 +34,10 @@ const initializeRefundScheduler = (interval = 3600000) => {
   console.log(`[ProRataRefundScheduler] Scheduler initialized with interval: ${interval}ms (${(interval / 60000).toFixed(0)} minutes)`);
 
   // Run immediately with small delay
-  setTimeout(() => {
+  const timeoutId = setTimeout(() => {
     processApprovedRefunds();
   }, 5000);
+  refundSchedulerTimeout = timeoutId;
 
   // Then run periodically
   refundSchedulerInterval = setInterval(() => {
@@ -61,6 +63,11 @@ const stopRefundScheduler = () => {
 
   if (refundSchedulerInterval) {
     clearInterval(refundSchedulerInterval);
+    refundSchedulerInterval = null;
+  }
+  if (refundSchedulerTimeout) {
+    clearTimeout(refundSchedulerTimeout);
+    refundSchedulerTimeout = null;
   }
 
   isSchedulerRunning = false;
@@ -208,13 +215,15 @@ const processSubscriptionRefund = async (subscriptionId) => {
 };
 
 /**
- * Get scheduler statistics
- * @returns {Object} Current statistics
+ * Get scheduler statistics with interval tracking information
+ * @returns {Object} Scheduler stats with interval details
  */
 const getRefundSchedulerStats = () => {
   return {
     isRunning: isSchedulerRunning,
     ...schedulerStats,
+    intervalActive: refundSchedulerInterval !== null,
+    timeoutActive: refundSchedulerTimeout !== null,
     nextRun: refundSchedulerInterval ? 'Scheduled' : 'Not scheduled'
   };
 };
