@@ -22,6 +22,7 @@ const buildQuery = (params) => {
     query.isRemoved = false; // default: only active content
   }
 
+  // Accept `category` as an alias for contentType so clients can filter by category.
   const contentCategory = contentType || category;
   if (contentCategory) {
     query.contentType = contentCategory;
