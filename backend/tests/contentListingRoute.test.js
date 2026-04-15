@@ -3,6 +3,12 @@
 const request = require('supertest');
 const express = require('express');
 
+jest.mock('../services/pinningManager', () => ({
+  pinningManager: {
+    pinContent: jest.fn()
+  }
+}));
+
 jest.mock('../services/searchService');
 const searchService = require('../services/searchService');
 const contentRoutes = require('../routes/contentRoutes');
