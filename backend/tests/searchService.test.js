@@ -23,6 +23,10 @@ describe('searchService.buildQuery', () => {
     expect(buildQuery({ category: 'video' })).toEqual({ isRemoved: false, contentType: 'video' });
   });
 
+  it('trims whitespace from category and creator filters', () => {
+    expect(buildQuery({ category: ' video ', creator: ' alice ' })).toEqual({ isRemoved: false, contentType: 'video', creator: 'alice' });
+  });
+
   it('supports minPrice and maxPrice filters', () => {
     expect(buildQuery({ minPrice: '2.5', maxPrice: '10' })).toEqual({
       isRemoved: false,
