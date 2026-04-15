@@ -1,199 +1,200 @@
+'use strict';
+
 /**
  * User Profile Service
- * Manages user profiles, settings, and preferences
+ * Manages user profiles, settings, preferences, and purchase history.
  */
 
 const UserProfile = require('../models/UserProfile');
 const Purchase = require('../models/Purchase');
 const PurchaseHistory = require('../models/PurchaseHistory');
 const Content = require('../models/Content');
+const logger = require('../utils/logger');
+
+// Fields callers are allowed to set via updateProfile / updateProfileById
+const UPDATABLE_FIELDS = ['displayName', 'avatar', 'username', 'bio', 'preferences', 'settings', 'socialLinks'];
+
+// Fields exposed on a public (unauthenticated) profile view
+const PUBLIC_FIELDS = 'address displayName avatar username bio isVerified socialLinks totalPurchases';
 
 class UserProfileService {
+
+  // ── Core CRUD ──────────────────────────────────────────────────────────────
+
   /**
-   * Get or create user profile
+   * Get or create a profile by wallet address.
    */
   async getOrCreateProfile(address) {
     try {
-      let profile = await UserProfile.findOne({ address: address.toLowerCase() });
-
+      const addr = address.toLowerCase();
+      let profile = await UserProfile.findOne({ address: addr });
       if (!profile) {
-        profile = new UserProfile({
-          address: address.toLowerCase()
-        });
-        await profile.save();
+        profile = await UserProfile.create({ address: addr });
       }
-
       return profile;
-    } catch (error) {
-      console.error('Error getting/creating profile:', error);
-      throw error;
+    } catch (err) {
+      logger.error('getOrCreateProfile failed', { err, address });
+      throw err;
     }
   }
 
   /**
-   * Get user profile
+   * GET /profile/:id — fetch profile by wallet address (the :id param).
+   * Returns the full document; callers decide what to expose.
+   * Throws with status 404 if not found.
    */
-  async getProfile(address) {
+  async getProfileById(id) {
     try {
-      const profile = await UserProfile.findOne({ address: address.toLowerCase() });
-
+      const profile = await UserProfile.findOne({ address: id.toLowerCase() });
       if (!profile) {
-        throw new Error('Profile not found');
+        const err = new Error('Profile not found');
+        err.statusCode = 404;
+        throw err;
       }
-
       return profile;
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-      throw error;
+    } catch (err) {
+      logger.error('getProfileById failed', { err, id });
+      throw err;
     }
   }
 
   /**
-   * Update user profile
+   * PUT /profile/:id — update displayName, bio, avatar (and optionally other
+   * allowed fields) for the profile identified by wallet address :id.
+   * Only fields present in UPDATABLE_FIELDS are written.
+   * Throws 404 if the profile does not exist.
    */
-  async updateProfile(address, profileData) {
+  async updateProfileById(id, data) {
     try {
-      const allowedFields = [
-        'displayName',
-        'avatar',
-        'username',
-        'bio',
-        'preferences',
-        'settings',
-        'socialLinks',
-        'tier'
-      ];
-
       const updateData = {};
-      for (const field of allowedFields) {
-        if (field in profileData) {
-          updateData[field] = profileData[field];
-        }
+      for (const field of UPDATABLE_FIELDS) {
+        if (field in data) updateData[field] = data[field];
       }
-
+      if (Object.keys(updateData).length === 0) {
+        const err = new Error('No updatable fields provided');
+        err.statusCode = 400;
+        throw err;
+      }
       updateData.lastProfileUpdate = new Date();
 
       const profile = await UserProfile.findOneAndUpdate(
-        { address: address.toLowerCase() },
-        updateData,
+        { address: id.toLowerCase() },
+        { $set: updateData },
         { new: true, runValidators: true }
       );
-
       if (!profile) {
-        throw new Error('Profile not found');
+        const err = new Error('Profile not found');
+        err.statusCode = 404;
+        throw err;
       }
-
       return profile;
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      throw error;
+    } catch (err) {
+      logger.error('updateProfileById failed', { err, id });
+      throw err;
     }
   }
 
   /**
-   * Update user preferences
+   * Legacy: get profile by address (alias for getProfileById).
    */
+  async getProfile(address) {
+    return this.getProfileById(address);
+  }
+
+  /**
+   * Legacy: update profile by address (alias for updateProfileById).
+   */
+  async updateProfile(address, data) {
+    return this.updateProfileById(address, data);
+  }
+
+  // ── Sub-resource updates ───────────────────────────────────────────────────
+
   async updatePreferences(address, preferences) {
     try {
       const profile = await UserProfile.findOneAndUpdate(
         { address: address.toLowerCase() },
-        { preferences },
+        { $set: { preferences } },
         { new: true }
       );
-
-      if (!profile) {
-        throw new Error('Profile not found');
-      }
-
+      if (!profile) { const e = new Error('Profile not found'); e.statusCode = 404; throw e; }
       return profile;
-    } catch (error) {
-      console.error('Error updating preferences:', error);
-      throw error;
+    } catch (err) {
+      logger.error('updatePreferences failed', { err, address });
+      throw err;
     }
   }
 
-  /**
-   * Update user settings
-   */
   async updateSettings(address, settings) {
     try {
       const profile = await UserProfile.findOneAndUpdate(
         { address: address.toLowerCase() },
-        { settings },
+        { $set: { settings } },
         { new: true }
       );
-
-      if (!profile) {
-        throw new Error('Profile not found');
-      }
-
+      if (!profile) { const e = new Error('Profile not found'); e.statusCode = 404; throw e; }
       return profile;
-    } catch (error) {
-      console.error('Error updating settings:', error);
-      throw error;
+    } catch (err) {
+      logger.error('updateSettings failed', { err, address });
+      throw err;
     }
   }
 
-  /**
-   * Update social links
-   */
   async updateSocialLinks(address, socialLinks) {
     try {
       const profile = await UserProfile.findOneAndUpdate(
         { address: address.toLowerCase() },
-        { socialLinks },
+        { $set: { socialLinks } },
         { new: true }
       );
-
-      if (!profile) {
-        throw new Error('Profile not found');
-      }
-
+      if (!profile) { const e = new Error('Profile not found'); e.statusCode = 404; throw e; }
       return profile;
-    } catch (error) {
-      console.error('Error updating social links:', error);
-      throw error;
+    } catch (err) {
+      logger.error('updateSocialLinks failed', { err, address });
+      throw err;
     }
   }
 
-  /**
-   * Update user tier
-   */
   async updateTier(address, tier) {
+    const ALLOWED = ['free', 'basic', 'premium', 'enterprise', 'admin'];
+    if (!ALLOWED.includes(tier)) {
+      const e = new Error('Invalid tier'); e.statusCode = 400; throw e;
+    }
     try {
-      const allowedTiers = ['free', 'basic', 'premium', 'enterprise', 'admin'];
-      if (!allowedTiers.includes(tier)) {
-        throw new Error('Invalid tier');
-      }
-
       const profile = await UserProfile.findOneAndUpdate(
         { address: address.toLowerCase() },
-        { tier },
+        { $set: { tier } },
         { new: true }
       );
-
-      if (!profile) {
-        throw new Error('Profile not found');
-      }
-
+      if (!profile) { const e = new Error('Profile not found'); e.statusCode = 404; throw e; }
       return profile;
-    } catch (error) {
-      console.error('Error updating tier:', error);
-      throw error;
+    } catch (err) {
+      logger.error('updateTier failed', { err, address });
+      throw err;
     }
   }
 
-  /**
-   * Record purchase history
-   */
+  async updateLastLogin(address) {
+    try {
+      return await UserProfile.findOneAndUpdate(
+        { address: address.toLowerCase() },
+        { $set: { lastLogin: new Date() } },
+        { new: true }
+      );
+    } catch (err) {
+      logger.error('updateLastLogin failed', { err, address });
+      throw err;
+    }
+  }
+
+  // ── Purchase history ───────────────────────────────────────────────────────
+
   async recordPurchase(buyerAddress, contentId, purchaseData) {
     try {
       const content = await Content.findOne({ contentId });
-      if (!content) {
-        throw new Error('Content not found');
-      }
+      if (!content) { const e = new Error('Content not found'); e.statusCode = 404; throw e; }
 
-      const purchaseHistory = new PurchaseHistory({
+      const purchaseHistory = await PurchaseHistory.create({
         buyerAddress: buyerAddress.toLowerCase(),
         contentId,
         contentTitle: content.title,
@@ -203,294 +204,158 @@ class UserProfileService {
         purchasePrice: purchaseData.price,
         purchaseCurrency: purchaseData.currency || 'USD',
         transactionHash: purchaseData.transactionHash,
-        transactionStatus: purchaseData.status || 'completed'
+        transactionStatus: purchaseData.status || 'completed',
       });
 
-      await purchaseHistory.save();
-
-      // Update user profile purchase stats
-      const profile = await UserProfile.findOne({ address: buyerAddress.toLowerCase() });
-      if (profile) {
-        profile.totalPurchases = (profile.totalPurchases || 0) + 1;
-        profile.totalSpent = (profile.totalSpent || 0) + purchaseData.price;
-        await profile.save();
-      }
+      await UserProfile.findOneAndUpdate(
+        { address: buyerAddress.toLowerCase() },
+        { $inc: { totalPurchases: 1, totalSpent: purchaseData.price } }
+      );
 
       return purchaseHistory;
-    } catch (error) {
-      console.error('Error recording purchase:', error);
-      throw error;
+    } catch (err) {
+      logger.error('recordPurchase failed', { err, buyerAddress, contentId });
+      throw err;
     }
   }
 
-  /**
-   * Get purchase history for user
-   */
   async getPurchaseHistory(address, options = {}) {
     try {
       const { skip = 0, limit = 20, sortBy = 'purchaseDate' } = options;
-
-      const purchases = await PurchaseHistory.find({
-        buyerAddress: address.toLowerCase()
-      })
-        .sort({ [sortBy]: -1 })
-        .skip(skip)
-        .limit(limit);
-
-      const total = await PurchaseHistory.countDocuments({
-        buyerAddress: address.toLowerCase()
-      });
-
-      return {
-        data: purchases,
-        total,
-        skip,
-        limit
-      };
-    } catch (error) {
-      console.error('Error fetching purchase history:', error);
-      throw error;
+      const query = { buyerAddress: address.toLowerCase() };
+      const [data, total] = await Promise.all([
+        PurchaseHistory.find(query).sort({ [sortBy]: -1 }).skip(skip).limit(limit),
+        PurchaseHistory.countDocuments(query),
+      ]);
+      return { data, total, skip, limit };
+    } catch (err) {
+      logger.error('getPurchaseHistory failed', { err, address });
+      throw err;
     }
   }
 
-  /**
-   * Get favorite content
-   */
   async getFavorites(address, options = {}) {
     try {
       const { skip = 0, limit = 20 } = options;
-
-      const favorites = await PurchaseHistory.find({
-        buyerAddress: address.toLowerCase(),
-        isFavorite: true
-      })
-        .sort({ favoriteDate: -1 })
-        .skip(skip)
-        .limit(limit);
-
-      const total = await PurchaseHistory.countDocuments({
-        buyerAddress: address.toLowerCase(),
-        isFavorite: true
-      });
-
-      return {
-        data: favorites,
-        total,
-        skip,
-        limit
-      };
-    } catch (error) {
-      console.error('Error fetching favorites:', error);
-      throw error;
+      const query = { buyerAddress: address.toLowerCase(), isFavorite: true };
+      const [data, total] = await Promise.all([
+        PurchaseHistory.find(query).sort({ favoriteDate: -1 }).skip(skip).limit(limit),
+        PurchaseHistory.countDocuments(query),
+      ]);
+      return { data, total, skip, limit };
+    } catch (err) {
+      logger.error('getFavorites failed', { err, address });
+      throw err;
     }
   }
 
-  /**
-   * Toggle favorite status
-   */
   async toggleFavorite(address, purchaseId) {
     try {
-      const purchase = await PurchaseHistory.findOne({
-        _id: purchaseId,
-        buyerAddress: address.toLowerCase()
-      });
-
-      if (!purchase) {
-        throw new Error('Purchase not found');
-      }
-
+      const purchase = await PurchaseHistory.findOne({ _id: purchaseId, buyerAddress: address.toLowerCase() });
+      if (!purchase) { const e = new Error('Purchase not found'); e.statusCode = 404; throw e; }
       purchase.isFavorite = !purchase.isFavorite;
       purchase.favoriteDate = purchase.isFavorite ? new Date() : null;
       await purchase.save();
-
       return purchase;
-    } catch (error) {
-      console.error('Error toggling favorite:', error);
-      throw error;
+    } catch (err) {
+      logger.error('toggleFavorite failed', { err, address, purchaseId });
+      throw err;
     }
   }
 
-  /**
-   * Get profile statistics
-   */
   async getProfileStats(address) {
     try {
-      const address_lower = address.toLowerCase();
-
-      const purchaseCount = await PurchaseHistory.countDocuments({
-        buyerAddress: address_lower
-      });
-
-      const totalSpent = await PurchaseHistory.aggregate([
-        { $match: { buyerAddress: address_lower } },
-        { $group: { _id: null, total: { $sum: '$purchasePrice' } } }
+      const addr = address.toLowerCase();
+      const [purchaseCount, totalSpentAgg, favoriteCount, ratedCount] = await Promise.all([
+        PurchaseHistory.countDocuments({ buyerAddress: addr }),
+        PurchaseHistory.aggregate([{ $match: { buyerAddress: addr } }, { $group: { _id: null, total: { $sum: '$purchasePrice' } } }]),
+        PurchaseHistory.countDocuments({ buyerAddress: addr, isFavorite: true }),
+        PurchaseHistory.countDocuments({ buyerAddress: addr, 'rating.score': { $ne: null } }),
       ]);
-
-      const favoriteCount = await PurchaseHistory.countDocuments({
-        buyerAddress: address_lower,
-        isFavorite: true
-      });
-
-      const ratedCount = await PurchaseHistory.countDocuments({
-        buyerAddress: address_lower,
-        'rating.score': { $ne: null }
-      });
-
       return {
         totalPurchases: purchaseCount,
-        totalSpent: totalSpent.length > 0 ? totalSpent[0].total : 0,
+        totalSpent: totalSpentAgg.length > 0 ? totalSpentAgg[0].total : 0,
         favoriteCount,
-        ratedCount
+        ratedCount,
       };
-    } catch (error) {
-      console.error('Error getting profile stats:', error);
-      throw error;
+    } catch (err) {
+      logger.error('getProfileStats failed', { err, address });
+      throw err;
     }
   }
 
-  /**
-   * Add rating and review
-   */
   async addRating(address, purchaseId, rating, review) {
     try {
-      const purchase = await PurchaseHistory.findOne({
-        _id: purchaseId,
-        buyerAddress: address.toLowerCase()
-      });
-
-      if (!purchase) {
-        throw new Error('Purchase not found');
-      }
-
-      purchase.rating = {
-        score: Math.min(Math.max(rating, 0), 5),
-        review,
-        reviewDate: new Date()
-      };
-
+      const purchase = await PurchaseHistory.findOne({ _id: purchaseId, buyerAddress: address.toLowerCase() });
+      if (!purchase) { const e = new Error('Purchase not found'); e.statusCode = 404; throw e; }
+      purchase.rating = { score: Math.min(Math.max(rating, 0), 5), review, reviewDate: new Date() };
       await purchase.save();
       return purchase;
-    } catch (error) {
-      console.error('Error adding rating:', error);
-      throw error;
+    } catch (err) {
+      logger.error('addRating failed', { err, address, purchaseId });
+      throw err;
     }
   }
 
-  /**
-   * Record content access/download
-   */
   async recordAccess(address, purchaseId, accessType = 'view') {
     try {
-      const purchase = await PurchaseHistory.findOne({
-        _id: purchaseId,
-        buyerAddress: address.toLowerCase()
-      });
-
-      if (!purchase) {
-        throw new Error('Purchase not found');
-      }
-
+      const purchase = await PurchaseHistory.findOne({ _id: purchaseId, buyerAddress: address.toLowerCase() });
+      if (!purchase) { const e = new Error('Purchase not found'); e.statusCode = 404; throw e; }
       if (accessType === 'download') {
         purchase.downloads.total = (purchase.downloads.total || 0) + 1;
         purchase.downloads.lastDownloadDate = new Date();
       }
-
       purchase.engagement.lastAccessedAt = new Date();
       purchase.engagement.viewCount = (purchase.engagement.viewCount || 0) + 1;
-
       await purchase.save();
       return purchase;
-    } catch (error) {
-      console.error('Error recording access:', error);
-      throw error;
+    } catch (err) {
+      logger.error('recordAccess failed', { err, address, purchaseId });
+      throw err;
     }
   }
 
-  /**
-   * Update completion percentage
-   */
   async updateCompletionPercentage(address, purchaseId, percentage) {
     try {
-      const purchase = await PurchaseHistory.findOne({
-        _id: purchaseId,
-        buyerAddress: address.toLowerCase()
-      });
-
-      if (!purchase) {
-        throw new Error('Purchase not found');
-      }
-
+      const purchase = await PurchaseHistory.findOne({ _id: purchaseId, buyerAddress: address.toLowerCase() });
+      if (!purchase) { const e = new Error('Purchase not found'); e.statusCode = 404; throw e; }
       purchase.engagement.completionPercentage = Math.min(Math.max(percentage, 0), 100);
       await purchase.save();
-
       return purchase;
-    } catch (error) {
-      console.error('Error updating completion:', error);
-      throw error;
+    } catch (err) {
+      logger.error('updateCompletionPercentage failed', { err, address, purchaseId });
+      throw err;
     }
   }
 
-  /**
-   * Block a user
-   */
+  // ── Block / unblock ────────────────────────────────────────────────────────
+
   async blockUser(address, blockedAddress) {
     try {
       const profile = await UserProfile.findOne({ address: address.toLowerCase() });
-
-      if (!profile) {
-        throw new Error('Profile not found');
-      }
-
-      if (!profile.blockedUsers.includes(blockedAddress.toLowerCase())) {
-        profile.blockedUsers.push(blockedAddress.toLowerCase());
+      if (!profile) { const e = new Error('Profile not found'); e.statusCode = 404; throw e; }
+      const blocked = blockedAddress.toLowerCase();
+      if (!profile.blockedUsers.includes(blocked)) {
+        profile.blockedUsers.push(blocked);
         await profile.save();
       }
-
       return profile;
-    } catch (error) {
-      console.error('Error blocking user:', error);
-      throw error;
+    } catch (err) {
+      logger.error('blockUser failed', { err, address, blockedAddress });
+      throw err;
     }
   }
 
-  /**
-   * Unblock a user
-   */
   async unblockUser(address, blockedAddress) {
     try {
       const profile = await UserProfile.findOne({ address: address.toLowerCase() });
-
-      if (!profile) {
-        throw new Error('Profile not found');
-      }
-
-      profile.blockedUsers = profile.blockedUsers.filter(
-        (addr) => addr !== blockedAddress.toLowerCase()
-      );
+      if (!profile) { const e = new Error('Profile not found'); e.statusCode = 404; throw e; }
+      profile.blockedUsers = profile.blockedUsers.filter(a => a !== blockedAddress.toLowerCase());
       await profile.save();
-
       return profile;
-    } catch (error) {
-      console.error('Error unblocking user:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Update last login
-   */
-  async updateLastLogin(address) {
-    try {
-      const profile = await UserProfile.findOneAndUpdate(
-        { address: address.toLowerCase() },
-        { lastLogin: new Date() },
-        { new: true }
-      );
-
-      return profile;
-    } catch (error) {
-      console.error('Error updating last login:', error);
-      throw error;
+    } catch (err) {
+      logger.error('unblockUser failed', { err, address, blockedAddress });
+      throw err;
     }
   }
 }
