@@ -44,6 +44,7 @@ const backupRoutes = require('./routes/backupRoutes');
 const subscriptionTierRoutes = require('./routes/subscriptionTierRoutes');
 const rateLimitRoutes = require('./routes/rateLimitRoutes');
 const webhookAdminRoutes = require('./routes/webhookAdminRoutes');
+const blockchainVerificationRoutes = require('./routes/blockchainVerificationRoutes');
 
 // Import middleware
 const { subscriptionRateLimiter } = require('./middleware/subscriptionRateLimiter');
@@ -152,6 +153,7 @@ app.use('/api/backup', backupRoutes);
 app.use('/api/subscription-tiers', subscriptionTierRoutes);
 app.use('/api/rate-limit', rateLimitRoutes);
 app.use('/api/webhook-admin', webhookAdminRoutes);
+app.use('/api/blockchain', blockchainVerificationRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
