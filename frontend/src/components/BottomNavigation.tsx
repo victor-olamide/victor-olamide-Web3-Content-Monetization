@@ -61,7 +61,7 @@ export function BottomNavigation({
                 {/* Badge */}
                 {isBadged && (
                   <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold h-5 w-5 rounded-full flex items-center justify-center">
-                    {item.badge > 99 ? '99+' : item.badge}
+                    {(item.badge ?? 0) > 99 ? '99+' : item.badge}
                   </span>
                 )}
               </div>

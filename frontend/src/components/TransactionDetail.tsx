@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Copy, CheckCircle, AlertCircle, Clock, DollarSign, Hash, Calendar } from 'lucide-react';
+import { STACKS_EXPLORER_BASE, STACKS_CHAIN } from '@/utils/constants';
 
 interface TransactionDetail {
   _id: string;
@@ -373,7 +374,7 @@ export const TransactionDetail: React.FC<TransactionDetailProps> = ({
               <div className="flex gap-4">
                 <button
                   onClick={() => {
-                    const link = `https://explorer.stacks.co/txid/${transaction.txHash}`;
+                    const link = `${STACKS_EXPLORER_BASE}/txid/${transaction.txHash}?chain=${STACKS_CHAIN}`;
                     window.open(link, '_blank');
                   }}
                   className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"

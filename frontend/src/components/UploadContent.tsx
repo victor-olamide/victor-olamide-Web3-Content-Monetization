@@ -4,8 +4,8 @@ import React, { useState } from 'react';
 import { Upload, FileText, CheckCircle, Loader2 } from 'lucide-react';
 import { useStorage } from '@/hooks/useStorage';
 import { useAuth } from '@/contexts/AuthContext';
-import { validateMetadata } from '@/utils/metadata';
 import { usePayPerView } from '@/hooks/usePayPerView';
+import { useToast } from '@/contexts/ToastContext';
 
 const UploadContent: React.FC = () => {
   const [title, setTitle] = useState('');
@@ -24,6 +24,8 @@ const UploadContent: React.FC = () => {
   const { uploadToGaia, uploadToIPFS, uploadMetadata, uploading: storageUploading } = useStorage();
   const { addContent } = usePayPerView();
   const { stxAddress } = useAuth();
+  const { showError, showSuccess, showWarning, showInfo } = useToast();
+  const { showError, showSuccess, showWarning } = useToast();
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadStep, setUploadStep] = useState<'idle' | 'storage' | 'metadata' | 'contract'>('idle');
@@ -34,8 +36,11 @@ const UploadContent: React.FC = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
+      const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+      if (selectedFile.size > MAX_SIZE) {
+        showWarning('File Too Large', `File size exceeds the 10MB limit. Your file is ${(selectedFile.size / 1024 / 1024).toFixed(1)}MB.`);
       if (selectedFile.size > 10 * 1024 * 1024) { // 10MB limit
-        alert("File size exceeds 10MB limit");
+        showWarning('File Too Large', 'File size exceeds the 10MB limit. Please choose a smaller file.');
         e.target.value = '';
         return;
       }
@@ -46,7 +51,7 @@ const UploadContent: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file || !stxAddress) {
-      alert("Please select a file and ensure you are connected");
+      showError('Cannot Upload', 'Please select a file and ensure your wallet is connected.');
       return;
     }
 
@@ -54,6 +59,9 @@ const UploadContent: React.FC = () => {
       setSuccess(false);
       setError(null);
       setUploadStep('storage');
+
+      if (!title || !contentId || !price) {
+        setError('Please fill in all required fields');
       
       // Preliminary check
       if (!title || !contentId || !price) {
@@ -68,12 +76,28 @@ const UploadContent: React.FC = () => {
       } else {
         contentUrl = await uploadToIPFS(file);
       }
+
       
       setUploadStep('metadata');
       const metadata = {
         title,
         description,
         contentType,
+        tags: tags.split(',').map((t) => t.trim()),
+        contentUrl,
+        createdAt: Date.now(),
+        creator: stxAddress,
+        contentId: parseInt(contentId),
+      };
+
+      const metadataUrl = await uploadMetadata(metadata, storageType as 'gaia' | 'ipfs');
+      console.log('Metadata uploaded:', metadataUrl);
+
+      setUploadStep('contract');
+      setContractPending(true);
+      showInfo('Awaiting Confirmation', 'Please confirm the transaction in your wallet.');
+      const txId = await addContent(parseInt(contentId), parseInt(price), metadataUrl);
+
         tags: tags.split(',').map(t => t.trim()),
         contentUrl,
         createdAt: Date.now(),
@@ -81,7 +105,7 @@ const UploadContent: React.FC = () => {
         contentId: parseInt(contentId)
       };
 
-      const metadataUrl = await uploadMetadata(metadata, storageType as any);
+      const metadataUrl = await uploadMetadata(metadata, storageType as 'gaia' | 'ipfs');
       console.log("Metadata uploaded:", metadataUrl);
 
       // Call contract to register content
@@ -106,6 +130,12 @@ const UploadContent: React.FC = () => {
               enabled: isTokenGated,
               tokenType,
               tokenContract,
+              minBalance: parseInt(minBalance),
+            },
+          }),
+        });
+      } catch (backendErr) {
+        console.error('Failed to notify backend:', backendErr);
               minBalance: parseInt(minBalance)
             }
           })
@@ -116,7 +146,7 @@ const UploadContent: React.FC = () => {
 
       setContractPending(false);
       setUploadStep('idle');
-      
+      showSuccess('Content Published!', 'Your content has been successfully published to the blockchain.');
       setSuccess(true);
       // Reset form
       setTitle('');
@@ -125,10 +155,12 @@ const UploadContent: React.FC = () => {
       setPrice('');
       setTags('');
       setFile(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
       setContractPending(false);
-      setError(err.message || "Upload failed. Please try again.");
+      const msg = err instanceof Error ? err.message : 'Upload failed. Please try again.';
+      setError(msg);
+      showError('Upload Failed', msg);
     }
   };
 
@@ -237,6 +269,9 @@ const UploadContent: React.FC = () => {
               <p className="text-xs text-gray-500">Require fans to hold specific tokens to access this content</p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                className="sr-only peer"
               <input 
                 type="checkbox" 
                 className="sr-only peer" 
@@ -254,7 +289,7 @@ const UploadContent: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700">Token Type</label>
                   <select
                     value={tokenType}
-                    onChange={(e) => setTokenType(e.target.value as any)}
+                    onChange={(e) => setTokenType(e.target.value as 'sip-009' | 'sip-010')}
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-orange-500 focus:border-orange-500"
                   >
                     <option value="sip-009">SIP-009 (NFT)</option>
@@ -314,6 +349,7 @@ const UploadContent: React.FC = () => {
             </div>
           </div>
         )}
+
         
         {success && (
           <div className="flex items-center gap-2 text-green-600 font-medium justify-center mt-2">

@@ -1,9 +1,15 @@
+const logger = require('../utils/logger');
+
 const errorHandler = (err, req, res, next) => {
   let error = { ...err };
   error.message = err.message;
 
-  // Log error
-  console.error('❌ Error:', err);
+  // Log with structured fields instead of raw console.error(err)
+  logger.error('Unhandled error', {
+    err,
+    method: req.method,
+    path: req.originalUrl,
+  });
 
   // Mongoose bad ObjectId
   if (err.name === 'CastError') {
@@ -37,7 +43,7 @@ const errorHandler = (err, req, res, next) => {
   res.status(error.statusCode || 500).json({
     success: false,
     error: error.message || 'Server Error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
   });
 };
 
