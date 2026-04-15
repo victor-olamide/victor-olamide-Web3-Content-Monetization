@@ -1,7 +1,8 @@
 const Purchase = require('../models/Purchase');
 const Subscription = require('../models/Subscription');
 const { verifyFTBalance, verifyNFTOwnership } = require('./tokenService');
-const { verifyPurchase, verifySubscription, verifyGatingRule } = require('./blockchainVerification');
+const { verifyPurchase, verifyGatingRule } = require('./blockchainVerification');
+const { verifySubscription } = require('./contractService');
 
 /**
  * Verify if a user has access to content (either creator, purchased, or token-gated)
