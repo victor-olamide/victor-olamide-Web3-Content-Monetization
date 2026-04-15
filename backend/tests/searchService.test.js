@@ -23,6 +23,13 @@ describe('searchService.buildQuery', () => {
     expect(buildQuery({ category: 'video' })).toEqual({ isRemoved: false, contentType: 'video' });
   });
 
+  it('supports minPrice and maxPrice filters', () => {
+    expect(buildQuery({ minPrice: '2.5', maxPrice: '10' })).toEqual({
+      isRemoved: false,
+      price: { $gte: 2.5, $lte: 10 }
+    });
+  });
+
   it('prefers explicit contentType over category alias', () => {
     expect(buildQuery({ category: 'image', contentType: 'article' })).toEqual({ isRemoved: false, contentType: 'article' });
   });
@@ -51,5 +58,21 @@ describe('searchService.searchContent', () => {
     );
     expect(Content.countDocuments).toHaveBeenCalledWith({ isRemoved: false, contentType: 'video', creator: 'alice', $text: { $search: 'token' } });
     expect(result).toMatchObject({ page: 2, limit: 5, total: 1, pages: 1, results: [{ contentId: 101, title: 'Test Content' }], facets: { contentType: { video: 1 } } });
+  });
+
+  it('does not include text score projection when q is omitted', async () => {
+    const cursor = createCursor([{ contentId: 102, title: 'Another Content' }]);
+    Content.find.mockReturnValue(cursor);
+    Content.countDocuments.mockResolvedValue(1);
+    Content.aggregate.mockReturnValue({ exec: jest.fn().mockResolvedValue([{ _id: 'article', count: 1 }]) });
+
+    const result = await searchContent({ page: '1', limit: '10', category: 'article' });
+
+    expect(Content.find).toHaveBeenCalledWith(
+      { isRemoved: false, contentType: 'article' },
+      {}
+    );
+    expect(result.page).toBe(1);
+    expect(result.limit).toBe(10);
   });
 });
