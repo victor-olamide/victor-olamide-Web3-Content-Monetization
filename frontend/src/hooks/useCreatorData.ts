@@ -51,14 +51,17 @@ export function useCreatorData(address: string | undefined) {
   useEffect(() => {
     if (!address) return;
 
+    const controller = new AbortController();
+    const { signal } = controller;
+
     const fetchData = async () => {
       setLoading(true);
       try {
         const [earningsRes, subscribersRes, growthRes, analyticsRes] = await Promise.all([
-          fetch(`${API_URL}/creator/earnings/${address}`),
-          fetch(`${API_URL}/creator/subscribers/${address}`),
-          fetch(`${API_URL}/creator/growth/${address}`),
-          fetch(`${API_URL}/creator/analytics/${address}?period=7d`)
+          fetch(`${API_URL}/creator/earnings/${address}`, { signal }),
+          fetch(`${API_URL}/creator/subscribers/${address}`, { signal }),
+          fetch(`${API_URL}/creator/growth/${address}`, { signal }),
+          fetch(`${API_URL}/creator/analytics/${address}?period=7d`, { signal })
         ]);
 
         if (!earningsRes.ok || !subscribersRes.ok || !growthRes.ok || !analyticsRes.ok) {
@@ -74,7 +77,8 @@ export function useCreatorData(address: string | undefined) {
         setSubscribers(subscribersData);
         setGrowth(growthData);
         setAnalytics(analyticsData);
-      } catch (err) {
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === 'AbortError') return;
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
         setLoading(false);
@@ -82,6 +86,11 @@ export function useCreatorData(address: string | undefined) {
     };
 
     fetchData();
+
+    // Cancel all in-flight requests when the component unmounts or address changes.
+    return () => {
+      controller.abort();
+    };
   }, [address]);
 
   return { earnings, subscribers, growth, analytics, loading, error };

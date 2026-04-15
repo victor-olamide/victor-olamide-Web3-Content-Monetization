@@ -35,13 +35,13 @@ export const useSTXPrice = (refreshInterval: number = 0): PriceResult => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch price data
-  const fetchPrice = useCallback(async () => {
+  // Fetch price data — accepts an optional AbortSignal for cleanup.
+  const fetchPrice = useCallback(async (signal?: AbortSignal) => {
     try {
       setIsLoading(true);
       setError(null);
 
-      const response = await fetch('/api/prices/stx');
+      const response = await fetch('/api/prices/stx', { signal });
 
       if (!response.ok) {
         throw new Error('Failed to fetch STX price');
@@ -56,19 +56,24 @@ export const useSTXPrice = (refreshInterval: number = 0): PriceResult => {
         setChange24h(priceData.change_24h);
         setChange24hPercent(priceData.change_24h_percent);
       }
-    } catch (err) {
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') return;
       setError(err instanceof Error ? err.message : 'Failed to fetch price');
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  // Initial fetch
+  // Initial fetch — cancel on unmount to prevent state updates on dead components.
   useEffect(() => {
-    fetchPrice();
+    const controller = new AbortController();
+    fetchPrice(controller.signal);
+    return () => {
+      controller.abort();
+    };
   }, [fetchPrice]);
 
-  // Auto-refresh interval
+  // Auto-refresh interval — the interval itself is already cleaned up on unmount.
   useEffect(() => {
     if (refreshInterval <= 0) return;
 

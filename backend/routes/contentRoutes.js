@@ -9,6 +9,7 @@ const { pinningManager } = require('../services/pinningManager');
 const { addContentToContract, removeContentFromContract } = require('../services/contractService');
 const { verifyCreatorOwnership, checkContentNotRemoved } = require('../middleware/creatorAuth');
 const { initiateRefund, getPendingRefundsForCreator } = require('../services/refundService');
+const { validateContentBody } = require('../middleware/inputValidation');
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -220,16 +221,17 @@ router.get('/', async (req, res) => {
 });
 
 // Create new content metadata
-router.post('/', async (req, res) => {
+router.post('/', validateContentBody, async (req, res) => {
+  const { contentId, title, description, contentType, price, creator, url, tokenGating } = req.validatedBody;
   const content = new Content({
-    contentId: req.body.contentId,
-    title: req.body.title,
-    description: req.body.description,
-    contentType: req.body.contentType,
-    price: req.body.price,
-    creator: req.body.creator,
-    url: req.body.url,
-    tokenGating: req.body.tokenGating || { enabled: false }
+    contentId,
+    title,
+    description,
+    contentType,
+    price,
+    creator,
+    url,
+    tokenGating: tokenGating || { enabled: false }
   });
 
   try {

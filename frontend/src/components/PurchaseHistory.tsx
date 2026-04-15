@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { ExternalLink, CreditCard } from 'lucide-react';
+import { STACKS_EXPLORER_BASE, STACKS_CHAIN } from '@/utils/constants';
 
 const PurchaseHistory: React.FC = () => {
   const { stxAddress } = useAuth();
@@ -46,7 +47,7 @@ const PurchaseHistory: React.FC = () => {
               <div className="text-right">
                 <p className="text-sm font-bold text-orange-600">{purchase.amount} STX</p>
                 <a 
-                  href={`https://explorer.stacks.co/txid/${purchase.txId}?chain=testnet`}
+                  href={`${STACKS_EXPLORER_BASE}/txid/${purchase.txId}?chain=${STACKS_CHAIN}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-[10px] text-gray-400 flex items-center gap-1 hover:text-blue-500"

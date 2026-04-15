@@ -5,6 +5,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 require('dotenv').config();
+const logger = require('./utils/logger');
 
 const logger = require('./utils/logger');
 const { validateEnv } = require('./utils/validateEnv');
@@ -162,6 +163,20 @@ app.use('*', (req, res) => {
 
 // Error handling middleware (must be last)
 app.use(errorHandler);
+// Database connection
+async function connectDB() {
+  try {
+    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/web3-content-platform';
+    await mongoose.connect(mongoUri, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    logger.info('Connected to MongoDB');
+  } catch (error) {
+    logger.error('MongoDB connection error', { err: error });
+    process.exit(1);
+  }
+}
 
 // Initialize optional services — non-fatal if they fail
 async function initializeServices() {
@@ -182,6 +197,7 @@ async function startServer() {
 
     app.listen(PORT, () => {
       logger.info('Server started', { port: PORT, env: process.env.NODE_ENV || 'development' });
+      logger.info('Server started', { port: PORT });
     });
   } catch (error) {
     logger.error('Failed to start server', { err: error });
@@ -193,12 +209,16 @@ async function startServer() {
 process.on('SIGTERM', async () => {
   logger.info('SIGTERM received — shutting down gracefully');
   await disconnectDB();
+  logger.info('SIGTERM received, shutting down gracefully');
+  await mongoose.connection.close();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
   logger.info('SIGINT received — shutting down gracefully');
   await disconnectDB();
+  logger.info('SIGINT received, shutting down gracefully');
+  await mongoose.connection.close();
   process.exit(0);
 });
 
