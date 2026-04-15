@@ -1,9 +1,15 @@
+'use strict';
+
 const express = require('express');
-const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 require('dotenv').config();
+const logger = require('./utils/logger');
+
+const logger = require('./utils/logger');
+const { validateEnv } = require('./utils/validateEnv');
+const { connectDB, disconnectDB } = require('./config/database');
 
 // Import routes
 const contentRoutes = require('./routes/contentRoutes');
@@ -42,24 +48,24 @@ const webhookAdminRoutes = require('./routes/webhookAdminRoutes');
 // Import middleware
 const { subscriptionRateLimiter } = require('./middleware/subscriptionRateLimiter');
 const { errorHandler } = require('./middleware/errorHandler');
+const { databaseHealthCheck, databaseStatusCheck } = require('./middleware/databaseHealth');
 
 // Import services
 const { initializePinningService } = require('./services/pinningManager');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 
 // Prometheus metrics
 const promClient = require('prom-client');
 const register = new promClient.Registry();
 promClient.collectDefaultMetrics({ register });
 
-// Custom metrics
 const httpRequestDuration = new promClient.Histogram({
   name: 'http_request_duration_seconds',
   help: 'Duration of HTTP requests in seconds',
   labelNames: ['method', 'route', 'status_code'],
-  buckets: [0.1, 0.5, 1, 2, 5]
+  buckets: [0.1, 0.5, 1, 2, 5],
 });
 register.registerMetric(httpRequestDuration);
 
@@ -67,7 +73,7 @@ register.registerMetric(httpRequestDuration);
 app.use(helmet());
 app.use(cors({
   origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
-  credentials: true
+  credentials: true,
 }));
 
 // Logging middleware
@@ -97,9 +103,21 @@ app.get('/health', (req, res) => {
   res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
-    uptime: process.uptime()
+    uptime: process.uptime(),
   });
 });
+
+// Database health endpoints
+app.get('/health/database', databaseHealthCheck);
+app.get('/health/database/status', databaseStatusCheck);
+
+// Metrics endpoint
+app.get('/metrics', async (req, res) => {
+  res.set('Content-Type', register.contentType);
+  res.end(await register.metrics());
+});
+
+// Note: duplicate /health route removed — single definition above is authoritative
 
 // API routes
 app.use('/api/content', contentRoutes);
@@ -118,17 +136,6 @@ app.use('/api/collaborators', collaboratorRoutes);
 app.use('/api/licensing', licensingRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/transactions', transactionRoutes);
-
-// Metrics endpoint
-app.get('/metrics', async (req, res) => {
-  res.set('Content-Type', register.contentType);
-  res.end(await register.metrics());
-});
-
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
-});
 app.use('/api/refunds', refundRoutes);
 app.use('/api/royalties', royaltyRoutes);
 app.use('/api/profile', profileRoutes);
@@ -146,17 +153,16 @@ app.use('/api/subscription-tiers', subscriptionTierRoutes);
 app.use('/api/rate-limit', rateLimitRoutes);
 app.use('/api/webhook-admin', webhookAdminRoutes);
 
-// Error handling middleware (must be last)
-app.use(errorHandler);
-
 // 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({
     error: 'Route not found',
-    message: `Cannot ${req.method} ${req.originalUrl}`
+    message: `Cannot ${req.method} ${req.originalUrl}`,
   });
 });
 
+// Error handling middleware (must be last)
+app.use(errorHandler);
 // Database connection
 async function connectDB() {
   try {
@@ -165,54 +171,69 @@ async function connectDB() {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
-    console.log('✅ Connected to MongoDB');
+    logger.info('Connected to MongoDB');
   } catch (error) {
-    console.error('❌ MongoDB connection error:', error);
+    logger.error('MongoDB connection error', { err: error });
     process.exit(1);
   }
 }
 
-// Initialize services
+// Initialize optional services — non-fatal if they fail
 async function initializeServices() {
   try {
     await initializePinningService();
-    console.log('✅ Pinning service initialized');
+    logger.info('Pinning service initialized');
   } catch (error) {
-    console.error('❌ Failed to initialize pinning service:', error);
+    logger.error('Failed to initialize pinning service', { err: error });
   }
 }
 
-// Start server
+// Start server — validates env, connects to MongoDB, then binds HTTP port
 async function startServer() {
   try {
+    validateEnv();
     await connectDB();
     await initializeServices();
 
     app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📊 Health check: http://localhost:${PORT}/health`);
-      console.log(`📚 API Documentation: http://localhost:${PORT}/api`);
+      logger.info('Server started', { port: PORT, env: process.env.NODE_ENV || 'development' });
+      logger.info('Server started', { port: PORT });
     });
   } catch (error) {
-    console.error('❌ Failed to start server:', error);
+    logger.error('Failed to start server', { err: error });
     process.exit(1);
   }
 }
 
-// Graceful shutdown
+// Graceful shutdown — delegates DB teardown to database.js
 process.on('SIGTERM', async () => {
-  console.log('🛑 SIGTERM received, shutting down gracefully');
+  logger.info('SIGTERM received — shutting down gracefully');
+  await disconnectDB();
+  logger.info('SIGTERM received, shutting down gracefully');
   await mongoose.connection.close();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
-  console.log('🛑 SIGINT received, shutting down gracefully');
+  logger.info('SIGINT received — shutting down gracefully');
+  await disconnectDB();
+  logger.info('SIGINT received, shutting down gracefully');
   await mongoose.connection.close();
   process.exit(0);
 });
 
-// Start the server
+// Catch unhandled promise rejections — log and exit so the process manager restarts cleanly
+process.on('unhandledRejection', (reason) => {
+  logger.error('Unhandled promise rejection', { err: reason instanceof Error ? reason : new Error(String(reason)) });
+  process.exit(1);
+});
+
+// Catch uncaught exceptions — log and exit
+process.on('uncaughtException', (err) => {
+  logger.error('Uncaught exception', { err });
+  process.exit(1);
+});
+
 if (require.main === module) {
   startServer();
 }

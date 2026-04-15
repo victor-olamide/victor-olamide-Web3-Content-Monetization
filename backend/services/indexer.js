@@ -6,9 +6,15 @@ const GatingRule = require('../models/GatingRule');
 
 class Indexer {
   constructor() {
-    this.apiUrl = process.env.STACKS_API_URL || 'https://stacks-node-api.mainnet.stacks.co';
+    const network = process.env.STACKS_NETWORK || 'testnet';
+    const defaultApiUrl =
+      network === 'mainnet'
+        ? 'https://stacks-node-api.mainnet.stacks.co'
+        : 'https://stacks-node-api.testnet.stacks.co';
+    this.apiUrl = process.env.STACKS_API_URL || defaultApiUrl;
     this.contractAddress = process.env.CONTRACT_ADDRESS;
     this.lastProcessedBlock = 0;
+    this.pollingIntervalId = null;
   }
 
   async start() {
@@ -18,16 +24,28 @@ class Indexer {
     await this.pollEvents();
     
     // Polling interval
-    setInterval(async () => {
+    const intervalId = setInterval(async () => {
       await this.pollEvents();
     }, 30000); // Every 30 seconds
+    this.pollingIntervalId = intervalId;
+  }
+
+  stop() {
+    if (this.pollingIntervalId) {
+      clearInterval(this.pollingIntervalId);
+      this.pollingIntervalId = null;
+      this.status = 'stopped';
+      console.log('Stacks event indexer stopped');
+    }
   }
 
   getStatus() {
     return {
       status: this.status,
+      pollingActive: this.pollingIntervalId !== null,
       lastProcessedBlock: this.lastProcessedBlock,
-      contractAddress: this.contractAddress
+      contractAddress: this.contractAddress,
+      apiUrl: this.apiUrl
     };
   }
 

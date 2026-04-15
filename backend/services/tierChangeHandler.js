@@ -13,6 +13,7 @@ const { mapSubscriptionToRateLimit } = require('../utils/subscriptionTierMapper'
 const RateLimitStore = require('../models/RateLimitStore');
 const TierChangeLog = require('../models/TierChangeLog');
 const { TIER_LEVELS } = require('../config/rateLimitConfig');
+const logger = require('../utils/logger');
 
 /**
  * Handle subscription tier change for a user
@@ -82,7 +83,7 @@ async function handleTierChange(changeData) {
       ? `User downgraded: ${oldRateLimitTier} → ${newRateLimitTier}` 
       : `User tier changed: ${oldRateLimitTier} → ${newRateLimitTier}`;
 
-    console.log(`[TIER_CHANGE] ${logMessage} | User: ${userId} | Subscription: ${oldSubscriptionTier} → ${newSubscriptionTier}`);
+    logger.info('Tier change', { userId, oldSubscriptionTier, newSubscriptionTier, oldRateLimitTier, newRateLimitTier, message: logMessage });
 
     return {
       success: true,
@@ -93,7 +94,7 @@ async function handleTierChange(changeData) {
     };
 
   } catch (error) {
-    console.error('Error handling tier change:', error.message);
+    logger.error('Error handling tier change', { err: error });
     return {
       success: false,
       error: error.message
@@ -127,11 +128,11 @@ async function handleBatchTierChanges(changes) {
       }
     }
 
-    console.log(`Batch tier changes processed: ${results.successful.length} successful, ${results.failed.length} failed`);
+    logger.info('Batch tier changes processed', { successful: results.successful.length, failed: results.failed.length });
     return results;
 
   } catch (error) {
-    console.error('Error handling batch tier changes:', error.message);
+    logger.error('Error handling batch tier changes', { err: error });
     throw error;
   }
 }
@@ -159,7 +160,7 @@ async function getUserTierChangeHistory(userId, options = {}) {
 
     return changes;
   } catch (error) {
-    console.error('Error getting tier change history:', error.message);
+    logger.error('Error getting tier change history', { err: error });
     return [];
   }
 }
@@ -245,10 +246,10 @@ async function notifyTierChange(userId, oldTier, newTier) {
 
     // Send notification (non-blocking)
     NotificationService?.send?.(notificationData).catch(err => {
-      console.error('Error sending tier change notification:', err.message);
+      logger.warn('Error sending tier change notification', { err });
     });
   } catch (error) {
-    console.error('Error in notifyTierChange:', error.message);
+    logger.error('Error in notifyTierChange', { err: error });
   }
 }
 

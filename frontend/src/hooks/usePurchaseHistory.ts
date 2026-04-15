@@ -78,9 +78,12 @@ export const usePurchaseHistory = (options: UsePurchaseHistoryOptions = {}) => {
   });
 
   /**
-   * Fetch purchases from API
+   * Fetch purchases from API.
+   * Accepts an optional AbortSignal so callers (e.g. useEffect cleanup) can
+   * cancel the in-flight request without causing state updates on unmounted
+   * components.
    */
-  const fetchPurchases = useCallback(async (forceRefresh = false) => {
+  const fetchPurchases = useCallback(async (forceRefresh = false, signal?: AbortSignal) => {
     try {
       // Check cache
       const now = Date.now();
@@ -106,6 +109,7 @@ export const usePurchaseHistory = (options: UsePurchaseHistoryOptions = {}) => {
       });
 
       const response = await fetch(`/api/profile/purchases?${params}`, {
+        signal,
         headers: {
           'X-Session-Id': localStorage.getItem('sessionId') || ''
         }
@@ -140,7 +144,9 @@ export const usePurchaseHistory = (options: UsePurchaseHistoryOptions = {}) => {
       setPurchases(filteredPurchases);
       setTotal(data.total || filteredPurchases.length);
       setError(null);
-    } catch (err) {
+    } catch (err: unknown) {
+      // AbortError is expected on unmount — silently ignore it.
+      if (err instanceof Error && err.name === 'AbortError') return;
       setError(err instanceof Error ? err.message : 'Failed to fetch purchases');
       setPurchases([]);
     } finally {
@@ -340,10 +346,16 @@ export const usePurchaseHistory = (options: UsePurchaseHistoryOptions = {}) => {
   }, []);
 
   /**
-   * Fetch purchases on mount and when filters/pagination change
+   * Fetch purchases on mount and when filters/pagination change.
+   * Uses AbortController so the in-flight request is cancelled if the
+   * component unmounts before it resolves, preventing memory leaks.
    */
   useEffect(() => {
-    fetchPurchases();
+    const controller = new AbortController();
+    fetchPurchases(false, controller.signal);
+    return () => {
+      controller.abort();
+    };
   }, [fetchPurchases]);
 
   return {
