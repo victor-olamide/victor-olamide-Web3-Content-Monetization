@@ -85,6 +85,7 @@ class PinningService {
     this.providers = this._loadProviderConfigs();
     this.healthStatus = new Map();
     this.lastHealthCheck = new Map();
+    this.healthCheckIntervalId = null;
 
     // Start health monitoring
     this._startHealthMonitoring();
@@ -137,12 +138,24 @@ class PinningService {
    * Start health monitoring for all providers
    */
   _startHealthMonitoring() {
-    setInterval(() => {
+    const intervalId = setInterval(() => {
       this._checkProviderHealth();
     }, HEALTH_CHECK_INTERVAL);
+    this.healthCheckIntervalId = intervalId;
 
     // Initial health check
     this._checkProviderHealth();
+  }
+
+  /**
+   * Stop health monitoring
+   */
+  _stopHealthMonitoring() {
+    if (this.healthCheckIntervalId) {
+      clearInterval(this.healthCheckIntervalId);
+      this.healthCheckIntervalId = null;
+      console.log('[PinningService] Health monitoring stopped');
+    }
   }
 
   /**
