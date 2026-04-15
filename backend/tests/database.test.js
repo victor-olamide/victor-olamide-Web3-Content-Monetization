@@ -146,6 +146,21 @@ describe('database.js', () => {
     const result = await healthCheck();
     expect(result.status).toBe('healthy');
   });
+
+  it('healthCheck returns unhealthy when not connected', async () => {
+    // Do not call connectDB — _isConnected stays false
+    const result = await healthCheck();
+    expect(result.status).toBe('unhealthy');
+    expect(result.message).toMatch(/not connected/i);
+  });
+
+  it('getConnectionStatus returns expected shape', () => {
+    const status = getConnectionStatus();
+    expect(status).toMatchObject({
+      isConnected: expect.any(Boolean),
+      readyState: expect.any(Number),
+    });
+  });
 });
 
 // ── redactUri tests ──────────────────────────────────────────────────────────
