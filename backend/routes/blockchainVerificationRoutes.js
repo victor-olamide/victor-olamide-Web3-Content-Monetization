@@ -11,6 +11,7 @@ const {
   getVerificationMetrics,
   evictExpiredCache
 } = require('../services/blockchainVerification');
+const TransactionVerification = require('../models/TransactionVerification');
 
 const router = express.Router();
 
@@ -183,6 +184,32 @@ router.delete('/cache', (req, res) => {
 router.get('/metrics', (req, res) => {
   const data = getVerificationMetrics();
   res.json({ success: true, data });
+});
+
+/**
+ * GET /api/blockchain/history
+ * Query persisted verification history
+ * Query params: verified, limit, skip
+ */
+router.get('/history', async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit || '20', 10), 100);
+    const skip = parseInt(req.query.skip || '0', 10);
+    const filter = {};
+    if (req.query.verified !== undefined) {
+      filter.verified = req.query.verified === 'true';
+    }
+
+    const [records, total] = await Promise.all([
+      TransactionVerification.find(filter).sort({ verifiedAt: -1 }).skip(skip).limit(limit).lean(),
+      TransactionVerification.countDocuments(filter)
+    ]);
+
+    res.json({ success: true, data: records, total, skip, limit });
+  } catch (err) {
+    console.error('Verification history error:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch verification history' });
+  }
 });
 
 module.exports = router;
