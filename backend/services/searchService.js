@@ -14,6 +14,11 @@ const buildQuery = (params) => {
     isRemoved,
   } = params;
 
+  const contentTypeValue = typeof contentType === 'string' ? contentType.trim() : contentType;
+  const categoryValue = typeof category === 'string' ? category.trim() : category;
+  const creatorValue = typeof creator === 'string' ? creator.trim() : creator;
+  const searchQuery = typeof q === 'string' ? q.trim() : q;
+
   const query = {};
 
   if (typeof isRemoved !== 'undefined') {
@@ -23,13 +28,13 @@ const buildQuery = (params) => {
   }
 
   // Accept `category` as an alias for contentType so clients can filter by category.
-  const contentCategory = contentType || category;
+  const contentCategory = contentTypeValue || categoryValue;
   if (contentCategory) {
     query.contentType = contentCategory;
   }
 
-  if (creator) {
-    query.creator = creator;
+  if (creatorValue) {
+    query.creator = creatorValue;
   }
 
   if (typeof minPrice !== 'undefined' || typeof maxPrice !== 'undefined') {
@@ -38,9 +43,9 @@ const buildQuery = (params) => {
     if (typeof maxPrice !== 'undefined') query.price.$lte = parseFloat(maxPrice);
   }
 
-  if (q) {
+  if (searchQuery) {
     // Use text search if index exists
-    query.$text = { $search: q };
+    query.$text = { $search: searchQuery };
   }
 
   return query;
