@@ -7,6 +7,7 @@ const morgan = require('morgan');
 require('dotenv').config();
 
 const logger = require('./utils/logger');
+const { validateEnv } = require('./utils/validateEnv');
 const { connectDB, disconnectDB } = require('./config/database');
 
 // Import routes
@@ -165,9 +166,10 @@ async function initializeServices() {
   }
 }
 
-// Start server — connects to MongoDB first, then binds HTTP port
+// Start server — validates env, connects to MongoDB, then binds HTTP port
 async function startServer() {
   try {
+    validateEnv();
     await connectDB();
     await initializeServices();
 
