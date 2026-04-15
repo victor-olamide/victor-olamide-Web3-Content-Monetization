@@ -140,3 +140,42 @@ describe('database.js', () => {
     expect(result.status).toBe('healthy');
   });
 });
+
+// ── redactUri tests ──────────────────────────────────────────────────────────
+
+describe('redactUri', () => {
+  let redactUri;
+
+  beforeEach(() => {
+    jest.resetModules();
+    process.env.DB_URI = 'mongodb://localhost:27017/test';
+    jest.mock('mongoose', () => ({
+      connect: jest.fn(),
+      connection: { on: jest.fn(), readyState: 0, host: null, port: null, name: null },
+    }));
+    ({ redactUri } = require('../config/database'));
+  });
+
+  afterEach(() => {
+    jest.resetModules();
+    jest.unmock('mongoose');
+  });
+
+  it('redacts username and password from URI', () => {
+    const result = redactUri('mongodb://admin:secret@localhost:27017/db');
+    expect(result).not.toContain('secret');
+    expect(result).not.toContain('admin');
+    expect(result).toContain('***');
+  });
+
+  it('returns URI unchanged when no credentials present', () => {
+    const result = redactUri('mongodb://localhost:27017/db');
+    expect(result).toContain('localhost');
+    expect(result).toContain('db');
+  });
+
+  it('returns <invalid-uri> for malformed URIs', () => {
+    const result = redactUri('not-a-valid-uri');
+    expect(result).toBe('<invalid-uri>');
+  });
+});
