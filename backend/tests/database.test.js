@@ -134,6 +134,13 @@ describe('database.js', () => {
     );
   });
 
+  it('disconnectDB closes the mongoose connection', async () => {
+    const mongoose = require('mongoose');
+    await connectDB();
+    await disconnectDB();
+    expect(mongoose.connection.close).toHaveBeenCalled();
+  });
+
   it('healthCheck returns healthy status when connected', async () => {
     await connectDB();
     const result = await healthCheck();
