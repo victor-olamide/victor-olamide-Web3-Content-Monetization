@@ -14,12 +14,20 @@ const userProfileSchema = new mongoose.Schema(
     // Display information
     displayName: {
       type: String,
-      trim: true
+      trim: true,
+      maxlength: [100, 'displayName must be 100 characters or fewer'],
     },
 
     avatar: {
       type: String,
-      default: null
+      default: null,
+      validate: {
+        validator: function (v) {
+          if (!v) return true; // null/empty allowed
+          return /^https?:\/\/(\w[\w-]*\.)+[\w-]+(\/.*)?\.?$/i.test(v);
+        },
+        message: 'avatar must be a valid http/https URL',
+      },
     },
 
     username: {
