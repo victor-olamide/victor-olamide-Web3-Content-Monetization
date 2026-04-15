@@ -34,6 +34,10 @@ describe('searchService.buildQuery', () => {
     expect(buildQuery({ category: 'image', contentType: 'article' })).toEqual({ isRemoved: false, contentType: 'article' });
   });
 
+  it('honors explicit isRemoved values when provided', () => {
+    expect(buildQuery({ isRemoved: 'true' })).toEqual({ isRemoved: true });
+  });
+
   it('adds text search when q is provided', () => {
     expect(buildQuery({ q: 'crypto' })).toEqual({ isRemoved: false, $text: { $search: 'crypto' } });
   });
