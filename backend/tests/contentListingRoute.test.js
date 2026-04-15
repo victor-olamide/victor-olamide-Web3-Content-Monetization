@@ -48,4 +48,13 @@ describe('GET /api/content', () => {
     expect(response.body.page).toBe(1);
     expect(response.body.limit).toBe(20);
   });
+
+  it('returns 500 when the search service fails', async () => {
+    searchService.searchContent.mockRejectedValue(new Error('search failed'));
+
+    const response = await request(app).get('/api/content');
+
+    expect(response.status).toBe(500);
+    expect(response.body.error).toBe('search failed');
+  });
 });
