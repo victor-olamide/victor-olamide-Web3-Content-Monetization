@@ -210,7 +210,7 @@ router.get('/:contentId', async (req, res) => {
   }
 });
 
-// Get all content metadata with pagination, filtering and keyword search
+// Get all content metadata with pagination, filtering by category/creator, and keyword search
 router.get('/', async (req, res) => {
   try {
     const results = await searchService.searchContent(req.query);
