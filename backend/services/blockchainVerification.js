@@ -556,7 +556,10 @@ function invalidateCacheForTx(txId) {
 function getCacheStats() {
   return {
     size: verificationCache.size,
-    entries: Array.from(verificationCache.keys())
+    entries: Array.from(verificationCache.keys()),
+    pendingTransactions: Array.from(verificationCache.entries())
+      .filter(([_, value]) => !value.result.verified)
+      .map(([txId, _]) => txId)
   };
 }
 
