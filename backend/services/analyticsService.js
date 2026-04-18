@@ -270,6 +270,13 @@ class AnalyticsService {
 
   /**
    * Get creator analytics data
+   * Returns views, revenue, subscriber count, and top content for a creator
+   * Aggregates data daily/weekly/monthly based on granularity
+   * @param {string} creatorId - Creator's MongoDB ObjectId
+   * @param {Date} startDate - Start date for analytics
+   * @param {Date} endDate - End date for analytics
+   * @param {string} granularity - 'hourly', 'daily', 'weekly', or 'monthly'
+   * @returns {Promise<Object>} Analytics data
    */
   async getCreatorAnalytics(creatorId, startDate, endDate, granularity = 'daily') {
     try {
