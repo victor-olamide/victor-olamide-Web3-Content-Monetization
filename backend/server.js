@@ -44,6 +44,7 @@ const backupRoutes = require('./routes/backupRoutes');
 const subscriptionTierRoutes = require('./routes/subscriptionTierRoutes');
 const rateLimitRoutes = require('./routes/rateLimitRoutes');
 const webhookAdminRoutes = require('./routes/webhookAdminRoutes');
+const blockchainVerificationRoutes = require('./routes/blockchainVerificationRoutes');
 
 // Import middleware
 const { subscriptionRateLimiter } = require('./middleware/subscriptionRateLimiter');
@@ -52,6 +53,7 @@ const { databaseHealthCheck, databaseStatusCheck } = require('./middleware/datab
 
 // Import services
 const { initializePinningService } = require('./services/pinningManager');
+const { startCacheEvictionJob } = require('./services/verificationCacheEvictionJob');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -152,6 +154,7 @@ app.use('/api/backup', backupRoutes);
 app.use('/api/subscription-tiers', subscriptionTierRoutes);
 app.use('/api/rate-limit', rateLimitRoutes);
 app.use('/api/webhook-admin', webhookAdminRoutes);
+app.use('/api/blockchain', blockchainVerificationRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
@@ -186,6 +189,7 @@ async function initializeServices() {
   } catch (error) {
     logger.error('Failed to initialize pinning service', { err: error });
   }
+  startCacheEvictionJob();
 }
 
 // Start server — validates env, connects to MongoDB, then binds HTTP port
