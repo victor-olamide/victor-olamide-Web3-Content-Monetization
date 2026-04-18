@@ -460,4 +460,5 @@ module.exports = {
   getContentPerformanceAnalytics,
   getRevenueAnalytics,
   exportAnalyticsData,
+  getCreatorAnalytics,
 };
