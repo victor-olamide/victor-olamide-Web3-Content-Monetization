@@ -79,6 +79,15 @@ const getCreatorAnalytics = async (req, res) => {
     const { id: creatorId } = req.params;
     const { startDate, endDate, granularity = 'daily' } = req.query;
 
+    // Validate granularity
+    const validGranularities = ['hourly', 'daily', 'weekly', 'monthly'];
+    if (!validGranularities.includes(granularity)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid granularity. Must be one of: hourly, daily, weekly, monthly',
+      });
+    }
+
     // Validate creator ID
     if (!creatorId) {
       return res.status(400).json({
