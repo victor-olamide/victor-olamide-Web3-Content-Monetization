@@ -133,6 +133,8 @@ const getCreatorAnalytics = async (req, res) => {
 
     const creatorData = await analyticsService.getCreatorAnalytics(creatorId, start, end, granularity);
 
+    console.log(`Creator analytics retrieved for ${creatorId}: ${creatorData.views} views, ${creatorData.revenue} revenue, ${creatorData.subscriberCount} subscribers`);
+
     res.status(200).json({
       success: true,
       data: creatorData,
