@@ -83,6 +83,7 @@ function evictExpiredCache() {
  */
 async function verifyTransactionStatus(txId, minConfirmations = 1) {
   metrics.totalVerifications++;
+  console.log(`Verifying transaction ${txId} with min confirmations ${minConfirmations}`);
   try {
     const cached = getCachedVerification(txId);
     if (cached) return cached;
