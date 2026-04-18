@@ -358,11 +358,15 @@ async function verifyGatingRule(contentId) {
 async function _pollForConfirmation(txId, timeoutMs, txLabel) {
   const maxAttempts = Math.ceil(timeoutMs / 10000);
   let delay = 10000;
+  let attempts = 0;
 
   for (let i = 0; i < maxAttempts; i++) {
+    attempts++;
+    console.log(`Polling attempt ${attempts} for ${txLabel} transaction ${txId}`);
     const verification = await verifyTransactionStatus(txId, 1);
 
     if (verification.verified) {
+      console.log(`${txLabel} transaction ${txId} confirmed after ${attempts} attempts`);
       return {
         confirmed: true,
         confirmations: verification.confirmations,
@@ -379,7 +383,7 @@ async function _pollForConfirmation(txId, timeoutMs, txLabel) {
     delay = Math.min(delay * 1.5, 30000); // cap at 30s
   }
 
-  throw new Error(`${txLabel} transaction confirmation timeout`);
+  throw new Error(`${txLabel} transaction confirmation timeout after ${attempts} attempts`);
 }
 
 /**
