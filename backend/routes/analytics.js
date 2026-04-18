@@ -17,6 +17,7 @@ const { authenticateToken } = require('../middleware/auth');
 router.post('/track', analyticsController.trackEvent);
 
 // Creator routes (require authentication)
+// GET /analytics/creator/:id - Get creator analytics dashboard data
 router.get('/creator/:id', authenticateToken, analyticsController.getCreatorAnalytics);
 
 // Admin-only routes (require authentication)
