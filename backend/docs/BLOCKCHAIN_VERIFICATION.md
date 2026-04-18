@@ -26,7 +26,7 @@ verificationCacheEvictionJob.js ← background cache cleanup
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/blockchain/tx/:txId` | Check single transaction status |
+| GET | `/api/blockchain/tx/:txId/details` | Get detailed transaction information |
 | POST | `/api/blockchain/tx/batch` | Batch verify up to 50 transactions |
 | GET | `/api/blockchain/tx/:txId/type` | Detect purchase vs subscription |
 | GET | `/api/blockchain/purchase/:userAddress/:contentId` | Verify PPV purchase |
