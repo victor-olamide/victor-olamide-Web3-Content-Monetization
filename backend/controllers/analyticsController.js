@@ -123,6 +123,17 @@ const getCreatorAnalytics = async (req, res) => {
       });
     }
 
+    // Check date range limits (max 1 year for daily, max 5 years for monthly)
+    const maxRange = granularity === 'monthly' ? 5 * 365 : 365;
+    const daysDiff = (end - start) / (1000 * 60 * 60 * 24);
+
+    if (daysDiff > maxRange) {
+      return res.status(400).json({
+        success: false,
+        message: `Date range too large. Maximum ${maxRange} days allowed for ${granularity} granularity`,
+      });
+    }
+
     // Check if user is the creator or admin
     if (req.user.id !== creatorId && req.user.role !== 'admin') {
       return res.status(403).json({
