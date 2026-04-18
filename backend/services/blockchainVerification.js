@@ -35,7 +35,10 @@ const metrics = {
   successfulVerifications: 0,
   failedVerifications: 0,
   purchaseVerifications: 0,
-  subscriptionVerifications: 0
+  subscriptionVerifications: 0,
+  pollingAttempts: 0,
+  pollingSuccesses: 0,
+  pollingFailures: 0
 };
 
 // ─── Transaction type constants ───────────────────────────────────────────────
@@ -419,11 +422,13 @@ async function _pollForConfirmation(txId, timeoutMs, txLabel) {
 
   for (let i = 0; i < maxAttempts; i++) {
     attempts++;
+    metrics.pollingAttempts++;
     console.log(`Polling attempt ${attempts} for ${txLabel} transaction ${txId}`);
     const verification = await verifyTransactionStatus(txId, 1);
 
     if (verification.verified) {
       console.log(`${txLabel} transaction ${txId} confirmed after ${attempts} attempts`);
+      metrics.pollingSuccesses++;
       return {
         confirmed: true,
         confirmations: verification.confirmations,
@@ -433,6 +438,7 @@ async function _pollForConfirmation(txId, timeoutMs, txLabel) {
     }
 
     if (verification.status === 'abort_by_response' || verification.status === 'abort_by_post_condition') {
+      metrics.pollingFailures++;
       throw new Error(`${txLabel} transaction failed: ${verification.status}`);
     }
 
@@ -440,6 +446,7 @@ async function _pollForConfirmation(txId, timeoutMs, txLabel) {
     delay = Math.min(delay * 1.5, 30000); // cap at 30s
   }
 
+  metrics.pollingFailures++;
   throw new Error(`${txLabel} transaction confirmation timeout after ${attempts} attempts`);
 }
 
