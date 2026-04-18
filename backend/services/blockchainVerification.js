@@ -346,6 +346,37 @@ async function verifyGatingRule(contentId) {
   }
 }
 
+// ─── Transaction status helpers ───────────────────────────────────────────────
+
+/**
+ * Check if a transaction is in pending state
+ * @param {string} txId - Transaction ID
+ * @returns {Promise<boolean>} True if pending
+ */
+async function isTransactionPending(txId) {
+  try {
+    const result = await verifyTransactionStatus(txId, 0); // 0 confirmations to check status
+    return result.status === 'pending';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Check if a transaction is confirmed
+ * @param {string} txId - Transaction ID
+ * @param {number} minConfirmations - Minimum confirmations
+ * @returns {Promise<boolean>} True if confirmed
+ */
+async function isTransactionConfirmed(txId, minConfirmations = 1) {
+  try {
+    const result = await verifyTransactionStatus(txId, minConfirmations);
+    return result.verified;
+  } catch {
+    return false;
+  }
+}
+
 // ─── Polling / wait helpers ───────────────────────────────────────────────────
 
 /**
@@ -389,7 +420,7 @@ async function _pollForConfirmation(txId, timeoutMs, txLabel) {
 /**
  * Wait for purchase transaction confirmation
  * @param {string} txId - Transaction ID
- * @param {number} timeoutMs - Timeout in milliseconds
+ * @param {number} timeoutMs - Timeout in milliseconds (default 5 minutes)
  * @returns {Promise<Object>} Confirmation result
  */
 async function waitForPurchaseConfirmation(txId, timeoutMs = 300000) {
