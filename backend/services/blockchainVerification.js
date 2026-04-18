@@ -73,6 +73,37 @@ function evictExpiredCache() {
   }
 }
 
+// ─── Transaction details ──────────────────────────────────────────────────────
+
+/**
+ * Get detailed transaction information from blockchain
+ * @param {string} txId - Transaction ID
+ * @returns {Promise<Object>} Detailed transaction info
+ */
+async function getTransactionDetails(txId) {
+  try {
+    const txResult = await verifyTransaction(txId);
+    if (txResult.status === 'not_found') {
+      return { found: false, txId };
+    }
+    return {
+      found: true,
+      txId,
+      status: txResult.status,
+      success: txResult.success,
+      blockHeight: txResult.blockHeight,
+      blockTime: txResult.blockTime,
+      confirmations: txResult.confirmations,
+      senderAddress: txResult.senderAddress,
+      txType: txResult.txType,
+      raw: txResult.raw
+    };
+  } catch (error) {
+    console.error('Error getting transaction details:', error);
+    return { found: false, txId, error: error.message };
+  }
+}
+
 // ─── Core verification ────────────────────────────────────────────────────────
 
 /**
