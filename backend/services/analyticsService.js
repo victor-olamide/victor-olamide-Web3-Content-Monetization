@@ -245,6 +245,119 @@ class AnalyticsService {
   }
 
   /**
+   * Get creator analytics data
+   */
+  async getCreatorAnalytics(creatorId, startDate, endDate, granularity = 'daily') {
+    try {
+      console.log(`Getting creator analytics for ${creatorId} from ${startDate} to ${endDate}`);
+
+      // Get creator's content IDs
+      const Content = require('../models/Content');
+      const creatorContent = await Content.find({ creator: creatorId }, '_id').lean();
+      const contentIds = creatorContent.map(c => c._id);
+
+      if (contentIds.length === 0) {
+        return {
+          views: 0,
+          revenue: 0,
+          subscriberCount: 0,
+          topContent: [],
+          periodData: []
+        };
+      }
+
+      // Aggregate data from events
+      const events = await AnalyticsEvent.find({
+        contentId: { $in: contentIds },
+        timestamp: { $gte: startDate, $lt: endDate },
+        eventType: { $in: ['CONTENT_VIEW', 'CONTENT_PURCHASE'] }
+      }).lean();
+
+      // Group by date
+      const groupedData = this.groupEventsByDate(events, granularity);
+
+      // Calculate metrics
+      const periodData = [];
+      let totalViews = 0;
+      let totalRevenue = 0;
+      const contentStats = new Map();
+
+      for (const [dateKey, dateEvents] of Object.entries(groupedData)) {
+        const date = new Date(dateKey);
+        let views = 0;
+        let revenue = 0;
+
+        for (const event of dateEvents) {
+          if (event.eventType === 'CONTENT_VIEW') {
+            views++;
+            totalViews++;
+          } else if (event.eventType === 'CONTENT_PURCHASE') {
+            revenue += event.metadata?.amount || 0;
+            totalRevenue += revenue;
+          }
+
+          // Track content stats
+          const contentId = event.contentId.toString();
+          if (!contentStats.has(contentId)) {
+            contentStats.set(contentId, { views: 0, revenue: 0, purchases: 0 });
+          }
+          const stats = contentStats.get(contentId);
+          if (event.eventType === 'CONTENT_VIEW') {
+            stats.views++;
+          } else if (event.eventType === 'CONTENT_PURCHASE') {
+            stats.revenue += event.metadata?.amount || 0;
+            stats.purchases++;
+          }
+        }
+
+        periodData.push({
+          date: dateKey,
+          views,
+          revenue,
+          granularity
+        });
+      }
+
+      // Get top content
+      const topContent = [];
+      for (const [contentId, stats] of contentStats.entries()) {
+        const content = await Content.findById(contentId, 'title contentType').lean();
+        if (content) {
+          topContent.push({
+            contentId,
+            title: content.title,
+            type: content.contentType,
+            views: stats.views,
+            revenue: stats.revenue,
+            purchases: stats.purchases
+          });
+        }
+      }
+
+      // Sort top content by revenue, then views
+      topContent.sort((a, b) => b.revenue - a.revenue || b.views - a.views);
+
+      // Get subscriber count
+      const Subscription = require('../models/Subscription');
+      const subscriberCount = await Subscription.countDocuments({
+        creator: creatorId,
+        cancelledAt: null
+      });
+
+      return {
+        views: totalViews,
+        revenue: totalRevenue,
+        subscriberCount,
+        topContent: topContent.slice(0, 10), // Top 10
+        periodData
+      };
+    } catch (error) {
+      console.error('Error getting creator analytics:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get analytics data for dashboard
    */
   async getDashboardData(startDate, endDate, granularity = 'daily') {
