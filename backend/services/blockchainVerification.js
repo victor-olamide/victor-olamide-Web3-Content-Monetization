@@ -377,6 +377,32 @@ async function isTransactionConfirmed(txId, minConfirmations = 1) {
   }
 }
 
+/**
+ * Get the time taken for transaction confirmation
+ * @param {string} txId - Transaction ID
+ * @param {number} timeoutMs - Timeout in milliseconds
+ * @returns {Promise<Object>} Confirmation time result
+ */
+async function getConfirmationTime(txId, timeoutMs = 300000) {
+  const startTime = Date.now();
+  try {
+    const result = await _pollForConfirmation(txId, timeoutMs, 'Transaction');
+    const confirmationTime = Date.now() - startTime;
+    return {
+      confirmed: true,
+      confirmationTimeMs: confirmationTime,
+      ...result
+    };
+  } catch (error) {
+    const elapsedTime = Date.now() - startTime;
+    return {
+      confirmed: false,
+      elapsedTimeMs: elapsedTime,
+      error: error.message
+    };
+  }
+}
+
 // ─── Polling / wait helpers ───────────────────────────────────────────────────
 
 /**
