@@ -114,9 +114,10 @@ async function getTransactionDetails(txId) {
  * Polls the Stacks API to get current transaction status and confirmations.
  * @param {string} txId - Transaction ID
  * @param {number} minConfirmations - Minimum confirmations required
+ * @param {boolean} pollIfPending - Whether to poll if transaction is not yet confirmed
  * @returns {Promise<Object>} Verification result
  */
-async function verifyTransactionStatus(txId, minConfirmations = 1) {
+async function verifyTransactionStatus(txId, minConfirmations = 1, pollIfPending = false) {
   metrics.totalVerifications++;
   console.log(`Verifying transaction ${txId} with min confirmations ${minConfirmations}`);
   try {
