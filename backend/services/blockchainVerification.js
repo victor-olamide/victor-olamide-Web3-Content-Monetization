@@ -1,3 +1,18 @@
+/**
+ * Blockchain Transaction Verification Service
+ *
+ * This service handles verification of on-chain transactions for subscription payments
+ * and pay-per-view (PPV) purchases on the Stacks blockchain. It polls the Stacks API
+ * to confirm transaction status before granting access to content.
+ *
+ * Key features:
+ * - Transaction status verification with caching
+ * - Polling for transaction confirmation
+ * - Purchase and subscription verification
+ * - Batch verification for multiple transactions
+ * - Access determination based on verified transactions
+ */
+
 const { callReadOnlyFunction, cvToJSON, standardPrincipalCV, uintCV } = require('@stacks/transactions');
 const { StacksMainnet, StacksTestnet } = require('@stacks/network');
 const { verifyTransaction, batchVerifyTransactions, getCurrentBlockHeight } = require('./stacksApiService');
