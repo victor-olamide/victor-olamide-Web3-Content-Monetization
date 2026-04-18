@@ -170,6 +170,10 @@ async function verifyTransactionStatus(txId, minConfirmations = 1) {
   } catch (error) {
     console.error('Transaction verification error:', error);
     metrics.failedVerifications++;
+    // Handle network errors specifically
+    if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
+      return { verified: false, status: 'network_error', confirmations: 0, error: 'Network connection failed' };
+    }
     return { verified: false, status: 'error', confirmations: 0, error: error.message };
   }
 }
