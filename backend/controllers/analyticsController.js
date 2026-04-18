@@ -72,6 +72,66 @@ const trackEvent = async (req, res) => {
 };
 
 /**
+ * Get creator analytics dashboard data
+ */
+const getCreatorAnalytics = async (req, res) => {
+  try {
+    const { id: creatorId } = req.params;
+    const { startDate, endDate, granularity = 'daily' } = req.query;
+
+    // Validate creator ID
+    if (!creatorId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Creator ID is required',
+      });
+    }
+
+    // Validate date parameters
+    if (!startDate || !endDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'startDate and endDate are required',
+      });
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    // Validate date range
+    if (start > end) {
+      return res.status(400).json({
+        success: false,
+        message: 'startDate must be before endDate',
+      });
+    }
+
+    // Check if user is the creator or admin
+    if (req.user.id !== creatorId && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You can only view your own analytics.',
+      });
+    }
+
+    const creatorData = await analyticsService.getCreatorAnalytics(creatorId, start, end, granularity);
+
+    res.status(200).json({
+      success: true,
+      data: creatorData,
+    });
+  } catch (error) {
+    console.error('Error fetching creator analytics:', error);
+
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching creator analytics',
+      error: error.message,
+    });
+  }
+};
+
+/**
  * Get analytics dashboard data
  */
 const getDashboardData = async (req, res) => {
