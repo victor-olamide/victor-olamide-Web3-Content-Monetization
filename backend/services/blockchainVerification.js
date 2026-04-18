@@ -111,6 +111,7 @@ async function getTransactionDetails(txId) {
 
 /**
  * Verify transaction status on blockchain with caching
+ * Polls the Stacks API to get current transaction status and confirmations.
  * @param {string} txId - Transaction ID
  * @param {number} minConfirmations - Minimum confirmations required
  * @returns {Promise<Object>} Verification result
