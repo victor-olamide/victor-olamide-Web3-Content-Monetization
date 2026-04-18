@@ -540,6 +540,14 @@ function clearVerificationCache() {
   verificationCache.clear();
 }
 
+/**
+ * Invalidate cache for a specific transaction
+ * @param {string} txId - Transaction ID
+ */
+function invalidateCacheForTx(txId) {
+  verificationCache.delete(txId);
+}
+
 function getCacheStats() {
   return {
     size: verificationCache.size,
