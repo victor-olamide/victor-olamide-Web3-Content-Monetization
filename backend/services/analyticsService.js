@@ -273,8 +273,45 @@ class AnalyticsService {
         eventType: { $in: ['CONTENT_VIEW', 'CONTENT_PURCHASE'] }
       }).lean();
 
-      // Group by date
-      const groupedData = this.groupEventsByDate(events, granularity);
+      // Group by date based on granularity
+      const groupedData = {};
+      for (const event of events) {
+        let dateKey;
+        const eventDate = new Date(event.timestamp);
+
+        switch (granularity) {
+          case 'hourly':
+            const hour = new Date(eventDate);
+            hour.setMinutes(0, 0, 0);
+            dateKey = hour.toISOString();
+            break;
+          case 'daily':
+            const day = new Date(eventDate);
+            day.setHours(0, 0, 0, 0);
+            dateKey = day.toISOString().split('T')[0];
+            break;
+          case 'weekly':
+            const week = new Date(eventDate);
+            const dayOfWeek = week.getDay();
+            week.setDate(week.getDate() - dayOfWeek);
+            week.setHours(0, 0, 0, 0);
+            dateKey = week.toISOString().split('T')[0];
+            break;
+          case 'monthly':
+            const month = new Date(eventDate);
+            month.setDate(1);
+            month.setHours(0, 0, 0, 0);
+            dateKey = month.toISOString().slice(0, 7); // YYYY-MM
+            break;
+          default:
+            dateKey = eventDate.toISOString().split('T')[0];
+        }
+
+        if (!groupedData[dateKey]) {
+          groupedData[dateKey] = [];
+        }
+        groupedData[dateKey].push(event);
+      }
 
       // Calculate metrics
       const periodData = [];
