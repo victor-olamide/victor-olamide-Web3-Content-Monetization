@@ -96,6 +96,14 @@ const getCreatorAnalytics = async (req, res) => {
       });
     }
 
+    // Validate creator ID format (assuming MongoDB ObjectId)
+    if (!/^[0-9a-fA-F]{24}$/.test(creatorId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid creator ID format',
+      });
+    }
+
     // Validate date parameters
     if (!startDate || !endDate) {
       return res.status(400).json({
