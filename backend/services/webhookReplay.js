@@ -1,5 +1,6 @@
 const WebhookEvent = require('../models/WebhookEvent');
 const webhookService = require('./webhookService');
+const logger = require('../utils/logger');
 
 async function replayUnprocessed(limit = 100) {
   const events = await WebhookEvent.find({ processed: false }).limit(limit);
@@ -7,7 +8,7 @@ async function replayUnprocessed(limit = 100) {
     try {
       await webhookService.processEvent(e);
     } catch (err) {
-      console.error('Replay failed for event', e.eventId, err.message);
+      logger.error('Replay failed for event', { eventId: e.eventId, err: err.message });
     }
   }
 }
