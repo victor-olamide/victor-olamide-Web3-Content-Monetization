@@ -14,6 +14,7 @@ const {
 const { checkRateLimit, releaseRequest } = require('../services/rateLimitService');
 const { generateKey } = require('../services/rateLimitService');
 const { DEFAULTS } = require('../config/rateLimitConfig');
+const logger = require('../utils/logger');
 
 /**
  * Create a subscription-based rate limiter middleware
@@ -108,13 +109,13 @@ function createSubscriptionRateLimiter(options = {}) {
         try {
           await releaseRequest(key);
         } catch (err) {
-          console.error('Error releasing rate limit on finish:', err.message);
+          logger.error('Error releasing rate limit on finish', { err: err.message });
         }
       });
 
       next();
     } catch (error) {
-      console.error('Subscription rate limiter error:', error.message);
+      logger.error('Subscription rate limiter error', { err: error.message });
       // Fail-open on error
       next();
     }
@@ -224,7 +225,7 @@ function createUpgradeAwareRateLimiter() {
       // Call the main subscription rate limiter
       return createSubscriptionRateLimiter()(req, res, next);
     } catch (error) {
-      console.error('Upgrade aware rate limiter error:', error.message);
+      logger.error('Upgrade aware rate limiter error', { err: error.message });
       next();
     }
   };
