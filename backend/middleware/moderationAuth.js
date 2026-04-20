@@ -7,6 +7,18 @@ const ModerationQueue = require('../models/ModerationQueue');
 const logger = require('../utils/logger');
 
 /**
+ * Parse a comma-separated list of Stacks addresses from an env var.
+ * Trims whitespace from each entry and removes empty strings.
+ */
+function parseAddressList(envValue) {
+  if (!envValue) return [];
+  return envValue
+    .split(',')
+    .map(addr => addr.trim())
+    .filter(addr => addr.length > 0);
+}
+
+/**
  * Verify user is a moderator
  * Checks if user address is in authorized moderators list
  */
