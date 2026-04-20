@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 /**
  * Analytics Service
  * Handles analytics data collection, processing, and aggregation
@@ -27,7 +28,7 @@ class AnalyticsService {
 
       return event;
     } catch (error) {
-      console.error('Error tracking analytics event:', error);
+      logger.error('Error tracking analytics event', { err: error });
       throw error;
     }
   }
@@ -48,7 +49,7 @@ class AnalyticsService {
           enriched.userCity = user.city;
         }
       } catch (error) {
-        console.warn('Could not enrich user data:', error);
+        logger.warn('Could not enrich user data', { err: error });
       }
     }
 
@@ -61,7 +62,7 @@ class AnalyticsService {
           enriched.creatorId = content.creator;
         }
       } catch (error) {
-        console.warn('Could not enrich content data:', error);
+        logger.warn('Could not enrich content data', { err: error });
       }
     }
 
@@ -124,9 +125,9 @@ class AnalyticsService {
     try {
       // Update real-time counters in Redis or in-memory cache
       // This would typically use Redis for real-time metrics
-      console.log('Processing real-time metrics for event:', event.eventType);
+      logger.info('Processing real-time metrics for event:', event.eventType);
     } catch (error) {
-      console.error('Error processing real-time metrics:', error);
+      logger.error('Error processing real-time metrics', { err: error });
     }
   }
 
@@ -146,7 +147,7 @@ class AnalyticsService {
       }).limit(50000); // Limit to prevent memory issues
 
       if (events.length === 0) {
-        console.log('No unprocessed events found for aggregation');
+        logger.info('No unprocessed events found for aggregation');
         return;
       }
 
@@ -189,7 +190,7 @@ class AnalyticsService {
       console.log(`Aggregation completed in ${processingTime}ms. Processed ${events.length} events.`);
 
     } catch (error) {
-      console.error('Error aggregating analytics data:', error);
+      logger.error('Error aggregating analytics data', { err: error });
       throw error;
     }
   }
@@ -264,7 +265,7 @@ class AnalyticsService {
         summary: this.calculateSummary(aggregations),
       };
     } catch (error) {
-      console.error('Error getting dashboard data:', error);
+      logger.error('Error getting dashboard data', { err: error });
       throw error;
     }
   }
@@ -359,7 +360,7 @@ class AnalyticsService {
 
       return deletedEvents.deletedCount;
     } catch (error) {
-      console.error('Error cleaning up old analytics data:', error);
+      logger.error('Error cleaning up old analytics data', { err: error });
       throw error;
     }
   }

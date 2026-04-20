@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 /**
  * Enhanced Rate Limit Service with Subscription Awareness
  * 
@@ -47,7 +48,7 @@ async function resolveUserTierFromSubscription(req) {
 
     return DEFAULTS.defaultTier;
   } catch (error) {
-    console.error('Error resolving user tier from subscription:', error.message);
+    logger.error('Error resolving user tier from subscription:', error.message);
     return DEFAULTS.defaultTier;
   }
 }
@@ -93,7 +94,7 @@ async function attachSubscriptionToRequest(userId, creatorId = null) {
       userId
     };
   } catch (error) {
-    console.error('Error attaching subscription to request:', error.message);
+    logger.error('Error attaching subscription to request:', error.message);
     return {
       hasSubscription: false,
       tier: TIER_LEVELS.FREE,
@@ -112,7 +113,7 @@ async function bulkResolveUserTiers(userIds) {
     const { getUsersRateLimitTiers } = require('../utils/subscriptionTierMapper');
     return await getUsersRateLimitTiers(userIds);
   } catch (error) {
-    console.error('Error bulk resolving user tiers:', error.message);
+    logger.error('Error bulk resolving user tiers:', error.message);
     const fallback = new Map();
     userIds.forEach(id => fallback.set(id, TIER_LEVELS.FREE));
     return fallback;

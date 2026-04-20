@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 /**
  * Rate Limiting Monitoring and Metrics
  * 
@@ -51,7 +52,7 @@ async function collectMetrics(options = {}) {
 
     return metrics;
   } catch (error) {
-    console.error('Error collecting metrics:', error.message);
+    logger.error('Error collecting metrics:', error.message);
     return {
       timestamp: new Date().toISOString(),
       error: error.message
@@ -136,7 +137,7 @@ async function getTierStatistics(timeframe = 'day') {
       uniqueUserCount: 0
     };
   } catch (error) {
-    console.error('Error getting tier statistics:', error.message);
+    logger.error('Error getting tier statistics:', error.message);
     return {};
   }
 }
@@ -194,7 +195,7 @@ async function getViolationMetrics(timeframe = 'day') {
       totalUsersBlocked: violations.reduce((sum, v) => sum + v.usersBlocked, 0)
     };
   } catch (error) {
-    console.error('Error getting violation metrics:', error.message);
+    logger.error('Error getting violation metrics:', error.message);
     return {};
   }
 }
@@ -242,7 +243,7 @@ async function getSystemHealth() {
       })
     };
   } catch (error) {
-    console.error('Error getting system health:', error.message);
+    logger.error('Error getting system health:', error.message);
     return {
       status: 'error',
       error: error.message
@@ -339,7 +340,7 @@ async function getTopViolators(limit = 10, timeframe = 'day') {
       .select('key tier violations lastViolationAt blockedUntil')
       .lean();
   } catch (error) {
-    console.error('Error getting top violators:', error.message);
+    logger.error('Error getting top violators:', error.message);
     return [];
   }
 }
@@ -413,7 +414,7 @@ async function getUpgradeTrends(timeframe = 'day', buckets = 24) {
 
     return trends;
   } catch (error) {
-    console.error('Error getting upgrade trends:', error.message);
+    logger.error('Error getting upgrade trends:', error.message);
     return [];
   }
 }
@@ -452,7 +453,7 @@ async function generateReport(options = {}) {
 
     return report;
   } catch (error) {
-    console.error('Error generating report:', error.message);
+    logger.error('Error generating report:', error.message);
     return {
       error: error.message,
       generatedAt: new Date().toISOString()

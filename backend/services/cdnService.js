@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const axios = require('axios');
 const crypto = require('crypto');
 const { cdnConfig, getProviderConfig, getContentTypeConfig, generateCdnUrl } = require('../config/cdnConfig');
@@ -103,7 +104,7 @@ class CdnService {
       };
 
     } catch (error) {
-      console.error('Failed to add content to CDN cache:', error);
+      logger.error('Failed to add content to CDN cache', { err: error });
       return { success: false, error: error.message };
     }
   }
@@ -151,7 +152,7 @@ class CdnService {
 
       return null;
     } catch (error) {
-      console.error('Failed to get CDN URL:', error);
+      logger.error('Failed to get CDN URL', { err: error });
       return null;
     }
   }
@@ -221,7 +222,7 @@ class CdnService {
       };
 
     } catch (error) {
-      console.error('Failed to purge CDN content:', error);
+      logger.error('Failed to purge CDN content', { err: error });
       return { success: false, error: error.message };
     }
   }
@@ -446,7 +447,7 @@ class CdnService {
       };
 
     } catch (error) {
-      console.error('Failed to get CDN analytics:', error);
+      logger.error('Failed to get CDN analytics', { err: error });
       return { success: false, error: error.message };
     }
   }
@@ -513,7 +514,7 @@ class CdnService {
       };
 
     } catch (error) {
-      console.error('Failed to perform CDN health check:', error);
+      logger.error('Failed to perform CDN health check', { err: error });
       return { success: false, error: error.message };
     }
   }
