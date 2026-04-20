@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const express = require('express');
 const router = express.Router();
 const Content = require('../models/Content');
@@ -22,7 +23,7 @@ router.get('/:contentId/stream', verifyContentAccess, rateLimitMiddleware, async
     res.setHeader('X-Access-Method', req.accessInfo.method);
     res.send(contentData);
   } catch (err) {
-    console.error('Content delivery error:', err);
+    logger.error('Content delivery error', { err });
     res.status(500).json({ message: 'Failed to deliver content', error: err.message });
   }
 });

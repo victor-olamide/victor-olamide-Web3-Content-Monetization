@@ -1,5 +1,6 @@
 const ContentPreview = require('../models/ContentPreview');
 const Content = require('../models/Content');
+const logger = require('../utils/logger');
 
 /**
  * Middleware to verify that a user can access preview features
@@ -28,7 +29,7 @@ const verifyPreviewAccess = async (req, res, next) => {
     req.content = content;
     next();
   } catch (error) {
-    console.error('Error in verifyPreviewAccess middleware:', error);
+    logger.error('Error in verifyPreviewAccess middleware', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to verify preview access'
@@ -78,7 +79,7 @@ const verifyPreviewOwnership = async (req, res, next) => {
     req.content = content;
     next();
   } catch (error) {
-    console.error('Error in verifyPreviewOwnership middleware:', error);
+    logger.error('Error in verifyPreviewOwnership middleware', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to verify preview ownership'
@@ -106,7 +107,7 @@ const checkPreviewEnabled = async (req, res, next) => {
     req.preview = preview;
     next();
   } catch (error) {
-    console.error('Error in checkPreviewEnabled middleware:', error);
+    logger.error('Error in checkPreviewEnabled middleware', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to check preview availability'
@@ -158,7 +159,7 @@ const validatePreviewUpload = (req, res, next) => {
 
     next();
   } catch (error) {
-    console.error('Error in validatePreviewUpload middleware:', error);
+    logger.error('Error in validatePreviewUpload middleware', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to validate file upload'
@@ -204,7 +205,7 @@ const rateLimitPreviewUploads = (() => {
 
       next();
     } catch (error) {
-      console.error('Error in rateLimitPreviewUploads middleware:', error);
+      logger.error('Error in rateLimitPreviewUploads middleware', { err: error });
       next();
     }
   };
@@ -219,7 +220,7 @@ const logPreviewOperation = (operation) => {
     const contentId = req.params.contentId || 'unknown';
     const timestamp = new Date().toISOString();
 
-    console.log(`[Preview] ${operation} - Content: ${contentId}, User: ${userAddress}, Time: ${timestamp}`);
+    logger.info('Preview operation', { operation, contentId, userAddress, timestamp });
     next();
   };
 };
@@ -247,7 +248,7 @@ const validatePreviewMetadata = (req, res, next) => {
 
     next();
   } catch (error) {
-    console.error('Error in validatePreviewMetadata middleware:', error);
+    logger.error('Error in validatePreviewMetadata middleware', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to validate metadata'
@@ -302,7 +303,7 @@ const trackPreviewAnalytics = async (req, res, next) => {
 
     next();
   } catch (error) {
-    console.error('Error tracking analytics:', error);
+    logger.error('Error tracking analytics', { err: error });
     next();
   }
 };

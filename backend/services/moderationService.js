@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 /**
  * Moderation Service
  * Core service for managing moderation queue and workflow
@@ -20,7 +21,7 @@ class ModerationService {
         .lean();
       return (lastQueue?.queueId || 0) + 1;
     } catch (error) {
-      console.error('Error getting next queue ID:', error);
+      logger.error('Error getting next queue ID', { err: error });
       throw error;
     }
   }
@@ -99,7 +100,7 @@ class ModerationService {
 
       return queue;
     } catch (error) {
-      console.error('Error creating moderation queue entry:', error);
+      logger.error('Error creating moderation queue entry', { err: error });
       throw error;
     }
   }
@@ -161,7 +162,7 @@ class ModerationService {
 
       return queue;
     } catch (error) {
-      console.error('Error merging flags:', error);
+      logger.error('Error merging flags', { err: error });
       throw error;
     }
   }
@@ -215,7 +216,7 @@ class ModerationService {
         hasMore: skip + queue.length < total
       };
     } catch (error) {
-      console.error('Error fetching queue:', error);
+      logger.error('Error fetching queue', { err: error });
       throw error;
     }
   }
@@ -262,7 +263,7 @@ class ModerationService {
 
       return queue;
     } catch (error) {
-      console.error('Error assigning queue entry:', error);
+      logger.error('Error assigning queue entry', { err: error });
       throw error;
     }
   }
@@ -302,7 +303,7 @@ class ModerationService {
 
       return queue;
     } catch (error) {
-      console.error('Error starting review:', error);
+      logger.error('Error starting review', { err: error });
       throw error;
     }
   }
@@ -349,7 +350,7 @@ class ModerationService {
 
       return queue;
     } catch (error) {
-      console.error('Error approving content:', error);
+      logger.error('Error approving content', { err: error });
       throw error;
     }
   }
@@ -412,7 +413,7 @@ class ModerationService {
 
       return queue;
     } catch (error) {
-      console.error('Error rejecting content:', error);
+      logger.error('Error rejecting content', { err: error });
       throw error;
     }
   }
@@ -468,7 +469,7 @@ class ModerationService {
 
       return queue;
     } catch (error) {
-      console.error('Error filing appeal:', error);
+      logger.error('Error filing appeal', { err: error });
       throw error;
     }
   }
@@ -488,7 +489,7 @@ class ModerationService {
       await log.save();
       return log;
     } catch (error) {
-      console.error('Error creating audit log:', error);
+      logger.error('Error creating audit log', { err: error });
       // Don't throw - audit logs shouldn't block operations
     }
   }
@@ -621,7 +622,7 @@ class ModerationService {
 
       return stats;
     } catch (error) {
-      console.error('Error getting stats:', error);
+      logger.error('Error getting stats', { err: error });
       throw error;
     }
   }

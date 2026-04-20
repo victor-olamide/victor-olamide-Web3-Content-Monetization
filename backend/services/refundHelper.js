@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 /**
  * Refund utility helper functions
  */
@@ -76,7 +77,7 @@ async function getContentRefundStats(contentId) {
       refundRate: purchases.length > 0 ? ((refunds.length / purchases.length) * 100).toFixed(2) + '%' : '0%'
     };
   } catch (error) {
-    console.error('Error getting content refund stats:', error);
+    logger.error('Error getting content refund stats', { err: error });
     return { error: error.message };
   }
 }
@@ -111,7 +112,7 @@ async function getCreatorRefundAnalytics(creator) {
       contentStats: contentRefundStats
     };
   } catch (error) {
-    console.error('Error getting creator refund analytics:', error);
+    logger.error('Error getting creator refund analytics', { err: error });
     return { error: error.message };
   }
 }
@@ -133,7 +134,7 @@ async function findEligibleForCompletion() {
 
     return approved;
   } catch (error) {
-    console.error('Error finding eligible refunds:', error);
+    logger.error('Error finding eligible refunds', { err: error });
     return [];
   }
 }
@@ -178,7 +179,7 @@ async function getMonthlyRefundTrend() {
       }, {})
     };
   } catch (error) {
-    console.error('Error getting refund trend:', error);
+    logger.error('Error getting refund trend', { err: error });
     return { error: error.message };
   }
 }

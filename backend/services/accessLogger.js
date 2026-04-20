@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const mongoose = require('mongoose');
 
 const accessLogSchema = new mongoose.Schema({
@@ -21,7 +22,7 @@ async function logAccess(data) {
     const log = new AccessLog(data);
     await log.save();
   } catch (err) {
-    console.error('Access logging error:', err);
+    logger.error('Access logging error:', err);
   }
 }
 

@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const ProRataRefund = require('../models/ProRataRefund');
 const Subscription = require('../models/Subscription');
 const {
@@ -26,7 +27,7 @@ const schedulerStats = {
  */
 const initializeRefundScheduler = (interval = 3600000) => {
   if (isSchedulerRunning) {
-    console.warn('[ProRataRefundScheduler] Scheduler is already running');
+    logger.warn('[ProRataRefundScheduler] Scheduler is already running');
     return { status: 'already_running' };
   }
 
@@ -57,7 +58,7 @@ const initializeRefundScheduler = (interval = 3600000) => {
  */
 const stopRefundScheduler = () => {
   if (!isSchedulerRunning) {
-    console.warn('[ProRataRefundScheduler] Scheduler is not running');
+    logger.warn('[ProRataRefundScheduler] Scheduler is not running');
     return { status: 'not_running' };
   }
 
@@ -71,7 +72,7 @@ const stopRefundScheduler = () => {
   }
 
   isSchedulerRunning = false;
-  console.log('[ProRataRefundScheduler] Scheduler stopped');
+  logger.info('[ProRataRefundScheduler] Scheduler stopped');
 
   return {
     status: 'stopped',
@@ -87,7 +88,7 @@ const processApprovedRefunds = async () => {
   const startTime = Date.now();
 
   try {
-    console.log('[ProRataRefundScheduler] Starting refund processing cycle...');
+    logger.info('[ProRataRefundScheduler] Starting refund processing cycle...');
 
     // Get all approved refunds
     const approvedRefunds = await ProRataRefund.find({ refundStatus: 'approved' });
@@ -129,7 +130,7 @@ const processApprovedRefunds = async () => {
         try {
           await rejectProRataRefund(refund._id, `Error during processing: ${error.message}`);
         } catch (rejectError) {
-          console.error('[ProRataRefundScheduler] Failed to mark refund as failed:', rejectError.message);
+          logger.error('[ProRataRefundScheduler] Failed to mark refund as failed:', rejectError.message);
         }
       }
     }
@@ -168,7 +169,7 @@ const processApprovedRefunds = async () => {
 
     console.log(`[ProRataRefundScheduler] Processing cycle complete | Processed: ${processedCount} | Success: ${successCount} | Failed: ${failureCount} | Time: ${processingTime}ms`);
   } catch (error) {
-    console.error('[ProRataRefundScheduler] Fatal error during processing:', error.message);
+    logger.error('[ProRataRefundScheduler] Fatal error during processing:', error.message);
   }
 };
 
@@ -283,7 +284,7 @@ const archiveOldRefunds = async (daysOld = 365) => {
       archivedCount: result.modifiedCount
     };
   } catch (error) {
-    console.error('[ProRataRefundScheduler] Archive failed:', error.message);
+    logger.error('[ProRataRefundScheduler] Archive failed:', error.message);
     return {
       success: false,
       message: 'Failed to archive refunds',

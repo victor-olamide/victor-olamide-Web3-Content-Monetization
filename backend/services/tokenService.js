@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const axios = require('axios');
 
 const STACKS_API_URL = process.env.STACKS_API_URL || 'https://api.mainnet.hiro.so';
@@ -43,9 +44,9 @@ async function getBalances(address) {
       }
     } else if (error.request) {
       // Request was made but no response was received
-      console.error('Hiro API no response:', error.message);
+      logger.error('Hiro API no response:', error.message);
     } else {
-      console.error('Error setting up Hiro API request:', error.message);
+      logger.error('Error setting up Hiro API request:', error.message);
     }
     throw error; // Propagate error so caller can handle it
   }
@@ -70,7 +71,7 @@ async function verifyFTBalance(address, contractAddress, minBalance = 1) {
     
     return false;
   } catch (error) {
-    console.error('Error verifying FT balance:', error.message);
+    logger.error('Error verifying FT balance:', error.message);
     return false;
   }
 }
@@ -94,7 +95,7 @@ async function verifyNFTOwnership(address, contractAddress, minCount = 1) {
     
     return false;
   } catch (error) {
-    console.error('Error verifying NFT ownership:', error.message);
+    logger.error('Error verifying NFT ownership:', error.message);
     return false;
   }
 }

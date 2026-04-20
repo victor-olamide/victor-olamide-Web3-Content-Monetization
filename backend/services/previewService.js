@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const ContentPreview = require('../models/ContentPreview');
 const Content = require('../models/Content');
 const Purchase = require('../models/Purchase');
@@ -89,7 +90,7 @@ class PreviewService {
 
       return previewDoc;
     } catch (error) {
-      console.error('Error creating/updating preview:', error);
+      logger.error('Error creating/updating preview', { err: error });
       throw error;
     }
   }
@@ -141,7 +142,7 @@ class PreviewService {
 
       return previewData;
     } catch (error) {
-      console.error('Error fetching preview:', error);
+      logger.error('Error fetching preview', { err: error });
       throw error;
     }
   }
@@ -159,7 +160,7 @@ class PreviewService {
       });
       return previews;
     } catch (error) {
-      console.error('Error fetching previews:', error);
+      logger.error('Error fetching previews', { err: error });
       throw error;
     }
   }
@@ -228,7 +229,7 @@ class PreviewService {
         accessType: 'preview_only'
       };
     } catch (error) {
-      console.error('Error checking access status:', error);
+      logger.error('Error checking access status', { err: error });
       throw error;
     }
   }
@@ -272,7 +273,7 @@ class PreviewService {
 
       return stats;
     } catch (error) {
-      console.error('Error getting preview stats:', error);
+      logger.error('Error getting preview stats', { err: error });
       throw error;
     }
   }
@@ -296,7 +297,7 @@ class PreviewService {
 
       return preview;
     } catch (error) {
-      console.error('Error toggling preview visibility:', error);
+      logger.error('Error toggling preview visibility', { err: error });
       throw error;
     }
   }
@@ -311,7 +312,7 @@ class PreviewService {
       await ContentPreview.deleteOne({ contentId });
       return { success: true, message: 'Preview deleted' };
     } catch (error) {
-      console.error('Error deleting preview:', error);
+      logger.error('Error deleting preview', { err: error });
       throw error;
     }
   }
@@ -347,7 +348,7 @@ class PreviewService {
         limit
       };
     } catch (error) {
-      console.error('Error getting previews by type:', error);
+      logger.error('Error getting previews by type', { err: error });
       throw error;
     }
   }
@@ -370,7 +371,7 @@ class PreviewService {
 
       return preview;
     } catch (error) {
-      console.error('Error recording preview download:', error);
+      logger.error('Error recording preview download', { err: error });
       throw error;
     }
   }
@@ -397,7 +398,7 @@ class PreviewService {
 
       return previews;
     } catch (error) {
-      console.error('Error getting trending previews:', error);
+      logger.error('Error getting trending previews', { err: error });
       throw error;
     }
   }
@@ -435,7 +436,7 @@ class PreviewService {
       preview.previewAnalytics.lastAnalyticsUpdate = new Date();
       await preview.save();
     } catch (error) {
-      console.error('Error tracking daily analytics:', error);
+      logger.error('Error tracking daily analytics', { err: error });
       // Don't throw - analytics tracking should not break preview functionality
     }
   }
@@ -461,7 +462,7 @@ class PreviewService {
         lastUpdated: preview.updatedAt
       };
     } catch (error) {
-      console.error('Error getting preview analytics:', error);
+      logger.error('Error getting preview analytics', { err: error });
       throw error;
     }
   }
@@ -487,7 +488,7 @@ class PreviewService {
         averageWatchTime: preview.previewAnalytics?.averageWatchTime || 0
       }));
     } catch (error) {
-      console.error('Error getting previews with analytics:', error);
+      logger.error('Error getting previews with analytics', { err: error });
       throw error;
     }
   }

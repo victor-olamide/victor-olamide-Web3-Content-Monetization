@@ -1,5 +1,6 @@
 const { verifySession } = require('../services/walletService');
 const WalletSession = require('../models/WalletSession');
+const logger = require('../utils/logger');
 
 /**
  * Middleware to verify wallet is authenticated
@@ -35,7 +36,7 @@ async function verifyWalletAuth(req, res, next) {
 
     next();
   } catch (error) {
-    console.error('Wallet auth middleware error:', error);
+    logger.error('Wallet auth middleware error', { err: error });
     res.status(500).json({
       message: 'Authentication error',
       error: error.message
@@ -65,7 +66,7 @@ async function optionalWalletAuth(req, res, next) {
     next();
   } catch (error) {
     // Log error but don't fail
-    console.warn('Optional wallet auth warning:', error.message);
+    logger.warn('Optional wallet auth warning', { err: error.message });
     next();
   }
 }
@@ -112,7 +113,7 @@ async function verifyWalletOwnership(req, res, next) {
 
     next();
   } catch (error) {
-    console.error('Wallet ownership verification error:', error);
+    logger.error('Wallet ownership verification error', { err: error });
     res.status(500).json({
       message: 'Verification error',
       error: error.message
@@ -189,7 +190,7 @@ async function checkSessionExpiration(req, res, next) {
 
     next();
   } catch (error) {
-    console.warn('Session expiration check error:', error);
+    logger.warn('Session expiration check error', { err: error });
     next();
   }
 }

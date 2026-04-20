@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 /**
  * IPFS Pinning Manager
  * Manages content lifecycle pinning operations and monitoring
@@ -286,7 +287,7 @@ class PinningManager {
       clearTimeout(this.initialHealthCheckTimeout);
       this.initialHealthCheckTimeout = null;
     }
-    console.log('[PinningManager] Monitoring stopped');
+    logger.info('[PinningManager] Monitoring stopped');
   }
 
   /**
@@ -445,9 +446,9 @@ async function initializePinningService() {
   try {
     // The PinningManager constructor already initializes the service
     // This function ensures the service is ready
-    console.log('[PinningManager] Service initialized and ready');
+    logger.info('[PinningManager] Service initialized and ready');
   } catch (error) {
-    console.error('[PinningManager] Initialization failed:', error);
+    logger.error('[PinningManager] Initialization failed', { err: error });
     throw error;
   }
 }

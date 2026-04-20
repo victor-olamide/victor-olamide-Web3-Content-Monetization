@@ -2,6 +2,7 @@ const Subscription = require('../models/Subscription');
 const SubscriptionRenewal = require('../models/SubscriptionRenewal');
 const Content = require('../models/Content');
 const { calculatePlatformFee } = require('./contractService');
+const logger = require('../utils/logger');
 
 /**
  * Validate renewal eligibility parameters
@@ -107,7 +108,7 @@ async function initiateRenewal(subscriptionId, renewalType = 'automatic') {
     try {
       platformFee = await calculatePlatformFee(subscription.amount);
     } catch (error) {
-      console.warn('Could not calculate platform fee:', error.message);
+      logger.warn('Could not calculate platform fee', { err: error.message });
       platformFee = Math.floor(subscription.amount * 0.025); // Fallback to 2.5%
     }
 
@@ -317,7 +318,7 @@ async function getSubscriptionsDueForRenewal(daysBeforeExpiry = 3) {
 
     return subscriptions;
   } catch (error) {
-    console.error('Error fetching subscriptions due for renewal:', error);
+    logger.error('Error fetching subscriptions due for renewal', { err: error });
     return [];
   }
 }
@@ -341,7 +342,7 @@ async function getExpiredSubscriptionsInGracePeriod() {
 
     return subscriptions;
   } catch (error) {
-    console.error('Error fetching expired subscriptions in grace period:', error);
+    logger.error('Error fetching expired subscriptions in grace period', { err: error });
     return [];
   }
 }
@@ -365,7 +366,7 @@ async function getExpiredSubscriptionsGraceEnded() {
 
     return subscriptions;
   } catch (error) {
-    console.error('Error fetching grace period ended subscriptions:', error);
+    logger.error('Error fetching grace period ended subscriptions', { err: error });
     return [];
   }
 }
@@ -416,7 +417,7 @@ async function getRenewalHistory(subscriptionId) {
 
     return renewals;
   } catch (error) {
-    console.error('Error fetching renewal history:', error);
+    logger.error('Error fetching renewal history', { err: error });
     return [];
   }
 }
@@ -473,7 +474,7 @@ async function getUserSubscriptionStatus(user) {
 
     return status;
   } catch (error) {
-    console.error('Error getting user subscription status:', error);
+    logger.error('Error getting user subscription status', { err: error });
     return { error: error.message };
   }
 }

@@ -395,7 +395,7 @@ class BackupSchedulerService {
     }
     isRunning = false;
     activeBackups.clear();
-    console.log('Backup scheduler stopped');
+    logger.info('Backup scheduler stopped');
   }
 
   /**
