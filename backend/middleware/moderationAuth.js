@@ -94,7 +94,7 @@ async function verifyAdmin(req, res, next) {
 
     next();
   } catch (error) {
-    console.error('Admin verification error:', error);
+    logger.error('Admin verification error', { err: error });
     res.status(500).json({
       success: false,
       error: 'Authorization verification failed'
