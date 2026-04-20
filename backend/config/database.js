@@ -1,5 +1,9 @@
 // MongoDB Replica Set Configuration
 // Production-ready database configuration for MongoDB cluster
+//
+// Required env vars: MONGO_APP_USERNAME, MONGO_APP_PASSWORD, MONGO_DATABASE
+// Optional env vars: MONGODB_URI (overrides per-host config), MONGO_HOSTS, MONGO_REPLICA_SET_NAME,
+//                    MONGO_AUTH_SOURCE, MONGO_SSL_ENABLED, STACKS_NODE_URL
 
 const mongoose = require('mongoose');
 const logger = require('../utils/logger');
