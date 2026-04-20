@@ -4,6 +4,7 @@
  */
 
 const ModerationQueue = require('../models/ModerationQueue');
+const logger = require('../utils/logger');
 
 /**
  * Verify user is a moderator
