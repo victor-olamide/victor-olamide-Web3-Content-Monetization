@@ -492,5 +492,9 @@ module.exports = {
   disconnectWallet,
   revokeSession,
   cleanupExpiredSessions,
-  updateWalletProfile
+  updateWalletProfile,
+  verifyStacksSignature,
+  buildSignMessage,
+  hashSignMessage,
+  getPendingChallengeCount,
 };
