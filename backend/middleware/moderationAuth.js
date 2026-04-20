@@ -47,6 +47,7 @@ async function verifyModerator(req, res, next) {
     );
 
     if (!isAuthorized) {
+      logger.warn('Unauthorized moderator access attempt', { address: moderatorAddress.toLowerCase() });
       return res.status(403).json({
         success: false,
         error: 'You do not have moderator permissions'
