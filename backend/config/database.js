@@ -279,4 +279,5 @@ module.exports = {
   dbConnection,
   mongoOptions,
   buildMongoURI,
+  validateDbCredentials,
 };
