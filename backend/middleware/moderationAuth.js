@@ -34,6 +34,9 @@ async function verifyModerator(req, res, next) {
     }
 
     const authorizedModerators = parseAddressList(process.env.AUTHORIZED_MODERATORS);
+    if (authorizedModerators.length === 0) {
+      logger.warn('AUTHORIZED_MODERATORS is not configured — all moderator access will be denied');
+    }
     const isAuthorized = authorizedModerators.some(
       addr => addr.toLowerCase() === moderatorAddress.toLowerCase()
     );
