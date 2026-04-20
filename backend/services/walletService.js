@@ -130,6 +130,12 @@ async function connectWallet(address, walletType, publicKey, signature, nonce, n
       throw new Error('Challenge expired — request a new connection challenge');
     }
 
+    const signedMessage = buildSignMessage(nonce, challenge.timestamp);
+    const isValid = verifyStacksSignature(signedMessage, signature, publicKey);
+    if (!isValid) {
+      throw new Error('Signature verification failed — signature does not match the provided public key');
+    }
+
     // Check if wallet already connected
     let walletConnection = await WalletConnection.findOne({
       address: address.toLowerCase(),
