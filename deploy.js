@@ -22,7 +22,7 @@ const { STACKS_MAINNET } = require(path.join(STACKS_MODULES, '@stacks/network'))
 const { generateWallet } = require(path.join(STACKS_MODULES, '@stacks/wallet-sdk'));
 
 const MNEMONIC        = process.env.DEPLOYER_MNEMONIC;
-const DEPLOYER        = 'SPG2T28R84NNF0AB8PFQRSGY16CD76KV72YHPADH';
+const DEPLOYER        = process.env.DEPLOYER_ADDRESS;
 const NODE_URL        = 'https://api.mainnet.hiro.so';
 const NETWORK         = { ...STACKS_MAINNET, coreApiUrl: NODE_URL };
 const CONTRACTS_DIR   = path.join(__dirname, 'contracts');
