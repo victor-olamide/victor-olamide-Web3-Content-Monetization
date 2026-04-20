@@ -15,7 +15,12 @@ function parseAddressList(envValue) {
   return envValue
     .split(',')
     .map(addr => addr.trim())
-    .filter(addr => addr.length > 0);
+    .filter(addr => addr.length > 0)
+    .filter(addr => {
+      const valid = /^S[PT][A-Z0-9]{33,}$/.test(addr);
+      if (!valid) logger.warn('parseAddressList: ignoring invalid Stacks address format', { addr });
+      return valid;
+    });
 }
 
 /**
