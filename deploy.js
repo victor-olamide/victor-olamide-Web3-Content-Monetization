@@ -99,7 +99,7 @@ async function main() {
   console.log(`  Deployer: ${DEPLOYER}`);
   console.log('════════════════════════════════════════════════════\n');
 
-  // Derive private key from mnemonic
+  // Derive private key from mnemonic — do not log the mnemonic itself
   console.log('Deriving private key from mnemonic...');
   const wallet     = await generateWallet({ secretKey: MNEMONIC, password: '' });
   const account    = wallet.accounts[0];
