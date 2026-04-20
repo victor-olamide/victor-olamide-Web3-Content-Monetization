@@ -28,8 +28,8 @@ const mongoOptions = {
 
   // Authentication
   authSource: 'admin',
-  user: process.env.MONGO_APP_USERNAME || 'web3app',
-  pass: process.env.MONGO_APP_PASSWORD || 'web3app_password_123',
+  user: process.env.MONGO_APP_USERNAME,
+  pass: process.env.MONGO_APP_PASSWORD,
 
   // SSL/TLS configuration
   ssl: process.env.MONGO_SSL_ENABLED === 'true',
