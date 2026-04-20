@@ -66,6 +66,12 @@ function validateDbCredentials() {
   if (password && password.length < 12) {
     logger.warn('MONGO_APP_PASSWORD is shorter than 12 characters — use a stronger password in production');
   }
+
+  logger.debug('Database credentials validated', {
+    user: process.env.MONGO_APP_USERNAME,
+    database: process.env.MONGO_DATABASE,
+    authSource: process.env.MONGO_AUTH_SOURCE || 'admin',
+  });
 }
 
 // Build MongoDB connection URI for replica set
