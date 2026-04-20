@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const logger = require('../utils/logger');
 const previewService = require('../services/previewService');
 const ContentPreview = require('../models/ContentPreview');
 const Content = require('../models/Content');
@@ -32,7 +33,7 @@ router.get('/:contentId', validateContentId, async (req, res) => {
     const preview = await previewService.getPreview(parseInt(contentId));
     res.json({ success: true, data: preview });
   } catch (error) {
-    console.error('Error fetching preview:', error);
+    logger.error('Error fetching preview', { err: error });
     res.status(404).json({ success: false, error: error.message });
   }
 });
@@ -51,7 +52,7 @@ router.post('/batch/get', validateBatchContentIds, async (req, res) => {
     const previews = await previewService.getPreviews(contentIds);
     res.json({ success: true, data: previews });
   } catch (error) {
-    console.error('Error fetching batch previews:', error);
+    logger.error('Error fetching batch previews', { err: error });
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -69,7 +70,7 @@ router.get('/type/:contentType', validateContentType, validatePaginationParams, 
     const result = await previewService.getPreviewsByType(contentType, { skip, limit });
     res.json({ success: true, data: result });
   } catch (error) {
-    console.error('Error fetching previews by type:', error);
+    logger.error('Error fetching previews by type', { err: error });
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -86,7 +87,7 @@ router.get('/trending', async (req, res) => {
     const previews = await previewService.getTrendingPreviews({ limit, days });
     res.json({ success: true, data: previews });
   } catch (error) {
-    console.error('Error fetching trending previews:', error);
+    logger.error('Error fetching trending previews', { err: error });
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -104,7 +105,7 @@ router.get('/:contentId/access/:userAddress', validateContentId, async (req, res
     );
     res.json({ success: true, data: accessStatus });
   } catch (error) {
-    console.error('Error checking access status:', error);
+    logger.error('Error checking access status', { err: error });
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -119,7 +120,7 @@ router.post('/:contentId/download', validateContentId, async (req, res) => {
     const preview = await previewService.recordPreviewDownload(parseInt(contentId));
     res.json({ success: true, data: preview });
   } catch (error) {
-    console.error('Error recording preview download:', error);
+    logger.error('Error recording preview download', { err: error });
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -146,7 +147,7 @@ router.post('/:contentId', verifyCreatorOwnership, validateContentId, validatePr
 
     res.json({ success: true, data: preview });
   } catch (error) {
-    console.error('Error creating preview:', error);
+    logger.error('Error creating preview', { err: error });
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -197,7 +198,7 @@ router.post('/:contentId/thumbnail', verifyCreatorOwnership, async (req, res) =>
         message: 'Thumbnail uploaded successfully'
       });
     } catch (error) {
-      console.error('Error uploading thumbnail:', error);
+      logger.error('Error uploading thumbnail', { err: error });
       res.status(500).json({ success: false, error: error.message });
     }
   });
@@ -252,7 +253,7 @@ router.post('/:contentId/trailer', verifyCreatorOwnership, async (req, res) => {
         message: 'Trailer uploaded successfully'
       });
     } catch (error) {
-      console.error('Error uploading trailer:', error);
+      logger.error('Error uploading trailer', { err: error });
       res.status(500).json({ success: false, error: error.message });
     }
   });
@@ -284,7 +285,7 @@ router.patch('/:contentId/metadata', verifyCreatorOwnership, async (req, res) =>
 
     res.json({ success: true, data: preview });
   } catch (error) {
-    console.error('Error updating preview metadata:', error);
+    logger.error('Error updating preview metadata', { err: error });
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -311,7 +312,7 @@ router.patch('/:contentId/visibility', verifyCreatorOwnership, async (req, res) 
 
     res.json({ success: true, data: preview });
   } catch (error) {
-    console.error('Error toggling preview visibility:', error);
+    logger.error('Error toggling preview visibility', { err: error });
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -326,7 +327,7 @@ router.get('/stats/:creatorAddress', async (req, res) => {
     const stats = await previewService.getPreviewStats(creatorAddress);
     res.json({ success: true, data: stats });
   } catch (error) {
-    console.error('Error fetching preview stats:', error);
+    logger.error('Error fetching preview stats', { err: error });
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -348,7 +349,7 @@ router.delete('/:contentId', verifyCreatorOwnership, async (req, res) => {
     const result = await previewService.deletePreview(parseInt(contentId));
     res.json({ success: true, data: result });
   } catch (error) {
-    console.error('Error deleting preview:', error);
+    logger.error('Error deleting preview', { err: error });
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -370,7 +371,7 @@ router.get('/:contentId/analytics', verifyCreatorOwnership, validateContentId, a
     const analytics = await previewService.getPreviewAnalytics(parseInt(contentId));
     res.json({ success: true, data: analytics });
   } catch (error) {
-    console.error('Error fetching preview analytics:', error);
+    logger.error('Error fetching preview analytics', { err: error });
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -397,7 +398,7 @@ router.post('/analytics/batch', verifyCreatorOwnership, validateBatchContentIds,
     const analytics = await previewService.getPreviewsWithAnalytics(contentIds);
     res.json({ success: true, data: analytics });
   } catch (error) {
-    console.error('Error fetching batch analytics:', error);
+    logger.error('Error fetching batch analytics', { err: error });
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -417,7 +418,7 @@ router.post('/:contentId/track/:eventType', validateContentId, validateEventType
     await previewService.trackDailyAnalytics(parseInt(contentId), eventType);
     res.json({ success: true, message: `Event tracked: ${eventType}` });
   } catch (error) {
-    console.error('Error tracking event:', error);
+    logger.error('Error tracking event', { err: error });
     res.status(500).json({ success: false, error: error.message });
   }
 });
