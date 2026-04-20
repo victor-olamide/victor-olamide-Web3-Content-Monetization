@@ -105,10 +105,12 @@ async function connectWallet(address, walletType, publicKey, signature, nonce, n
       throw new Error('Invalid network. Must be "mainnet", "testnet", or "devnet"');
     }
 
-    // Verify signature (basic validation)
-    // In production, verify against the actual signature
-    if (!signature || signature.length < 10) {
-      throw new Error('Invalid signature provided');
+    if (!signature) {
+      throw new Error('Signature is required');
+    }
+    const rawSig = signature.startsWith('0x') ? signature.slice(2) : signature;
+    if (!/^[0-9a-fA-F]+$/.test(rawSig)) {
+      throw new Error('Signature must be a hex-encoded string');
     }
 
     // Check if wallet already connected
