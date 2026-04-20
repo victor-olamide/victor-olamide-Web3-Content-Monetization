@@ -29,6 +29,18 @@ function buildSignMessage(nonce, timestamp) {
 }
 
 /**
+ * Hash a plaintext message the same way Stacks wallets do before signing.
+ * Stacks personal sign: sha256( sha256("\x18Stacks Signed Message:\n" + len + message) )
+ */
+function hashSignMessage(message) {
+  const prefix = `\x18Stacks Signed Message:\n${message.length}`;
+  const prefixed = Buffer.from(prefix + message, 'utf8');
+  return crypto.createHash('sha256').update(
+    crypto.createHash('sha256').update(prefixed).digest()
+  ).digest('hex');
+}
+
+/**
  * Create a connection request with nonce
  * User receives this challenge from wallet to sign
  */
