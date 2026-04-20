@@ -73,9 +73,6 @@ function buildMongoURI() {
   const protocol = mongoOptions.ssl ? 'mongodb+srv' : 'mongodb';
   const hosts = process.env.MONGO_HOSTS || 'mongodb-primary:27017,mongodb-secondary1:27017,mongodb-secondary2:27017';
   const database = process.env.MONGO_DATABASE;
-  if (!database) {
-    throw new Error('MONGO_DATABASE environment variable is required');
-  }
   const replicaSet = process.env.MONGO_REPLICA_SET_NAME || 'rs0';
 
   // For replica set, use multiple hosts
