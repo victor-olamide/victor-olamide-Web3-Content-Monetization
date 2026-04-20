@@ -24,6 +24,13 @@ try {
 }
 
 /**
+ * Returns the number of active pending challenges (for monitoring/health checks)
+ */
+function getPendingChallengeCount() {
+  return pendingChallenges.size;
+}
+
+/**
  * Generate a unique nonce for wallet signature challenge
  */
 function generateNonce() {
