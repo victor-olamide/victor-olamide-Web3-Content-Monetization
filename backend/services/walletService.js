@@ -7,6 +7,14 @@ const CHALLENGE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 // In-memory store for pending wallet connection challenges: nonce → { timestamp, expiresAt }
 const pendingChallenges = new Map();
 
+// Purge expired challenges every 15 minutes to prevent unbounded memory growth
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, val] of pendingChallenges) {
+    if (now > val.expiresAt) pendingChallenges.delete(key);
+  }
+}, 15 * 60 * 1000).unref();
+
 let stacksTx;
 try {
   stacksTx = require('@stacks/transactions');
