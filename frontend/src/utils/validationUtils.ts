@@ -12,6 +12,11 @@ export interface ValidateResult {
   errors: ValidationError[];
 }
 
+export interface ValidationResult {
+  isValid: boolean;
+  errors: Record<string, string>;
+}
+
 /**
  * Validate email format
  */
@@ -81,23 +86,67 @@ export function validatePassword(password: string): {
 /**
  * Validate login form
  */
-export function validateLoginForm(email: string, password: string): ValidateResult {
-  const errors: ValidationError[] = [];
+export function validateLoginForm(data: { email: string; password: string }): ValidationResult {
+  const errors: Record<string, string> = {};
 
-  if (!email || !email.trim()) {
-    errors.push({ field: 'email', message: 'Email is required' });
-  } else if (!validateEmail(email)) {
-    errors.push({ field: 'email', message: 'Please enter a valid email address' });
+  if (!data.email || !data.email.trim()) {
+    errors.email = 'Email is required';
+  } else if (!validateEmail(data.email)) {
+    errors.email = 'Please enter a valid email address';
   }
 
-  if (!password || !password.trim()) {
-    errors.push({ field: 'password', message: 'Password is required' });
-  } else if (password.length < 6) {
-    errors.push({ field: 'password', message: 'Password must be at least 6 characters' });
+  if (!data.password || !data.password.trim()) {
+    errors.password = 'Password is required';
+  } else if (data.password.length < 6) {
+    errors.password = 'Password must be at least 6 characters';
   }
 
   return {
-    isValid: errors.length === 0,
+    isValid: Object.keys(errors).length === 0,
+    errors
+  };
+}
+
+/**
+ * Validate registration form
+ */
+export function validateRegistrationForm(data: {
+  name: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+}): ValidationResult {
+  const errors: Record<string, string> = {};
+
+  if (!data.name || !data.name.trim()) {
+    errors.name = 'Name is required';
+  } else if (data.name.length < 2) {
+    errors.name = 'Name must be at least 2 characters';
+  }
+
+  if (!data.email || !data.email.trim()) {
+    errors.email = 'Email is required';
+  } else if (!validateEmail(data.email)) {
+    errors.email = 'Please enter a valid email address';
+  }
+
+  if (!data.password || !data.password.trim()) {
+    errors.password = 'Password is required';
+  } else if (data.password.length < 6) {
+    errors.password = 'Password must be at least 6 characters';
+  }
+
+  if (!data.confirmPassword || !data.confirmPassword.trim()) {
+    errors.confirmPassword = 'Please confirm your password';
+  } else if (data.password !== data.confirmPassword) {
+    errors.confirmPassword = 'Passwords do not match';
+  }
+
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors
+  };
+}
     errors
   };
 }
