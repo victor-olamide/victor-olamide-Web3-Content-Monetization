@@ -211,5 +211,6 @@ module.exports = {
   verifyModerator,
   verifyAdmin,
   verifyQueueAccess,
-  verifyContentCreator
+  verifyContentCreator,
+  parseAddressList,
 };
