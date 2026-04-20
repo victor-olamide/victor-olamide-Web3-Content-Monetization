@@ -14,7 +14,8 @@ export default function LoginPage() {
 
   const [formData, setFormData] = useState({
     email: '',
-    password: ''
+    password: '',
+    rememberMe: false
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -134,6 +135,21 @@ export default function LoginPage() {
             >
               Forgot password?
             </Link>
+          </div>
+
+          {/* Remember Me */}
+          <div className="flex items-center">
+            <input
+              id="rememberMe"
+              name="rememberMe"
+              type="checkbox"
+              checked={formData.rememberMe}
+              onChange={(e) => handleChange('rememberMe', e.target.checked)}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <label htmlFor="rememberMe" className="ml-2 block text-sm text-gray-900">
+              Remember me
+            </label>
           </div>
 
           <FormSubmitButton
