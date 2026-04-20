@@ -43,6 +43,19 @@ const mongoOptions = {
   monitorCommands: process.env.MONGO_MONITOR_COMMANDS === 'true',
 };
 
+// Fail fast if required database credentials are not set
+function validateDbCredentials() {
+  const missing = [];
+  if (!process.env.MONGO_APP_USERNAME) missing.push('MONGO_APP_USERNAME');
+  if (!process.env.MONGO_APP_PASSWORD) missing.push('MONGO_APP_PASSWORD');
+  if (missing.length > 0) {
+    throw new Error(
+      `Missing required database environment variables: ${missing.join(', ')}. ` +
+      'Set them in your .env file or deployment secrets.'
+    );
+  }
+}
+
 // Build MongoDB connection URI for replica set
 function buildMongoURI() {
   const protocol = mongoOptions.ssl ? 'mongodb+srv' : 'mongodb';
