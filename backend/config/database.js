@@ -67,8 +67,14 @@ function validateDbCredentials() {
   }
 
   const password = process.env.MONGO_APP_PASSWORD;
-  if (password && password.length < 12) {
-    logger.warn('MONGO_APP_PASSWORD is shorter than 12 characters — use a stronger password in production');
+  if (password) {
+    if (password.length < 12) {
+      logger.warn('MONGO_APP_PASSWORD is shorter than 12 characters — use a stronger password in production');
+    }
+    const hasComplexity = /[A-Z]/.test(password) && /[0-9]/.test(password) && /[^A-Za-z0-9]/.test(password);
+    if (!hasComplexity && process.env.NODE_ENV === 'production') {
+      logger.warn('MONGO_APP_PASSWORD lacks uppercase, digit, or special character — strengthen it for production');
+    }
   }
 
   logger.debug('Database credentials validated', {
