@@ -5,6 +5,7 @@
 
 const axios = require('axios');
 const FormData = require('form-data');
+const logger = require('../utils/logger');
 
 // Pinning service providers
 const PROVIDERS = {
@@ -154,7 +155,7 @@ class PinningService {
     if (this.healthCheckIntervalId) {
       clearInterval(this.healthCheckIntervalId);
       this.healthCheckIntervalId = null;
-      console.log('[PinningService] Health monitoring stopped');
+      logger.info('PinningService health monitoring stopped');
     }
   }
 
@@ -170,9 +171,9 @@ class PinningService {
         this.healthStatus.set(provider, isHealthy);
         this.lastHealthCheck.set(provider, new Date());
 
-        console.log(`[PinningService] ${provider} health: ${isHealthy ? '✅' : '❌'}`);
+        logger.info('PinningService provider health', { provider, healthy: isHealthy });
       } catch (error) {
-        console.error(`[PinningService] Health check failed for ${provider}:`, error.message);
+        logger.error('PinningService health check failed', { provider, err: error.message });
         this.healthStatus.set(provider, false);
       }
     }
@@ -275,7 +276,7 @@ class PinningService {
 
     for (const provider of providersToUse) {
       try {
-        console.log(`[PinningService] Uploading to ${provider}...`);
+        logger.debug('PinningService uploading', { provider });
 
         const result = await this._uploadToProvider(provider, fileBuffer, fileName, metadata, tags, onProgress);
         results.push({
@@ -286,9 +287,9 @@ class PinningService {
           size: fileBuffer.length
         });
 
-        console.log(`[PinningService] ✅ Successfully pinned to ${provider}: ${result.hash}`);
+        logger.info('PinningService pinned successfully', { provider, hash: result.hash });
       } catch (error) {
-        console.error(`[PinningService] ❌ Failed to pin to ${provider}:`, error.message);
+        logger.error('PinningService failed to pin', { provider, err: error.message });
         errors.push({ provider, error: error.message });
       }
     }
@@ -412,7 +413,7 @@ class PinningService {
 
         if (attempt < MAX_RETRIES) {
           const delay = RETRY_DELAY * Math.pow(2, attempt - 1);
-          console.log(`[PinningService] Retrying ${provider} in ${delay}ms...`);
+          logger.debug('PinningService retrying', { provider, delayMs: delay });
           await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
@@ -442,7 +443,7 @@ class PinningService {
 
     for (const provider of providersToUse) {
       try {
-        console.log(`[PinningService] Pinning ${hash} to ${provider}...`);
+        logger.debug('PinningService pinning hash', { hash, provider });
 
         await this._pinToProvider(provider, hash);
         results.push({
@@ -451,9 +452,9 @@ class PinningService {
           timestamp: new Date()
         });
 
-        console.log(`[PinningService] ✅ Successfully pinned ${hash} to ${provider}`);
+        logger.info('PinningService hash pinned', { hash, provider });
       } catch (error) {
-        console.error(`[PinningService] ❌ Failed to pin ${hash} to ${provider}:`, error.message);
+        logger.error('PinningService failed to pin hash', { hash, provider, err: error.message });
         errors.push({ provider, error: error.message });
       }
     }
@@ -516,7 +517,7 @@ class PinningService {
       if (!this.providers[provider]?.enabled) continue;
 
       try {
-        console.log(`[PinningService] Unpinning ${hash} from ${provider}...`);
+        logger.debug('PinningService unpinning hash', { hash, provider });
 
         await this._unpinFromProvider(provider, hash);
         results.push({
@@ -525,9 +526,9 @@ class PinningService {
           timestamp: new Date()
         });
 
-        console.log(`[PinningService] ✅ Successfully unpinned ${hash} from ${provider}`);
+        logger.info('PinningService hash unpinned', { hash, provider });
       } catch (error) {
-        console.error(`[PinningService] ❌ Failed to unpin ${hash} from ${provider}:`, error.message);
+        logger.error('PinningService failed to unpin hash', { hash, provider, err: error.message });
         errors.push({ provider, error: error.message });
       }
     }
