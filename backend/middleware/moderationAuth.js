@@ -79,6 +79,9 @@ async function verifyAdmin(req, res, next) {
     }
 
     const authorizedAdmins = parseAddressList(process.env.AUTHORIZED_ADMINS);
+    if (authorizedAdmins.length === 0) {
+      logger.warn('AUTHORIZED_ADMINS is not configured — all admin access will be denied');
+    }
     const isAuthorized = authorizedAdmins.some(
       addr => addr.toLowerCase() === adminAddress.toLowerCase()
     );
