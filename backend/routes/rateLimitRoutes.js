@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const express = require('express');
 const router = express.Router();
 const {
@@ -40,7 +41,7 @@ router.get('/status', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error getting rate limit status:', error);
+    logger.error('Error getting rate limit status', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to get rate limit status',
@@ -64,7 +65,7 @@ router.get('/tiers', (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error getting tiers:', error);
+    logger.error('Error getting tiers', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to get tier configurations',
@@ -102,7 +103,7 @@ router.get('/tiers/compare', (req, res) => {
       data: comparison
     });
   } catch (error) {
-    console.error('Error comparing tiers:', error);
+    logger.error('Error comparing tiers', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to compare tiers',
@@ -126,7 +127,7 @@ router.get('/endpoints', (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error getting endpoint overrides:', error);
+    logger.error('Error getting endpoint overrides', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to get endpoint overrides',
@@ -147,7 +148,7 @@ router.get('/stats', async (req, res) => {
       data: stats
     });
   } catch (error) {
-    console.error('Error getting rate limit stats:', error);
+    logger.error('Error getting rate limit stats', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to get rate limit statistics',
@@ -186,7 +187,7 @@ router.post('/reset', async (req, res) => {
       key: key.replace(/:.+/, ':***')
     });
   } catch (error) {
-    console.error('Error resetting rate limits:', error);
+    logger.error('Error resetting rate limits', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to reset rate limits',
@@ -208,7 +209,7 @@ router.post('/cleanup', async (req, res) => {
       deletedCount
     });
   } catch (error) {
-    console.error('Error cleaning up rate limits:', error);
+    logger.error('Error cleaning up rate limits', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to clean up rate limit records',
@@ -256,7 +257,7 @@ router.put('/tier', async (req, res) => {
       tier
     });
   } catch (error) {
-    console.error('Error updating tier:', error);
+    logger.error('Error updating tier', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to update tier',

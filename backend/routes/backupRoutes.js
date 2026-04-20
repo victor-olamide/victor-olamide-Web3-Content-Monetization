@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const express = require('express');
 const router = express.Router();
 const databaseBackupService = require('../services/databaseBackupService');
@@ -31,7 +32,7 @@ router.get('/status', requireBackupAccess, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Failed to get backup status:', error);
+    logger.error('Failed to get backup status', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to get backup status'
@@ -53,7 +54,7 @@ router.post('/database', requireBackupAccess, async (req, res) => {
       data: result
     });
   } catch (error) {
-    console.error('Failed to trigger database backup:', error);
+    logger.error('Failed to trigger database backup', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to trigger database backup'
@@ -75,7 +76,7 @@ router.post('/content', requireBackupAccess, async (req, res) => {
       data: result
     });
   } catch (error) {
-    console.error('Failed to trigger content backup:', error);
+    logger.error('Failed to trigger content backup', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to trigger content backup'
@@ -97,7 +98,7 @@ router.post('/full', requireBackupAccess, async (req, res) => {
       data: result
     });
   } catch (error) {
-    console.error('Failed to trigger full backup:', error);
+    logger.error('Failed to trigger full backup', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to trigger full backup'
@@ -141,7 +142,7 @@ router.get('/jobs', requireBackupAccess, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Failed to get backup jobs:', error);
+    logger.error('Failed to get backup jobs', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to get backup jobs'
@@ -171,7 +172,7 @@ router.get('/jobs/:backupId', requireBackupAccess, async (req, res) => {
       data: job
     });
   } catch (error) {
-    console.error('Failed to get backup job:', error);
+    logger.error('Failed to get backup job', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to get backup job'
@@ -194,7 +195,7 @@ router.post('/jobs/:backupId/verify', requireBackupAccess, async (req, res) => {
       data: result
     });
   } catch (error) {
-    console.error('Failed to verify backup:', error);
+    logger.error('Failed to verify backup', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to verify backup'
@@ -220,7 +221,7 @@ router.get('/list', requireBackupAccess, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Failed to list backups:', error);
+    logger.error('Failed to list backups', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to list backups'
@@ -242,7 +243,7 @@ router.post('/cleanup', requireBackupAccess, async (req, res) => {
       message: 'Retention cleanup completed'
     });
   } catch (error) {
-    console.error('Failed to run retention cleanup:', error);
+    logger.error('Failed to run retention cleanup', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to run retention cleanup'
@@ -281,7 +282,7 @@ router.get('/config', requireBackupAccess, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Failed to get backup config:', error);
+    logger.error('Failed to get backup config', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to get backup config'
@@ -314,7 +315,7 @@ router.post('/export', requireBackupAccess, async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Failed to export backup metadata:', error);
+    logger.error('Failed to export backup metadata', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to export backup metadata'
