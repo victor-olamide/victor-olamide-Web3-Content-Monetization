@@ -4,9 +4,12 @@
  */
 
 const moderationService = require('../services/moderationService');
+const moderationNotificationService = require('../services/moderationNotificationService');
+const moderationAuditLoggingService = require('../services/moderationAuditLoggingService');
 const ModerationQueue = require('../models/ModerationQueue');
 const ModerationFlag = require('../models/ModerationFlag');
 const AdminAuditLog = require('../models/AdminAuditLog');
+const User = require('../models/User');
 
 /**
  * Submit content flag/report
@@ -89,6 +92,34 @@ const submitContentFlag = async (req, res) => {
       req.ip,
       req.headers['user-agent']
     );
+
+    // Log to audit service
+    await moderationAuditLoggingService.logFlagSubmission(flag, {
+      flaggedBy: userId,
+      queueId: queue.queueId,
+      flagType: 'user-report',
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+
+    // Send notifications based on severity
+    try {
+      const creator = await User.findById(queue.creator);
+      if (creator) {
+        const Content = require('../models/Content');
+        const content = await Content.findOne({ contentId: queue.contentId });
+        if (content && queue.severity === 'critical') {
+          await moderationNotificationService.notifyCreatorOfFlag(contentId, creator.id, {
+            contentTitle: queue.contentTitle,
+            reason: reason,
+            severity: queue.severity
+          });
+        }
+      }
+    } catch (notifyError) {
+      console.warn('Error sending notification:', notifyError);
+      // Don't fail the flag submission if notification fails
+    }
 
     res.status(201).json({
       success: true,
