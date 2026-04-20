@@ -136,6 +136,9 @@ async function connectWallet(address, walletType, publicKey, signature, nonce, n
       throw new Error('Signature verification failed — signature does not match the provided public key');
     }
 
+    // Consume nonce: each challenge may only be used once
+    pendingChallenges.delete(nonce);
+
     // Check if wallet already connected
     let walletConnection = await WalletConnection.findOne({
       address: address.toLowerCase(),
