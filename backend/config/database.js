@@ -27,7 +27,7 @@ const mongoOptions = {
   readPreference: process.env.MONGO_READ_PREFERENCE || 'secondaryPreferred',
 
   // Authentication
-  authSource: 'admin',
+  authSource: process.env.MONGO_AUTH_SOURCE || 'admin',
   user: process.env.MONGO_APP_USERNAME,
   pass: process.env.MONGO_APP_PASSWORD,
 
