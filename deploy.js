@@ -97,7 +97,10 @@ async function main() {
 
   console.log('════════════════════════════════════════════════════');
   console.log('  Web3 Content Monetization — Mainnet Deployment');
-  console.log(`  Deployer: ${DEPLOYER}`);
+  console.log(`  Deployer : ${DEPLOYER}`);
+  console.log(`  Node URL : ${NODE_URL}`);
+  console.log(`  Dry Run  : ${DRY_RUN}`);
+  console.log(`  Contracts: ${CONTRACTS.length}`);
   console.log('════════════════════════════════════════════════════\n');
 
   // Derive private key from mnemonic — do not log the mnemonic itself
