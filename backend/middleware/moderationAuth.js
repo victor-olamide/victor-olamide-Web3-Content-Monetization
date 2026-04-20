@@ -4,6 +4,32 @@
  */
 
 const ModerationQueue = require('../models/ModerationQueue');
+const logger = require('../utils/logger');
+
+/**
+ * Parse a comma-separated list of Stacks addresses from an env var.
+ * Trims whitespace from each entry, removes empty strings, and filters
+ * out entries that do not match the Stacks address format (SP… / ST…).
+ * Comparison against parsed addresses should use .toLowerCase() on both sides.
+ */
+function parseAddressList(envValue) {
+  if (!envValue) return [];
+  return envValue
+    .split(',')
+    .map(addr => addr.trim())
+    .filter(addr => addr.length > 0)
+    .filter(addr => {
+      const valid = /^S[PT][A-Z0-9]{33,}$/.test(addr);
+      if (!valid) logger.warn('parseAddressList: ignoring invalid Stacks address format', { addr });
+      return valid;
+    });
+}
+
+// Log parsed address lists at module load so misconfiguration is visible in startup logs
+logger.info('Moderation auth config loaded', {
+  moderators: parseAddressList(process.env.AUTHORIZED_MODERATORS).length,
+  admins: parseAddressList(process.env.AUTHORIZED_ADMINS).length,
+});
 
 /**
  * Verify user is a moderator
@@ -20,13 +46,16 @@ async function verifyModerator(req, res, next) {
       });
     }
 
-    // TODO: Replace with actual moderator verification from config/database
-    const authorizedModerators = process.env.AUTHORIZED_MODERATORS?.split(',') || [];
+    const authorizedModerators = parseAddressList(process.env.AUTHORIZED_MODERATORS);
+    if (authorizedModerators.length === 0) {
+      logger.warn('AUTHORIZED_MODERATORS is not configured — all moderator access will be denied');
+    }
     const isAuthorized = authorizedModerators.some(
       addr => addr.toLowerCase() === moderatorAddress.toLowerCase()
     );
 
     if (!isAuthorized) {
+      logger.warn('Unauthorized moderator access attempt', { address: moderatorAddress.toLowerCase() });
       return res.status(403).json({
         success: false,
         error: 'You do not have moderator permissions'
@@ -38,9 +67,10 @@ async function verifyModerator(req, res, next) {
       isAuthorized: true
     };
 
+    logger.info('Moderator access granted', { address: moderatorAddress.toLowerCase() });
     next();
   } catch (error) {
-    console.error('Moderator verification error:', error);
+    logger.error('Moderator verification error', { err: error });
     res.status(500).json({
       success: false,
       error: 'Authorization verification failed'
@@ -63,13 +93,16 @@ async function verifyAdmin(req, res, next) {
       });
     }
 
-    // TODO: Replace with actual admin verification
-    const authorizedAdmins = process.env.AUTHORIZED_ADMINS?.split(',') || [];
+    const authorizedAdmins = parseAddressList(process.env.AUTHORIZED_ADMINS);
+    if (authorizedAdmins.length === 0) {
+      logger.warn('AUTHORIZED_ADMINS is not configured — all admin access will be denied');
+    }
     const isAuthorized = authorizedAdmins.some(
       addr => addr.toLowerCase() === adminAddress.toLowerCase()
     );
 
     if (!isAuthorized) {
+      logger.warn('Unauthorized admin access attempt', { address: adminAddress.toLowerCase() });
       return res.status(403).json({
         success: false,
         error: 'You do not have admin permissions'
@@ -81,9 +114,10 @@ async function verifyAdmin(req, res, next) {
       isAuthorized: true
     };
 
+    logger.info('Admin access granted', { address: adminAddress.toLowerCase() });
     next();
   } catch (error) {
-    console.error('Admin verification error:', error);
+    logger.error('Admin verification error', { err: error });
     res.status(500).json({
       success: false,
       error: 'Authorization verification failed'
@@ -121,6 +155,7 @@ async function verifyQueueAccess(req, res, next) {
       queue.status === 'pending';
 
     if (!hasAccess) {
+      logger.warn('Queue access denied', { queueId, moderatorAddress: moderatorAddress || 'unknown' });
       return res.status(403).json({
         success: false,
         error: 'You do not have access to this queue entry'
@@ -128,9 +163,10 @@ async function verifyQueueAccess(req, res, next) {
     }
 
     req.queue = queue;
+    logger.info('Queue access granted', { queueId, moderatorAddress: moderatorAddress || 'admin' });
     next();
   } catch (error) {
-    console.error('Queue access verification error:', error);
+    logger.error('Queue access verification error', { err: error });
     res.status(500).json({
       success: false,
       error: 'Access verification failed'
@@ -173,7 +209,7 @@ async function verifyContentCreator(req, res, next) {
     req.content = content;
     next();
   } catch (error) {
-    console.error('Content creator verification error:', error);
+    logger.error('Content creator verification error', { err: error });
     res.status(500).json({
       success: false,
       error: 'Creator verification failed'
@@ -185,5 +221,6 @@ module.exports = {
   verifyModerator,
   verifyAdmin,
   verifyQueueAccess,
-  verifyContentCreator
+  verifyContentCreator,
+  parseAddressList,
 };
