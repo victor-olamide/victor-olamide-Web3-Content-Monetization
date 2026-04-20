@@ -29,6 +29,8 @@ async function createConnectionRequest(network = 'mainnet') {
   const nonce = generateNonce();
   const timestamp = Date.now();
 
+  pendingChallenges.set(nonce, { timestamp, expiresAt: timestamp + CHALLENGE_TTL_MS });
+
   return {
     nonce,
     timestamp,
