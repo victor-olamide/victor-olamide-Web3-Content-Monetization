@@ -52,6 +52,9 @@ function validateDbCredentials() {
   if (!process.env.MONGO_APP_PASSWORD || process.env.MONGO_APP_PASSWORD.trim() === '') {
     missing.push('MONGO_APP_PASSWORD');
   }
+  if (!process.env.MONGO_DATABASE || process.env.MONGO_DATABASE.trim() === '') {
+    missing.push('MONGO_DATABASE');
+  }
   if (missing.length > 0) {
     throw new Error(
       `Missing required database environment variables: ${missing.join(', ')}. ` +
