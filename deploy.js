@@ -1,7 +1,17 @@
 // Web3 Content Monetization — Mainnet Deployment Script
-// Deploys 5 contracts in dependency order
-// Usage: node deploy.js  (run from project root)
-// Requires: DEPLOYER_MNEMONIC, DEPLOYER_ADDRESS, STACKS_NODE_URL in environment or .env file
+// Deploys contracts in dependency order
+//
+// Usage:
+//   node deploy.js
+//
+// Required env vars (set in .env or export before running):
+//   DEPLOYER_MNEMONIC   — 24-word BIP-39 mnemonic for the deployer wallet
+//   DEPLOYER_ADDRESS    — Stacks mainnet address (SP...) matching the mnemonic
+//
+// Optional env vars:
+//   STACKS_NODE_URL     — Stacks API base URL (default: https://api.mainnet.hiro.so)
+//   STACKS_MODULES_PATH — Path to @stacks node_modules
+//   DRY_RUN             — Set to "true" to skip broadcasting transactions
 
 const path  = require('path');
 const fs    = require('fs');
