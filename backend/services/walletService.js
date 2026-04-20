@@ -112,6 +112,9 @@ async function connectWallet(address, walletType, publicKey, signature, nonce, n
     if (!/^[0-9a-fA-F]+$/.test(rawSig)) {
       throw new Error('Signature must be a hex-encoded string');
     }
+    if (rawSig.length !== 130) {
+      throw new Error(`Invalid signature length: expected 130 hex chars (65 bytes), got ${rawSig.length}`);
+    }
 
     // Check if wallet already connected
     let walletConnection = await WalletConnection.findOne({
