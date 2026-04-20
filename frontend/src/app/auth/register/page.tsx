@@ -58,19 +58,9 @@ export default function RegisterPage() {
     setSuccessMessage('');
 
     // Validate form
-    const validation = validateRegistrationForm(
-      formData.email,
-      formData.password,
-      formData.confirmPassword,
-      formData.name
-    );
-
+    const validation = validateRegistrationForm(formData);
     if (!validation.isValid) {
-      const errorMap: Record<string, string> = {};
-      validation.errors.forEach(err => {
-        errorMap[err.field] = err.message;
-      });
-      setErrors(errorMap);
+      setErrors(validation.errors);
       return;
     }
 

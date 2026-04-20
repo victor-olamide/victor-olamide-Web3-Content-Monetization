@@ -56,13 +56,9 @@ export default function LoginPage() {
     setSuccessMessage('');
 
     // Validate form
-    const validation = validateLoginForm(formData.email, formData.password);
+    const validation = validateLoginForm(formData);
     if (!validation.isValid) {
-      const errorMap: Record<string, string> = {};
-      validation.errors.forEach(err => {
-        errorMap[err.field] = err.message;
-      });
-      setErrors(errorMap);
+      setErrors(validation.errors);
       return;
     }
 
