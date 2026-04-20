@@ -29,6 +29,27 @@ function generateSessionId() {
 }
 
 /**
+ * Verify a Stacks wallet signature (Hiro / Xverse VRS format).
+ * Returns true if the signature is valid for the given message and public key.
+ */
+function verifyStacksSignature(message, signature, claimedPublicKey) {
+  if (!stacksTx || !stacksTx.publicKeyFromSignatureVrs) {
+    throw new Error('Signature verification unavailable: @stacks/transactions not loaded');
+  }
+
+  const normalSig = signature.startsWith('0x') ? signature.slice(2) : signature;
+  const msgHash = hashSignMessage(message);
+
+  try {
+    const recoveredPubKey = stacksTx.publicKeyFromSignatureVrs(msgHash, { data: normalSig });
+    const normalClaimed = claimedPublicKey.startsWith('0x') ? claimedPublicKey.slice(2) : claimedPublicKey;
+    return recoveredPubKey.toLowerCase() === normalClaimed.toLowerCase();
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Reconstruct the exact message that was presented to the user for signing
  */
 function buildSignMessage(nonce, timestamp) {
