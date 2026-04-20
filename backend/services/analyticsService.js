@@ -422,12 +422,41 @@ class AnalyticsService {
         cancelledAt: null
       });
 
+      // Calculate engagement metrics
+      const engagementMetrics = this.calculateEngagementMetrics(
+        topContent.map(c => ({ views: c.views, revenue: c.revenue, purchases: c.purchases }))
+      );
+
+      // Calculate previous period metrics for comparison
+      let comparison = null;
+      try {
+        const previousMetrics = await this.calculatePreviousPeriodMetrics(creatorId, startDate, endDate, granularity);
+        comparison = {
+          viewsGrowth: this.calculateGrowthRate(totalViews, previousMetrics.views),
+          revenueGrowth: this.calculateGrowthRate(totalRevenue, previousMetrics.revenue),
+          subscriberGrowth: this.calculateGrowthRate(subscriberCount, previousMetrics.subscriberCount),
+          previousViews: previousMetrics.views,
+          previousRevenue: previousMetrics.revenue,
+          previousSubscriberCount: previousMetrics.subscriberCount,
+        };
+      } catch (error) {
+        console.warn('Could not calculate comparison metrics:', error.message);
+        // Comparison is optional, don't fail if it's not available
+      }
+
       const result = {
         views: totalViews,
         revenue: totalRevenue,
         subscriberCount,
         topContent: topContent.slice(0, 10), // Top 10
-        periodData
+        periodData,
+        engagementMetrics: {
+          totalEngagements: engagementMetrics.totalEngagements,
+          conversionRate: engagementMetrics.conversionRate.toFixed(2),
+          avgViewsPerContent: engagementMetrics.avgViewsPerContent.toFixed(2),
+          avgRevenuePerContent: engagementMetrics.avgRevenuePerContent.toFixed(2),
+        },
+        comparison: comparison || null,
       };
 
       // Cache the result
