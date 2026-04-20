@@ -47,6 +47,11 @@ function validateEnv() {
     console.error(`DEPLOYER_MNEMONIC must be a 24-word BIP-39 phrase (got ${wordCount} words)`);
     process.exit(1);
   }
+
+  if (!/^SP[A-Z0-9]{33,}$/.test(process.env.DEPLOYER_ADDRESS)) {
+    console.error('DEPLOYER_ADDRESS must be a valid Stacks mainnet address starting with SP');
+    process.exit(1);
+  }
 }
 
 function sleep(ms) {
