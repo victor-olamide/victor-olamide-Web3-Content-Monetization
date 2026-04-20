@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 /**
  * Notification Routes
  * REST API endpoints for notification management
@@ -34,7 +35,7 @@ router.get('/', async (req, res) => {
       data: result
     });
   } catch (error) {
-    console.error('Error fetching notifications:', error);
+    logger.error('Error fetching notifications', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to fetch notifications'
@@ -56,7 +57,7 @@ router.get('/stats', async (req, res) => {
       data: stats
     });
   } catch (error) {
-    console.error('Error getting notification stats:', error);
+    logger.error('Error getting notification stats', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to get notification statistics'
@@ -78,7 +79,7 @@ router.get('/unread-count', async (req, res) => {
       data: { unreadCount: count }
     });
   } catch (error) {
-    console.error('Error getting unread count:', error);
+    logger.error('Error getting unread count', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to get unread count'
@@ -115,7 +116,7 @@ router.get('/:id', async (req, res) => {
       data: notification
     });
   } catch (error) {
-    console.error('Error fetching notification:', error);
+    logger.error('Error fetching notification', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to fetch notification'
@@ -136,7 +137,7 @@ router.put('/:id/read', async (req, res) => {
       data: notification
     });
   } catch (error) {
-    console.error('Error marking notification as read:', error);
+    logger.error('Error marking notification as read', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to mark notification as read'
@@ -158,7 +159,7 @@ router.put('/mark-all-read', async (req, res) => {
       data: result
     });
   } catch (error) {
-    console.error('Error marking all notifications as read:', error);
+    logger.error('Error marking all notifications as read', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to mark all notifications as read'
@@ -188,7 +189,7 @@ router.post('/mark-multiple-read', async (req, res) => {
       data: result
     });
   } catch (error) {
-    console.error('Error marking multiple notifications as read:', error);
+    logger.error('Error marking multiple notifications as read', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to mark multiple notifications as read'
@@ -209,7 +210,7 @@ router.put('/:id/archive', async (req, res) => {
       data: notification
     });
   } catch (error) {
-    console.error('Error archiving notification:', error);
+    logger.error('Error archiving notification', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to archive notification'
@@ -230,7 +231,7 @@ router.delete('/:id', async (req, res) => {
       message: 'Notification deleted'
     });
   } catch (error) {
-    console.error('Error deleting notification:', error);
+    logger.error('Error deleting notification', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to delete notification'
@@ -260,7 +261,7 @@ router.post('/delete-multiple', async (req, res) => {
       data: result
     });
   } catch (error) {
-    console.error('Error deleting multiple notifications:', error);
+    logger.error('Error deleting multiple notifications', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to delete multiple notifications'
@@ -294,7 +295,7 @@ router.post('/test', async (req, res) => {
       data: notification
     });
   } catch (error) {
-    console.error('Error creating test notification:', error);
+    logger.error('Error creating test notification', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to create test notification'

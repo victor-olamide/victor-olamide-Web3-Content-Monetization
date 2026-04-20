@@ -19,6 +19,7 @@ const {
   mapSubscriptionToRateLimit,
   getSubscriptionTierWithRateLimitMapping
 } = require('../utils/subscriptionTierMapper');
+const logger = require('../utils/logger');
 
 /**
  * Middleware to handle subscription creation
@@ -59,7 +60,7 @@ function subscriptionCreatedMiddleware() {
 
       next();
     } catch (error) {
-      console.error('Error in subscription created middleware:', error.message);
+      logger.error('Error in subscription created middleware', { err: error.message });
       next();
     }
   };
@@ -119,7 +120,7 @@ function subscriptionUpgradedMiddleware() {
 
       next();
     } catch (error) {
-      console.error('Error in subscription upgraded middleware:', error.message);
+      logger.error('Error in subscription upgraded middleware', { err: error.message });
       next();
     }
   };
@@ -173,7 +174,7 @@ function subscriptionDowngradedMiddleware() {
 
       next();
     } catch (error) {
-      console.error('Error in subscription downgraded middleware:', error.message);
+      logger.error('Error in subscription downgraded middleware', { err: error.message });
       next();
     }
   };
@@ -224,7 +225,7 @@ function subscriptionCancelledMiddleware() {
 
       next();
     } catch (error) {
-      console.error('Error in subscription cancelled middleware:', error.message);
+      logger.error('Error in subscription cancelled middleware', { err: error.message });
       next();
     }
   };
@@ -276,7 +277,7 @@ function subscriptionRenewalFailedMiddleware() {
 
       next();
     } catch (error) {
-      console.error('Error in subscription renewal failed middleware:', error.message);
+      logger.error('Error in subscription renewal failed middleware', { err: error.message });
       next();
     }
   };
@@ -305,10 +306,10 @@ function bulkTierCacheInvalidationMiddleware() {
         invalidateUsersTiers(userIds);
       }
 
-      console.log(`Tier cache invalidated for ${userIds.length} users`);
+      logger.info('Tier cache invalidated', { count: userIds.length });
       next();
     } catch (error) {
-      console.error('Error in bulk cache invalidation:', error.message);
+      logger.error('Error in bulk cache invalidation', { err: error.message });
       next();
     }
   };

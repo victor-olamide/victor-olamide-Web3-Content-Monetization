@@ -8,6 +8,7 @@
  */
 
 const { DEFAULTS } = require('../config/rateLimitConfig');
+const logger = require('./logger');
 
 /**
  * Rate Limit Error Codes
@@ -177,7 +178,7 @@ function createTierChangeErrorResponse(message, details = {}) {
  * @returns {Object} Error response
  */
 function handleDatabaseError(error, operation = 'database operation') {
-  console.error(`[RATE_LIMIT_DB_ERROR] ${operation}: ${error.message}`);
+  logger.error('Rate limit DB error', { operation, err: error.message });
 
   return {
     success: false,
@@ -199,7 +200,7 @@ function handleDatabaseError(error, operation = 'database operation') {
  * @returns {Object} Error response
  */
 function handleCacheError(error, operation = 'cache operation') {
-  console.error(`[RATE_LIMIT_CACHE_ERROR] ${operation}: ${error.message}`);
+  logger.error('Rate limit cache error', { operation, err: error.message });
 
   // Cache errors are non-critical, return success but log issue
   return {
@@ -268,7 +269,7 @@ function logRateLimitError(errorData) {
     timestamp = new Date()
   } = errorData;
 
-  console.error('[RATE_LIMIT_ERROR]', {
+  logger.error('Rate limit error', {
     userId,
     key,
     tier,

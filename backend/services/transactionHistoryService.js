@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const TransactionHistory = require('../models/TransactionHistory');
 
 /**
@@ -19,7 +20,7 @@ class TransactionHistoryService {
       await transaction.save();
       return transaction.toDisplay();
     } catch (error) {
-      console.error('Error recording transaction:', error);
+      logger.error('Error recording transaction', { err: error });
       throw error;
     }
   }
@@ -68,7 +69,7 @@ class TransactionHistoryService {
         pages: Math.ceil(total / limit)
       };
     } catch (error) {
-      console.error('Error fetching transaction history:', error);
+      logger.error('Error fetching transaction history', { err: error });
       throw error;
     }
   }
@@ -101,7 +102,7 @@ class TransactionHistoryService {
         endDate
       };
     } catch (error) {
-      console.error('Error fetching transactions by date range:', error);
+      logger.error('Error fetching transactions by date range', { err: error });
       throw error;
     }
   }
@@ -121,7 +122,7 @@ class TransactionHistoryService {
 
       return transactions.map((tx) => this._formatTransaction(tx));
     } catch (error) {
-      console.error('Error fetching pending transactions:', error);
+      logger.error('Error fetching pending transactions', { err: error });
       throw error;
     }
   }
@@ -139,7 +140,7 @@ class TransactionHistoryService {
 
       return this._formatTransaction(transaction);
     } catch (error) {
-      console.error('Error fetching transaction by hash:', error);
+      logger.error('Error fetching transaction by hash', { err: error });
       throw error;
     }
   }
@@ -162,7 +163,7 @@ class TransactionHistoryService {
 
       return this._formatTransaction(transaction);
     } catch (error) {
-      console.error('Error fetching transaction by ID:', error);
+      logger.error('Error fetching transaction by ID', { err: error });
       throw error;
     }
   }
@@ -182,7 +183,7 @@ class TransactionHistoryService {
         byCategory: this._groupByCategory(summary.byCategory || [])
       };
     } catch (error) {
-      console.error('Error generating transaction summary:', error);
+      logger.error('Error generating transaction summary', { err: error });
       throw error;
     }
   }
@@ -215,7 +216,7 @@ class TransactionHistoryService {
         type
       };
     } catch (error) {
-      console.error('Error fetching transactions by type:', error);
+      logger.error('Error fetching transactions by type', { err: error });
       throw error;
     }
   }
@@ -248,7 +249,7 @@ class TransactionHistoryService {
         category
       };
     } catch (error) {
-      console.error('Error fetching transactions by category:', error);
+      logger.error('Error fetching transactions by category', { err: error });
       throw error;
     }
   }
@@ -276,7 +277,7 @@ class TransactionHistoryService {
 
       return transaction ? this._formatTransaction(transaction) : null;
     } catch (error) {
-      console.error('Error updating transaction status:', error);
+      logger.error('Error updating transaction status', { err: error });
       throw error;
     }
   }
@@ -295,7 +296,7 @@ class TransactionHistoryService {
       await transaction.updateConfirmations(confirmationCount);
       return this._formatTransaction(transaction);
     } catch (error) {
-      console.error('Error updating confirmations:', error);
+      logger.error('Error updating confirmations', { err: error });
       throw error;
     }
   }
@@ -326,7 +327,7 @@ class TransactionHistoryService {
         limit: 1000
       });
     } catch (error) {
-      console.error('Error generating monthly summary:', error);
+      logger.error('Error generating monthly summary', { err: error });
       throw error;
     }
   }
@@ -375,7 +376,7 @@ class TransactionHistoryService {
         totals
       };
     } catch (error) {
-      console.error('Error exporting for tax reporting:', error);
+      logger.error('Error exporting for tax reporting', { err: error });
       throw error;
     }
   }
@@ -417,7 +418,7 @@ class TransactionHistoryService {
 
       return balanceHistory;
     } catch (error) {
-      console.error('Error calculating balance over time:', error);
+      logger.error('Error calculating balance over time', { err: error });
       throw error;
     }
   }
@@ -461,7 +462,7 @@ class TransactionHistoryService {
         lastTransactionDate: lastTransaction?.createdAt || null
       };
     } catch (error) {
-      console.error('Error generating user stats:', error);
+      logger.error('Error generating user stats', { err: error });
       throw error;
     }
   }
@@ -491,7 +492,7 @@ class TransactionHistoryService {
       await transaction.save();
       return this._formatTransaction(transaction);
     } catch (error) {
-      console.error('Error reconciling transaction:', error);
+      logger.error('Error reconciling transaction', { err: error });
       throw error;
     }
   }

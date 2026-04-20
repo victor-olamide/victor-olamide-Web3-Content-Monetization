@@ -1,4 +1,5 @@
 const { RATE_LIMIT_HEADERS, DEFAULTS } = require('../config/rateLimitConfig');
+const logger = require('../utils/logger');
 const {
   resolveUserTier,
   generateKey,
@@ -85,13 +86,13 @@ function createTieredRateLimiter(options = {}) {
         try {
           await releaseRequest(key);
         } catch (err) {
-          console.error('Error releasing rate limit on finish:', err.message);
+          logger.error('Error releasing rate limit on finish', { err: err.message });
         }
       });
 
       next();
     } catch (error) {
-      console.error('Rate limiter error:', error.message);
+      logger.error('Rate limiter error', { err: error.message });
       // On error, allow the request through (fail-open)
       next();
     }
@@ -191,7 +192,7 @@ function createApiKeyRateLimiter(options = {}) {
 
       next();
     } catch (error) {
-      console.error('API key rate limiter error:', error.message);
+      logger.error('API key rate limiter error', { err: error.message });
       next();
     }
   };

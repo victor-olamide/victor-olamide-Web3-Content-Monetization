@@ -8,6 +8,7 @@ const Content = require('../models/Content');
 const ModerationQueue = require('../models/ModerationQueue');
 const moderationService = require('./moderationService');
 const { v4: uuidv4 } = require('uuid');
+const logger = require('../utils/logger');
 
 class ReportingService {
   /**
@@ -100,7 +101,7 @@ class ReportingService {
         message: 'Report submitted successfully. Our moderation team will review it shortly.'
       };
     } catch (error) {
-      console.error('Error submitting flag:', error);
+      logger.error('Error submitting flag', { err: error });
       throw error;
     }
   }
@@ -139,7 +140,7 @@ class ReportingService {
         hasMore: skip + flags.length < total
       };
     } catch (error) {
-      console.error('Error fetching user flags:', error);
+      logger.error('Error fetching user flags', { err: error });
       throw error;
     }
   }
@@ -164,7 +165,7 @@ class ReportingService {
         queue
       };
     } catch (error) {
-      console.error('Error fetching flag details:', error);
+      logger.error('Error fetching flag details', { err: error });
       throw error;
     }
   }
@@ -210,7 +211,7 @@ class ReportingService {
         hasMore: skip + flags.length < total
       };
     } catch (error) {
-      console.error('Error fetching content flags:', error);
+      logger.error('Error fetching content flags', { err: error });
       throw error;
     }
   }
@@ -233,7 +234,7 @@ class ReportingService {
       await flag.save();
       return flag;
     } catch (error) {
-      console.error('Error updating flag status:', error);
+      logger.error('Error updating flag status', { err: error });
       throw error;
     }
   }
@@ -256,7 +257,7 @@ class ReportingService {
       await flag.save();
       return flag;
     } catch (error) {
-      console.error('Error dismissing flag:', error);
+      logger.error('Error dismissing flag', { err: error });
       throw error;
     }
   }
@@ -320,7 +321,7 @@ class ReportingService {
         totalFlags: analytics.reduce((sum, item) => sum + item.count, 0)
       };
     } catch (error) {
-      console.error('Error fetching analytics:', error);
+      logger.error('Error fetching analytics', { err: error });
       throw error;
     }
   }
@@ -356,7 +357,7 @@ class ReportingService {
 
       return mostFlagged;
     } catch (error) {
-      console.error('Error fetching most flagged content:', error);
+      logger.error('Error fetching most flagged content', { err: error });
       throw error;
     }
   }
@@ -417,7 +418,7 @@ class ReportingService {
 
       return { flag, queue };
     } catch (error) {
-      console.error('Error creating automated flag:', error);
+      logger.error('Error creating automated flag', { err: error });
       throw error;
     }
   }
