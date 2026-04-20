@@ -6,7 +6,10 @@
 const path  = require('path');
 const fs    = require('fs');
 
-require('dotenv').config();
+const dotenvResult = require('dotenv').config();
+if (dotenvResult.error && !process.env.DEPLOYER_MNEMONIC) {
+  console.warn('No .env file found — expecting environment variables to be set externally');
+}
 
 // Use @stacks packages from the DEBY/stacks project which has wallet-sdk
 const STACKS_MODULES = process.env.STACKS_MODULES_PATH || '/Users/mac/Documents/DEBY/stacks/node_modules';
