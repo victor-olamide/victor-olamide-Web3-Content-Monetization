@@ -116,6 +116,11 @@ async function connectWallet(address, walletType, publicKey, signature, nonce, n
       throw new Error(`Invalid signature length: expected 130 hex chars (65 bytes), got ${rawSig.length}`);
     }
 
+    const rawPubKey = publicKey.startsWith('0x') ? publicKey.slice(2) : publicKey;
+    if (!/^[0-9a-fA-F]{66}$/.test(rawPubKey)) {
+      throw new Error('publicKey must be a 33-byte (66 hex char) compressed secp256k1 public key');
+    }
+
     // Check if wallet already connected
     let walletConnection = await WalletConnection.findOne({
       address: address.toLowerCase(),
