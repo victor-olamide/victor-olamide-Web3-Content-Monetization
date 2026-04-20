@@ -58,6 +58,11 @@ function validateDbCredentials() {
       'Set them in your .env file or deployment secrets.'
     );
   }
+
+  const password = process.env.MONGO_APP_PASSWORD;
+  if (password && password.length < 12) {
+    logger.warn('MONGO_APP_PASSWORD is shorter than 12 characters — use a stronger password in production');
+  }
 }
 
 // Build MongoDB connection URI for replica set
