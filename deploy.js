@@ -23,7 +23,7 @@ const { generateWallet } = require(path.join(STACKS_MODULES, '@stacks/wallet-sdk
 
 const MNEMONIC        = process.env.DEPLOYER_MNEMONIC;
 const DEPLOYER        = process.env.DEPLOYER_ADDRESS;
-const NODE_URL        = 'https://api.mainnet.hiro.so';
+const NODE_URL        = process.env.STACKS_NODE_URL || 'https://api.mainnet.hiro.so';
 const NETWORK         = { ...STACKS_MAINNET, coreApiUrl: NODE_URL };
 const CONTRACTS_DIR   = path.join(__dirname, 'contracts');
 
