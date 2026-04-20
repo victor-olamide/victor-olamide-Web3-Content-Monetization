@@ -119,6 +119,9 @@ class DatabaseConnection {
   // Connect to MongoDB replica set
   async connect() {
     try {
+      if (!process.env.MONGODB_URI) {
+        validateDbCredentials();
+      }
       const mongoURI = process.env.MONGODB_URI || buildMongoURI();
 
       logger.info('Connecting to MongoDB replica set', {
