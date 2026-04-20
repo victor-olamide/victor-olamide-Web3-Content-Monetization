@@ -5,6 +5,7 @@
 
 const express = require('express');
 const router = express.Router();
+const logger = require('../utils/logger');
 const { pinningService } = require('../services/pinningService');
 const { pinningManager } = require('../services/pinningManager');
 const Content = require('../models/Content');
@@ -31,7 +32,7 @@ router.get('/status', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error getting pinning status:', error);
+    logger.error('Error getting pinning status', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to get pinning status',
@@ -53,7 +54,7 @@ router.get('/health', async (req, res) => {
       data: health
     });
   } catch (error) {
-    console.error('Error getting pinning health:', error);
+    logger.error('Error getting pinning health', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to get pinning health',
@@ -75,7 +76,7 @@ router.get('/storage', async (req, res) => {
       data: usage
     });
   } catch (error) {
-    console.error('Error getting storage usage:', error);
+    logger.error('Error getting storage usage', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to get storage usage',
@@ -123,7 +124,7 @@ router.post('/content/:contentId/pin', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error pinning content:', error);
+    logger.error('Error pinning content', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to pin content',
@@ -165,7 +166,7 @@ router.post('/content/:contentId/unpin', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error unpinning content:', error);
+    logger.error('Error unpinning content', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to unpin content',
@@ -213,7 +214,7 @@ router.get('/content/:contentId/status', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error checking content pinning status:', error);
+    logger.error('Error checking content pinning status', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to check pinning status',
@@ -250,7 +251,7 @@ router.post('/content/:contentId/repair', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error repairing content pinning:', error);
+    logger.error('Error repairing content pinning', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to repair content pinning',
@@ -273,7 +274,7 @@ router.post('/health-check', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error performing health check:', error);
+    logger.error('Error performing health check', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to perform health check',
@@ -352,7 +353,7 @@ router.get('/content', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error getting pinned content:', error);
+    logger.error('Error getting pinned content', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to get pinned content',
@@ -386,7 +387,7 @@ router.post('/emergency/unpin-all', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error performing emergency unpin:', error);
+    logger.error('Error performing emergency unpin', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to perform emergency unpin',
@@ -425,7 +426,7 @@ router.post('/preview/:previewId/pin', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error pinning preview:', error);
+    logger.error('Error pinning preview', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to pin preview',
