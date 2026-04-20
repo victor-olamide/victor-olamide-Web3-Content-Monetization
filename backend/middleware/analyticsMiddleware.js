@@ -4,6 +4,7 @@
  */
 
 const analyticsService = require('../services/analyticsService');
+const logger = require('../utils/logger');
 
 /**
  * Track page views automatically
@@ -29,7 +30,7 @@ const trackPageView = (req, res, next) => {
 
     // Fire and forget - don't block the response
     analyticsService.trackEvent(eventData).catch(error => {
-      console.error('Error tracking page view:', error);
+      logger.error('Error tracking page view', { err: error });
     });
   }
 
@@ -68,7 +69,7 @@ const trackApiUsage = (req, res, next) => {
 
     // Fire and forget
     analyticsService.trackEvent(eventData).catch(error => {
-      console.error('Error tracking API usage:', error);
+      logger.error('Error tracking API usage', { err: error });
     });
   });
 
@@ -93,7 +94,7 @@ const trackAuthEvents = (req, res, next) => {
       };
 
       analyticsService.trackEvent(eventData).catch(error => {
-        console.error('Error tracking login event:', error);
+        logger.error('Error tracking login event', { err: error });
       });
     }
 
@@ -108,7 +109,7 @@ const trackAuthEvents = (req, res, next) => {
       };
 
       analyticsService.trackEvent(eventData).catch(error => {
-        console.error('Error tracking registration event:', error);
+        logger.error('Error tracking registration event', { err: error });
       });
     }
 
@@ -140,7 +141,7 @@ const trackContentInteractions = (req, res, next) => {
         };
 
         analyticsService.trackEvent(eventData).catch(error => {
-          console.error('Error tracking content view:', error);
+          logger.error('Error tracking content view', { err: error });
         });
       }
 
@@ -174,7 +175,7 @@ const trackTransactionEvents = (req, res, next) => {
         };
 
         analyticsService.trackEvent(eventData).catch(error => {
-          console.error('Error tracking transaction:', error);
+          logger.error('Error tracking transaction', { err: error });
         });
       }
 
@@ -222,7 +223,7 @@ const trackSearchEvents = (req, res, next) => {
     };
 
     analyticsService.trackEvent(eventData).catch(error => {
-      console.error('Error tracking search event:', error);
+      logger.error('Error tracking search event', { err: error });
     });
   }
 
