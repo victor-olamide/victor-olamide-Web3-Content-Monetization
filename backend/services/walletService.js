@@ -102,7 +102,8 @@ async function createConnectionRequest(network = 'mainnet') {
   return {
     nonce,
     timestamp,
-    message: `Sign to connect your wallet\n\nNonce: ${nonce}\nTimestamp: ${timestamp}`,
+    expiresAt: timestamp + CHALLENGE_TTL_MS,
+    message: buildSignMessage(nonce, timestamp),
     network
   };
 }
