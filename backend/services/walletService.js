@@ -103,8 +103,11 @@ async function createConnectionRequest(network = 'mainnet') {
 }
 
 /**
- * Connect a wallet (Hiro or Xverse)
- * Called after user signs the challenge
+ * Connect a wallet (Hiro or Xverse) after verifying the signed connection challenge.
+ *
+ * @param {string} signature - 65-byte VRS signature hex (from createConnectionRequest challenge)
+ * @param {string} nonce     - The nonce from createConnectionRequest (consumed after use)
+ * Throws if the signature is invalid, the nonce is unknown, or the challenge is expired.
  */
 async function connectWallet(address, walletType, publicKey, signature, nonce, network = 'mainnet', metadata = {}) {
   try {
