@@ -22,6 +22,13 @@ function generateSessionId() {
 }
 
 /**
+ * Reconstruct the exact message that was presented to the user for signing
+ */
+function buildSignMessage(nonce, timestamp) {
+  return `Sign to connect your wallet\n\nNonce: ${nonce}\nTimestamp: ${timestamp}`;
+}
+
+/**
  * Create a connection request with nonce
  * User receives this challenge from wallet to sign
  */
