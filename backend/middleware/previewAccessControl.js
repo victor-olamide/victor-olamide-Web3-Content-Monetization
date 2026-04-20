@@ -6,6 +6,7 @@
 const Content = require('../models/Content');
 const Purchase = require('../models/Purchase');
 const Subscription = require('../models/Subscription');
+const logger = require('../utils/logger');
 
 /**
  * Middleware to check if user can view preview
@@ -19,7 +20,7 @@ const canViewPreview = async (req, res, next) => {
     // Previews are public by default
     next();
   } catch (error) {
-    console.error('Error in preview access check:', error);
+    logger.error('Error in preview access check', { err: error });
     res.status(500).json({ success: false, error: 'Access check failed' });
   }
 };
@@ -75,7 +76,7 @@ const canDownloadPreview = async (req, res, next) => {
 
     next();
   } catch (error) {
-    console.error('Error in preview download access check:', error);
+    logger.error('Error in preview download access check', { err: error });
     res.status(500).json({ success: false, error: 'Access check failed' });
   }
 };
@@ -103,7 +104,7 @@ const isCreatorForPreview = async (req, res, next) => {
 
     next();
   } catch (error) {
-    console.error('Error in creator check:', error);
+    logger.error('Error in creator check', { err: error });
     res.status(500).json({ success: false, error: 'Permission check failed' });
   }
 };
@@ -179,7 +180,7 @@ const checkContentAccessType = async (req, res, next) => {
 
     next();
   } catch (error) {
-    console.error('Error checking content access type:', error);
+    logger.error('Error checking content access type', { err: error });
     res.status(500).json({ success: false, error: 'Access check failed' });
   }
 };
