@@ -10,6 +10,7 @@
 const NodeCache = require('node-cache');
 const { getUserRateLimitTier, getUsersRateLimitTiers } = require('../utils/subscriptionTierMapper');
 const { DEFAULTS } = require('../config/rateLimitConfig');
+const logger = require('../utils/logger');
 
 // Initialize cache with 10-minute standard TTL
 const tierCache = new NodeCache({ stdTTL: 600, checkperiod: 120 });
@@ -53,7 +54,7 @@ async function getUserTierCached(userId, creatorId = null, options = {}) {
 
     return tier;
   } catch (error) {
-    console.error('Error getting cached user tier:', error.message);
+    logger.error('Error getting cached user tier', { err: error.message });
     return DEFAULTS.defaultTier;
   }
 }
@@ -103,7 +104,7 @@ async function getUsersTiersCached(userIds, options = {}) {
 
     return tierMap;
   } catch (error) {
-    console.error('Error getting cached users tiers:', error.message);
+    logger.error('Error getting cached users tiers', { err: error.message });
     const fallback = new Map();
     userIds.forEach(id => fallback.set(id, DEFAULTS.defaultTier));
     return fallback;
@@ -125,7 +126,7 @@ function invalidateUserTier(userId, creatorId = null) {
       tierCache.del(key);
     }
   } catch (error) {
-    console.error('Error invalidating user tier cache:', error.message);
+    logger.error('Error invalidating user tier cache', { err: error.message });
   }
 }
 
@@ -140,7 +141,7 @@ function invalidateUsersTiers(userIds) {
       tierCache.del(key);
     });
   } catch (error) {
-    console.error('Error invalidating users tiers cache:', error.message);
+    logger.error('Error invalidating users tiers cache', { err: error.message });
   }
 }
 
@@ -150,9 +151,9 @@ function invalidateUsersTiers(userIds) {
 function clearTierCache() {
   try {
     tierCache.flushAll();
-    console.log('Tier cache cleared');
+    logger.info('Tier cache cleared');
   } catch (error) {
-    console.error('Error clearing tier cache:', error.message);
+    logger.error('Error clearing tier cache', { err: error.message });
   }
 }
 
@@ -168,7 +169,7 @@ function getCacheStats() {
       stats: tierCache.getStats()
     };
   } catch (error) {
-    console.error('Error getting cache stats:', error.message);
+    logger.error('Error getting cache stats', { err: error.message });
     return {
       keys: [],
       keyCount: 0,
@@ -184,9 +185,9 @@ function getCacheStats() {
 function setCacheTTL(ttlSeconds) {
   try {
     tierCache.options.stdTTL = ttlSeconds;
-    console.log(`Tier cache TTL set to ${ttlSeconds} seconds`);
+    logger.info('Tier cache TTL updated', { ttlSeconds });
   } catch (error) {
-    console.error('Error setting cache TTL:', error.message);
+    logger.error('Error setting cache TTL', { err: error.message });
   }
 }
 
@@ -196,15 +197,15 @@ function setCacheTTL(ttlSeconds) {
  */
 async function warmupCache(userIds) {
   try {
-    console.log(`Warming up tier cache for ${userIds.length} users...`);
+    logger.info('Warming up tier cache', { count: userIds.length });
     const start = Date.now();
     
     await getUsersTiersCached(userIds);
     
     const duration = Date.now() - start;
-    console.log(`✓ Cache warmup completed in ${duration}ms`);
+    logger.info('Cache warmup completed', { durationMs: duration });
   } catch (error) {
-    console.error('Error warming up cache:', error.message);
+    logger.error('Error warming up cache', { err: error.message });
   }
 }
 
@@ -222,7 +223,7 @@ function getCacheHealth() {
       memoryEstimate: `${JSON.stringify(stats.keys).length} bytes`
     };
   } catch (error) {
-    console.error('Error checking cache health:', error.message);
+    logger.error('Error checking cache health', { err: error.message });
     return {
       healthy: false,
       error: error.message
