@@ -1,6 +1,39 @@
 const crypto = require('crypto');
 const WalletConnection = require('../models/WalletConnection');
 const WalletSession = require('../models/WalletSession');
+const logger = require('../utils/logger');
+
+const CHALLENGE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+// In-memory store for pending wallet connection challenges: nonce → { timestamp, expiresAt }
+const pendingChallenges = new Map();
+
+// Purge expired challenges every 15 minutes to prevent unbounded memory growth
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, val] of pendingChallenges) {
+    if (now > val.expiresAt) pendingChallenges.delete(key);
+  }
+}, 15 * 60 * 1000).unref();
+
+let stacksTx;
+try {
+  stacksTx = require('@stacks/transactions');
+  if (!stacksTx.publicKeyFromSignatureVrs) {
+    throw new Error('publicKeyFromSignatureVrs not found — upgrade @stacks/transactions to v6+');
+  }
+} catch (err) {
+  stacksTx = null;
+  // Signature verification will be unavailable — connectWallet will throw on every call
+  console.error('WARNING: @stacks/transactions failed to load, wallet signature verification is disabled:', err.message);
+}
+
+/**
+ * Returns the number of active pending challenges (for monitoring/health checks)
+ */
+function getPendingChallengeCount() {
+  return pendingChallenges.size;
+}
 
 /**
  * Generate a unique nonce for wallet signature challenge
@@ -17,6 +50,46 @@ function generateSessionId() {
 }
 
 /**
+ * Verify a Stacks wallet signature (Hiro / Xverse VRS format).
+ * Returns true if the signature is valid for the given message and public key.
+ */
+function verifyStacksSignature(message, signature, claimedPublicKey) {
+  if (!stacksTx || !stacksTx.publicKeyFromSignatureVrs) {
+    throw new Error('Signature verification unavailable: @stacks/transactions not loaded');
+  }
+
+  const normalSig = signature.startsWith('0x') ? signature.slice(2) : signature;
+  const msgHash = hashSignMessage(message);
+
+  try {
+    const recoveredPubKey = stacksTx.publicKeyFromSignatureVrs(msgHash, { data: normalSig });
+    const normalClaimed = claimedPublicKey.startsWith('0x') ? claimedPublicKey.slice(2) : claimedPublicKey;
+    return recoveredPubKey.toLowerCase() === normalClaimed.toLowerCase();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Reconstruct the exact message that was presented to the user for signing
+ */
+function buildSignMessage(nonce, timestamp) {
+  return `Sign to connect your wallet\n\nNonce: ${nonce}\nTimestamp: ${timestamp}`;
+}
+
+/**
+ * Hash a plaintext message the same way Stacks wallets do before signing.
+ * Stacks personal sign: sha256( sha256("\x18Stacks Signed Message:\n" + len + message) )
+ */
+function hashSignMessage(message) {
+  const prefix = `\x18Stacks Signed Message:\n${message.length}`;
+  const prefixed = Buffer.from(prefix + message, 'utf8');
+  return crypto.createHash('sha256').update(
+    crypto.createHash('sha256').update(prefixed).digest()
+  ).digest('hex');
+}
+
+/**
  * Create a connection request with nonce
  * User receives this challenge from wallet to sign
  */
@@ -24,17 +97,23 @@ async function createConnectionRequest(network = 'mainnet') {
   const nonce = generateNonce();
   const timestamp = Date.now();
 
+  pendingChallenges.set(nonce, { timestamp, expiresAt: timestamp + CHALLENGE_TTL_MS });
+
   return {
     nonce,
     timestamp,
-    message: `Sign to connect your wallet\n\nNonce: ${nonce}\nTimestamp: ${timestamp}`,
+    expiresAt: timestamp + CHALLENGE_TTL_MS,
+    message: buildSignMessage(nonce, timestamp),
     network
   };
 }
 
 /**
- * Connect a wallet (Hiro or Xverse)
- * Called after user signs the challenge
+ * Connect a wallet (Hiro or Xverse) after verifying the signed connection challenge.
+ *
+ * @param {string} signature - 65-byte VRS signature hex (from createConnectionRequest challenge)
+ * @param {string} nonce     - The nonce from createConnectionRequest (consumed after use)
+ * Throws if the signature is invalid, the nonce is unknown, or the challenge is expired.
  */
 async function connectWallet(address, walletType, publicKey, signature, nonce, network = 'mainnet', metadata = {}) {
   try {
@@ -51,11 +130,41 @@ async function connectWallet(address, walletType, publicKey, signature, nonce, n
       throw new Error('Invalid network. Must be "mainnet", "testnet", or "devnet"');
     }
 
-    // Verify signature (basic validation)
-    // In production, verify against the actual signature
-    if (!signature || signature.length < 10) {
-      throw new Error('Invalid signature provided');
+    if (!signature) {
+      throw new Error('Signature is required');
     }
+    const rawSig = signature.startsWith('0x') ? signature.slice(2) : signature;
+    if (!/^[0-9a-fA-F]+$/.test(rawSig)) {
+      throw new Error('Signature must be a hex-encoded string');
+    }
+    if (rawSig.length !== 130) {
+      throw new Error(`Invalid signature length: expected 130 hex chars (65 bytes), got ${rawSig.length}`);
+    }
+
+    const rawPubKey = publicKey.startsWith('0x') ? publicKey.slice(2) : publicKey;
+    if (!/^[0-9a-fA-F]{66}$/.test(rawPubKey)) {
+      throw new Error('publicKey must be a 33-byte (66 hex char) compressed secp256k1 public key');
+    }
+
+    const challenge = pendingChallenges.get(nonce);
+    if (!challenge) {
+      throw new Error('Invalid or unknown nonce — request a new connection challenge');
+    }
+    if (Date.now() > challenge.expiresAt) {
+      pendingChallenges.delete(nonce);
+      throw new Error('Challenge expired — request a new connection challenge');
+    }
+
+    const signedMessage = buildSignMessage(nonce, challenge.timestamp);
+    const isValid = verifyStacksSignature(signedMessage, signature, publicKey);
+    if (!isValid) {
+      logger.warn('Wallet signature verification failed', { address, walletType, network });
+      throw new Error('Signature verification failed — signature does not match the provided public key');
+    }
+
+    // Consume nonce: each challenge may only be used once
+    pendingChallenges.delete(nonce);
+    logger.info('Wallet signature verified', { address, walletType, network });
 
     // Check if wallet already connected
     let walletConnection = await WalletConnection.findOne({
@@ -392,5 +501,9 @@ module.exports = {
   disconnectWallet,
   revokeSession,
   cleanupExpiredSessions,
-  updateWalletProfile
+  updateWalletProfile,
+  verifyStacksSignature,
+  buildSignMessage,
+  hashSignMessage,
+  getPendingChallengeCount,
 };

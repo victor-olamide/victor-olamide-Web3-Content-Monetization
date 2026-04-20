@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { useContentAccess } from '@/hooks/useContentAccess';
 import { usePayPerView } from '@/hooks/usePayPerView';
 import { useWalletBalance } from '@/hooks/useWalletBalance';
+import { useToast } from '@/contexts/ToastContext';
 import { STACKS_API_BASE, STACKS_EXPLORER_BASE, STACKS_CHAIN } from '@/utils/constants';
 
 export default function ContentView({ params }: { params: { id: string } }) {
@@ -15,10 +16,29 @@ export default function ContentView({ params }: { params: { id: string } }) {
   const { content, hasAccess, loading, error, refreshAccess } = useContentAccess(params.id);
   const { purchaseContent } = usePayPerView();
   const { stx, loading: balanceLoading, error: balanceError, refetch: refetchBalance } = useWalletBalance();
+  const { showSuccess, showError, showInfo } = useToast();
   const [purchasing, setPurchasing] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
   const [txId, setTxId] = useState<string | null>(null);
+  const [txStatus, setTxStatus] = useState<'pending' | 'success' | 'failed' | null>(null);
+  const [attempts, setAttempts] = useState(0);
+  const [pollingError, setPollingError] = useState<string | null>(null);
+
+  const pollTransaction = useCallback((id: string) => {
+    setTxStatus('pending');
+    setAttempts(0);
+    setPollingError(null);
+    let count = 0;
+    const interval = setInterval(async () => {
+      count++;
+      setAttempts(count);
+      if (count > 30) {
+        clearInterval(interval);
+        setPollingError('Transaction confirmation timed out. Please check the explorer.');
+        showError('Transaction Timeout', 'Could not confirm transaction after 5 minutes. Check the explorer for status.');
+        return;
+      }
 
   const pollTransaction = async (id: string) => {
     setTxStatus('pending');
@@ -31,6 +51,17 @@ export default function ContentView({ params }: { params: { id: string } }) {
           clearInterval(interval);
           refreshAccess();
           refetchBalance();
+          showSuccess('Access Granted', 'Your purchase was confirmed on the blockchain!');
+        } else if (data.tx_status === 'abort' || data.tx_status === 'failed') {
+          setTxStatus('failed');
+          clearInterval(interval);
+          showError('Transaction Failed', 'Your transaction was rejected by the blockchain.');
+        }
+      } catch (err) {
+        console.error('Polling error:', err);
+      }
+    }, 10000);
+  }, [refreshAccess, refetchBalance, showSuccess, showError]);
         } else if (data.tx_status === 'abort' || data.tx_status === 'failed') {
           setTxStatus('failed');
           clearInterval(interval);
@@ -53,6 +84,8 @@ export default function ContentView({ params }: { params: { id: string } }) {
     setPurchaseError(null);
     setTxStatus(null);
 
+    if (balanceLoading) {
+      setPurchaseError('Fetching wallet balance, please try again.');
     // Real balance check against Stacks API
     if (balanceLoading) {
       setPurchaseError("Fetching wallet balance, please try again.");
@@ -68,6 +101,13 @@ export default function ContentView({ params }: { params: { id: string } }) {
       );
       return;
     }
+
+    setPurchasing(true);
+    try {
+      const result = await purchaseContent(parseInt(params.id), content.price, content.creator);
+      const newTxId = result as string;
+      setTxId(newTxId);
+
     
     setPurchasing(true);
 
@@ -98,6 +138,11 @@ export default function ContentView({ params }: { params: { id: string } }) {
       }
 
       showSuccess('Purchase Submitted', 'Your transaction is being processed on the blockchain.');
+      pollTransaction(newTxId);
+    } catch (err: unknown) {
+      console.error(err);
+      setTxId(null);
+      const errMsg = err instanceof Error ? err.message : 'Purchase failed';
       pollTransaction(result as string);
     } catch (err: any) {
       console.error(err);
@@ -126,9 +171,7 @@ export default function ContentView({ params }: { params: { id: string } }) {
         <div className="p-8 max-w-4xl mx-auto text-center">
           <h1 className="text-3xl font-bold mb-4">{error || 'Content Not Found'}</h1>
           <p className="text-gray-600 mb-8">The content you are looking for does not exist or has been removed.</p>
-          <Link href="/dashboard" className="text-orange-600 font-bold hover:underline">
-            Return to Dashboard
-          </Link>
+          <Link href="/dashboard" className="text-orange-600 font-bold hover:underline">Return to Dashboard</Link>
         </div>
       </DashboardShell>
     );
@@ -149,6 +192,7 @@ export default function ContentView({ params }: { params: { id: string } }) {
   return (
     <DashboardShell>
       <div className="p-8 max-w-4xl mx-auto">
+        <Link href="/dashboard" className="flex items-center gap-1 text-gray-500 hover:text-gray-700 mb-6 transition">
         <Link
           href="/dashboard"
           className="flex items-center gap-1 text-gray-500 hover:text-gray-700 mb-6 transition"
@@ -205,6 +249,7 @@ export default function ContentView({ params }: { params: { id: string } }) {
                     {purchasing ? <Loader2 className="animate-spin" size={20} /> : null}
                     {purchasing ? 'Processing...' : 'Purchase Access'}
                   </button>
+                  <button
                   <button 
                     onClick={() => showInfo('Subscription', 'Subscription flow coming soon. Stay tuned!')}
                     disabled={purchasing}
@@ -237,6 +282,7 @@ export default function ContentView({ params }: { params: { id: string } }) {
                         : 'Transaction failed'}
                     </p>
                     {txStatus === 'success' && (
+                      <button onClick={() => window.location.reload()} className="text-xs font-bold text-green-800 underline mt-1">
                       <button
                         onClick={() => window.location.reload()}
                         className="text-xs font-bold text-green-800 underline mt-1"
@@ -245,6 +291,7 @@ export default function ContentView({ params }: { params: { id: string } }) {
                       </button>
                     )}
                     <a
+                      href={`${STACKS_EXPLORER_BASE}/txid/${txId}?chain=${STACKS_CHAIN}`}
                       href={`${EXPLORER_BASE}/txid/${txId}?chain=${EXPLORER_CHAIN}`}
                       target="_blank"
                       rel="noopener noreferrer"

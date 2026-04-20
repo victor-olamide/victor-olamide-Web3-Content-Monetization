@@ -10,6 +10,7 @@ const { pinningManager } = require('../services/pinningManager');
 const { addContentToContract, removeContentFromContract } = require('../services/contractService');
 const { verifyCreatorOwnership, checkContentNotRemoved } = require('../middleware/creatorAuth');
 const { initiateRefund, getPendingRefundsForCreator } = require('../services/refundService');
+const searchService = require('../services/searchService');
 const { validateContentBody } = require('../middleware/inputValidation');
 
 const upload = multer({ 
@@ -52,7 +53,6 @@ router.post('/upload', (req, res) => {
 // Search endpoint for content discovery
 router.get('/search', async (req, res) => {
   try {
-    const searchService = require('../services/searchService');
     const results = await searchService.searchContent(req.query);
     res.json(results);
   } catch (err) {
@@ -211,13 +211,14 @@ router.get('/:contentId', async (req, res) => {
   }
 });
 
-// Get all content metadata
+// Get all content metadata with pagination, filtering by category/creator, and keyword search
 router.get('/', async (req, res) => {
   try {
-    const content = await Content.find();
-    res.json(content);
+    const results = await searchService.searchContent(req.query);
+    res.json(results);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error('Content listing error:', err);
+    res.status(500).json({ message: 'Failed to retrieve content', error: err.message });
   }
 });
 
