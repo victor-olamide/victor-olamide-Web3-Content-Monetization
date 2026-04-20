@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const WalletConnection = require('../models/WalletConnection');
 const WalletSession = require('../models/WalletSession');
+const logger = require('../utils/logger');
 
 const CHALLENGE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
@@ -141,6 +142,7 @@ async function connectWallet(address, walletType, publicKey, signature, nonce, n
     const signedMessage = buildSignMessage(nonce, challenge.timestamp);
     const isValid = verifyStacksSignature(signedMessage, signature, publicKey);
     if (!isValid) {
+      logger.warn('Wallet signature verification failed', { address, walletType, network });
       throw new Error('Signature verification failed — signature does not match the provided public key');
     }
 
