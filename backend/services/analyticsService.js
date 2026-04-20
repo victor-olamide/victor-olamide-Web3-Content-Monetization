@@ -427,6 +427,12 @@ class AnalyticsService {
         topContent.map(c => ({ views: c.views, revenue: c.revenue, purchases: c.purchases }))
       );
 
+      // Categorize content by performance
+      const performanceCategories = this.categorizeContentPerformance(topContent);
+
+      // Calculate trends
+      const trends = this.calculateTrends(periodData);
+
       // Calculate previous period metrics for comparison
       let comparison = null;
       try {
@@ -456,6 +462,13 @@ class AnalyticsService {
           avgViewsPerContent: engagementMetrics.avgViewsPerContent.toFixed(2),
           avgRevenuePerContent: engagementMetrics.avgRevenuePerContent.toFixed(2),
         },
+        performanceAnalysis: {
+          topTierCount: performanceCategories.topTier.length,
+          midTierCount: performanceCategories.midTier.length,
+          lowTierCount: performanceCategories.lowTier.length,
+          topPerformers: performanceCategories.topTier.slice(0, 5),
+        },
+        trends: trends,
         comparison: comparison || null,
       };
 
