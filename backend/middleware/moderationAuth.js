@@ -147,6 +147,7 @@ async function verifyQueueAccess(req, res, next) {
       queue.status === 'pending';
 
     if (!hasAccess) {
+      logger.warn('Queue access denied', { queueId, moderatorAddress: moderatorAddress || 'unknown' });
       return res.status(403).json({
         success: false,
         error: 'You do not have access to this queue entry'
