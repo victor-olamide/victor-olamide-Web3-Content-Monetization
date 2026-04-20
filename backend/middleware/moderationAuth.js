@@ -94,6 +94,7 @@ async function verifyAdmin(req, res, next) {
     );
 
     if (!isAuthorized) {
+      logger.warn('Unauthorized admin access attempt', { address: adminAddress.toLowerCase() });
       return res.status(403).json({
         success: false,
         error: 'You do not have admin permissions'
