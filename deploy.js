@@ -26,6 +26,7 @@ const DEPLOYER        = process.env.DEPLOYER_ADDRESS;
 const NODE_URL        = process.env.STACKS_NODE_URL || 'https://api.mainnet.hiro.so';
 const NETWORK         = { ...STACKS_MAINNET, coreApiUrl: NODE_URL };
 const CONTRACTS_DIR   = path.join(__dirname, 'contracts');
+const DRY_RUN         = process.env.DRY_RUN === 'true';
 
 const CONTRACTS = [
   { name: 'content-gate',  file: 'content-gate.clar',  fee: BigInt(3000) },
@@ -121,6 +122,13 @@ async function main() {
     const codeBody = fs.readFileSync(path.join(CONTRACTS_DIR, contract.file), 'utf8');
 
     console.log(`Deploying ${contract.name}... (nonce: ${nonce}, fee: ${contract.fee} µSTX)`);
+
+    if (DRY_RUN) {
+      console.log(`  [DRY RUN] Skipping broadcast for ${contract.name}`);
+      nonce++;
+      deployed++;
+      continue;
+    }
 
     let txId;
     try {
