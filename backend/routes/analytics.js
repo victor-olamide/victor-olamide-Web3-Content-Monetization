@@ -11,9 +11,14 @@ const analyticsController = require('../controllers/analyticsController');
 
 // Import middleware
 const { adminAuthMiddleware } = require('../middleware/adminAuth');
+const { authenticateToken } = require('../middleware/auth');
 
 // Public routes (for event tracking)
 router.post('/track', analyticsController.trackEvent);
+
+// Creator routes (require authentication)
+// GET /analytics/creator/:id - Get creator analytics dashboard data
+router.get('/creator/:id', authenticateToken, analyticsController.getCreatorAnalytics);
 
 // Admin-only routes (require authentication)
 router.use(adminAuthMiddleware);

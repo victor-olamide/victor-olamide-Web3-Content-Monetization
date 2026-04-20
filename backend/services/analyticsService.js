@@ -10,6 +10,30 @@ const User = require('../models/User');
 const Content = require('../models/Content');
 
 class AnalyticsService {
+  constructor() {
+    this.analyticsCache = new Map();
+    this.CACHE_TTL = 10 * 60 * 1000; // 10 minutes for analytics
+  }
+
+  /**
+   * Get cached analytics data
+   */
+  getCachedAnalytics(key) {
+    const cached = this.analyticsCache.get(key);
+    if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+      return cached.data;
+    }
+    this.analyticsCache.delete(key);
+    return null;
+  }
+
+  /**
+   * Set cached analytics data
+   */
+  setCachedAnalytics(key, data) {
+    this.analyticsCache.set(key, { data, timestamp: Date.now() });
+  }
+
   /**
    * Track analytics event
    */
@@ -246,6 +270,220 @@ class AnalyticsService {
   }
 
   /**
+   * Get creator analytics data
+   * Returns views, revenue, subscriber count, and top content for a creator
+   * Aggregates data daily/weekly/monthly based on granularity
+   * @param {string} creatorId - Creator's MongoDB ObjectId
+   * @param {Date} startDate - Start date for analytics
+   * @param {Date} endDate - End date for analytics
+   * @param {string} granularity - 'hourly', 'daily', 'weekly', or 'monthly'
+   * @returns {Promise<Object>} Analytics data
+   */
+  async getCreatorAnalytics(creatorId, startDate, endDate, granularity = 'daily') {
+    try {
+      console.log(`Getting creator analytics for ${creatorId} from ${startDate} to ${endDate}`);
+
+      // Create cache key
+      const cacheKey = `creator_analytics_${creatorId}_${startDate.toISOString()}_${endDate.toISOString()}_${granularity}`;
+      const cached = this.getCachedAnalytics(cacheKey);
+      if (cached) {
+        console.log('Returning cached creator analytics');
+        return cached;
+      }
+
+      // Get creator's content IDs
+      const Content = require('../models/Content');
+      const creatorContent = await Content.find({ creator: creatorId }, '_id').lean();
+      const contentIds = creatorContent.map(c => c._id);
+
+      if (contentIds.length === 0) {
+        const result = {
+          views: 0,
+          revenue: 0,
+          subscriberCount: 0,
+          topContent: [],
+          periodData: []
+        };
+        this.setCachedAnalytics(cacheKey, result);
+        return result;
+      }
+
+      // Aggregate data from events
+      const events = await AnalyticsEvent.find({
+        contentId: { $in: contentIds },
+        timestamp: { $gte: startDate, $lt: endDate },
+        eventType: { $in: ['CONTENT_VIEW', 'CONTENT_PURCHASE'] }
+      }).lean();
+
+      // Group by date based on granularity
+      const groupedData = {};
+      for (const event of events) {
+        let dateKey;
+        const eventDate = new Date(event.timestamp);
+
+        switch (granularity) {
+          case 'hourly':
+            const hour = new Date(eventDate);
+            hour.setMinutes(0, 0, 0);
+            dateKey = hour.toISOString();
+            break;
+          case 'daily':
+            const day = new Date(eventDate);
+            day.setHours(0, 0, 0, 0);
+            dateKey = day.toISOString().split('T')[0];
+            break;
+          case 'weekly':
+            const week = new Date(eventDate);
+            const dayOfWeek = week.getDay();
+            week.setDate(week.getDate() - dayOfWeek);
+            week.setHours(0, 0, 0, 0);
+            dateKey = week.toISOString().split('T')[0];
+            break;
+          case 'monthly':
+            const month = new Date(eventDate);
+            month.setDate(1);
+            month.setHours(0, 0, 0, 0);
+            dateKey = month.toISOString().slice(0, 7); // YYYY-MM
+            break;
+          default:
+            dateKey = eventDate.toISOString().split('T')[0];
+        }
+
+        if (!groupedData[dateKey]) {
+          groupedData[dateKey] = [];
+        }
+        groupedData[dateKey].push(event);
+      }
+
+      // Calculate metrics
+      const periodData = [];
+      let totalViews = 0;
+      let totalRevenue = 0;
+      const contentStats = new Map();
+
+      for (const [dateKey, dateEvents] of Object.entries(groupedData)) {
+        const date = new Date(dateKey);
+        let views = 0;
+        let revenue = 0;
+
+        for (const event of dateEvents) {
+          if (event.eventType === 'CONTENT_VIEW') {
+            views++;
+            totalViews++;
+          } else if (event.eventType === 'CONTENT_PURCHASE') {
+            revenue += event.metadata?.amount || 0;
+            totalRevenue += revenue;
+          }
+
+          // Track content stats
+          const contentId = event.contentId.toString();
+          if (!contentStats.has(contentId)) {
+            contentStats.set(contentId, { views: 0, revenue: 0, purchases: 0 });
+          }
+          const stats = contentStats.get(contentId);
+          if (event.eventType === 'CONTENT_VIEW') {
+            stats.views++;
+          } else if (event.eventType === 'CONTENT_PURCHASE') {
+            stats.revenue += event.metadata?.amount || 0;
+            stats.purchases++;
+          }
+        }
+
+        periodData.push({
+          date: dateKey,
+          views,
+          revenue,
+          granularity
+        });
+      }
+
+      // Get top content
+      const topContent = [];
+      for (const [contentId, stats] of contentStats.entries()) {
+        const content = await Content.findById(contentId, 'title contentType').lean();
+        if (content) {
+          topContent.push({
+            contentId,
+            title: content.title,
+            type: content.contentType,
+            views: stats.views,
+            revenue: stats.revenue,
+            purchases: stats.purchases
+          });
+        }
+      }
+
+      // Sort top content by revenue, then views
+      topContent.sort((a, b) => b.revenue - a.revenue || b.views - a.views);
+
+      // Get subscriber count
+      const Subscription = require('../models/Subscription');
+      const subscriberCount = await Subscription.countDocuments({
+        creator: creatorId,
+        cancelledAt: null
+      });
+
+      // Calculate engagement metrics
+      const engagementMetrics = this.calculateEngagementMetrics(
+        topContent.map(c => ({ views: c.views, revenue: c.revenue, purchases: c.purchases }))
+      );
+
+      // Categorize content by performance
+      const performanceCategories = this.categorizeContentPerformance(topContent);
+
+      // Calculate trends
+      const trends = this.calculateTrends(periodData);
+
+      // Calculate previous period metrics for comparison
+      let comparison = null;
+      try {
+        const previousMetrics = await this.calculatePreviousPeriodMetrics(creatorId, startDate, endDate, granularity);
+        comparison = {
+          viewsGrowth: this.calculateGrowthRate(totalViews, previousMetrics.views),
+          revenueGrowth: this.calculateGrowthRate(totalRevenue, previousMetrics.revenue),
+          subscriberGrowth: this.calculateGrowthRate(subscriberCount, previousMetrics.subscriberCount),
+          previousViews: previousMetrics.views,
+          previousRevenue: previousMetrics.revenue,
+          previousSubscriberCount: previousMetrics.subscriberCount,
+        };
+      } catch (error) {
+        console.warn('Could not calculate comparison metrics:', error.message);
+        // Comparison is optional, don't fail if it's not available
+      }
+
+      const result = {
+        views: totalViews,
+        revenue: totalRevenue,
+        subscriberCount,
+        topContent: topContent.slice(0, 10), // Top 10
+        periodData,
+        engagementMetrics: {
+          totalEngagements: engagementMetrics.totalEngagements,
+          conversionRate: engagementMetrics.conversionRate.toFixed(2),
+          avgViewsPerContent: engagementMetrics.avgViewsPerContent.toFixed(2),
+          avgRevenuePerContent: engagementMetrics.avgRevenuePerContent.toFixed(2),
+        },
+        performanceAnalysis: {
+          topTierCount: performanceCategories.topTier.length,
+          midTierCount: performanceCategories.midTier.length,
+          lowTierCount: performanceCategories.lowTier.length,
+          topPerformers: performanceCategories.topTier.slice(0, 5),
+        },
+        trends: trends,
+        comparison: comparison || null,
+      };
+
+      // Cache the result
+      this.setCachedAnalytics(cacheKey, result);
+
+      return result;
+    } catch (error) {
+      console.error('Error getting creator analytics:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get analytics data for dashboard
    */
   async getDashboardData(startDate, endDate, granularity = 'daily') {
@@ -363,6 +601,121 @@ class AnalyticsService {
       logger.error('Error cleaning up old analytics data', { err: error });
       throw error;
     }
+  }
+
+  /**
+   * Calculate metrics for a previous period for comparison
+   */
+  async calculatePreviousPeriodMetrics(creatorId, startDate, endDate, granularity) {
+    try {
+      // Calculate the period duration
+      const periodDuration = endDate - startDate;
+      const previousEndDate = new Date(startDate);
+      const previousStartDate = new Date(startDate - periodDuration);
+
+      // Calculate metrics for previous period
+      const previousMetrics = await this.getCreatorAnalytics(
+        creatorId,
+        previousStartDate,
+        previousEndDate,
+        granularity
+      );
+
+      return previousMetrics;
+    } catch (error) {
+      console.error('Error calculating previous period metrics:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Calculate growth rates for key metrics
+   */
+  calculateGrowthRate(currentValue, previousValue) {
+    if (previousValue === 0) {
+      return currentValue > 0 ? 100 : 0; // 100% growth if previous was 0
+    }
+    return ((currentValue - previousValue) / previousValue) * 100;
+  }
+
+  /**
+   * Calculate engagement rate based on views and interactions
+   */
+  calculateEngagementMetrics(contentStats) {
+    const metrics = {
+      totalEngagements: 0,
+      conversionRate: 0,
+      avgViewsPerContent: 0,
+      avgRevenuePerContent: 0,
+    };
+
+    if (contentStats.length === 0) {
+      return metrics;
+    }
+
+    let totalViews = 0;
+    let totalRevenue = 0;
+    let totalPurchases = 0;
+
+    for (const content of contentStats) {
+      totalViews += content.views || 0;
+      totalRevenue += content.revenue || 0;
+      totalPurchases += content.purchases || 0;
+    }
+
+    metrics.totalEngagements = totalPurchases;
+    metrics.conversionRate = totalViews > 0 ? (totalPurchases / totalViews) * 100 : 0;
+    metrics.avgViewsPerContent = totalViews / contentStats.length;
+    metrics.avgRevenuePerContent = totalRevenue / contentStats.length;
+
+    return metrics;
+  }
+
+  /**
+   * Categorize content by performance tier
+   */
+  categorizeContentPerformance(contentList) {
+    if (contentList.length === 0) {
+      return { topTier: [], midTier: [], lowTier: [] };
+    }
+
+    // Sort by revenue
+    const sorted = [...contentList].sort((a, b) => b.revenue - a.revenue);
+
+    // Calculate tiers by quartiles
+    const topTierCount = Math.ceil(sorted.length * 0.25); // Top 25%
+    const midTierCount = Math.ceil(sorted.length * 0.5); // Next 25-50%
+
+    return {
+      topTier: sorted.slice(0, topTierCount),
+      midTier: sorted.slice(topTierCount, topTierCount + midTierCount),
+      lowTier: sorted.slice(topTierCount + midTierCount),
+    };
+  }
+
+  /**
+   * Calculate time-based trends for metrics
+   */
+  calculateTrends(periodData) {
+    if (periodData.length < 2) {
+      return { viewsTrend: 'stable', revenueTrend: 'stable' };
+    }
+
+    // Compare first half with second half
+    const midPoint = Math.floor(periodData.length / 2);
+    const firstHalf = periodData.slice(0, midPoint);
+    const secondHalf = periodData.slice(midPoint);
+
+    const firstHalfViews = firstHalf.reduce((sum, d) => sum + d.views, 0);
+    const secondHalfViews = secondHalf.reduce((sum, d) => sum + d.views, 0);
+
+    const firstHalfRevenue = firstHalf.reduce((sum, d) => sum + d.revenue, 0);
+    const secondHalfRevenue = secondHalf.reduce((sum, d) => sum + d.revenue, 0);
+
+    return {
+      viewsTrend: secondHalfViews > firstHalfViews ? 'increasing' : 'decreasing',
+      revenueTrend: secondHalfRevenue > firstHalfRevenue ? 'increasing' : 'decreasing',
+    };
   }
 }
 
