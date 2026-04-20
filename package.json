@@ -8,6 +8,7 @@
   "dependencies": {
     "@victor-olamide/content-cli": "^1.0.0",
     "@victor-olamide/content-utils": "^1.0.0",
-    "@victor-olamide/stacks-sdk": "^1.0.0"
+    "@victor-olamide/stacks-sdk": "^1.0.0",
+    "dotenv": "^16.4.5"
   }
 }
