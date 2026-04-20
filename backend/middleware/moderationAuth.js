@@ -23,6 +23,12 @@ function parseAddressList(envValue) {
     });
 }
 
+// Log parsed address lists at module load so misconfiguration is visible in startup logs
+logger.info('Moderation auth config loaded', {
+  moderators: parseAddressList(process.env.AUTHORIZED_MODERATORS).length,
+  admins: parseAddressList(process.env.AUTHORIZED_ADMINS).length,
+});
+
 /**
  * Verify user is a moderator
  * Checks if user address is in authorized moderators list
