@@ -546,6 +546,146 @@ class ModerationService {
   }
 
   /**
+   * Perform automatic content filtering and flagging
+   */
+  async autoFilterContent(content) {
+    try {
+      const keywordFilterService = require('./keywordFilterService');
+
+      // Analyze content using keyword filter
+      const analysis = keywordFilterService.analyzeContent(content);
+      const assessment = keywordFilterService.getRiskAssessment(analysis);
+
+      const result = {
+        analysis,
+        assessment,
+        flagged: assessment.recommendation === 'auto-flag',
+        shouldReview: ['auto-flag', 'flag-for-review'].includes(assessment.recommendation)
+      };
+
+      // If content should be flagged, create a flag
+      if (result.shouldReview) {
+        // Determine the reason from detected findings
+        let primaryReason = 'other';
+        let severity = 'medium';
+
+        if (analysis.detected.length > 0) {
+          const primaryDetection = analysis.detected[0];
+          primaryReason = primaryDetection.reason;
+          severity = primaryDetection.severity;
+        }
+
+        const flagData = {
+          flagId: `auto-${uuidv4()}`,
+          contentId: content.contentId || content._id,
+          flaggedBy: 'system',
+          flagType: 'automated-detection',
+          reason: primaryReason,
+          description: `Auto-flagged content: ${assessment.reasons.join('; ')}`,
+          evidence: {
+            keywords: analysis.detected.map(d => ({ category: d.category, matches: d.count })),
+            riskLevel: assessment.risk_level,
+            confidence: assessment.confidence
+          },
+          severity: severity,
+          status: 'received',
+          reportMetadata: {
+            detectedAt: new Date(),
+            riskAssessment: assessment,
+            analysisData: analysis
+          }
+        };
+
+        result.flag = flagData;
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error in auto-filter content:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Process auto-flagged content and create queue entry
+   */
+  async processAutoFlaggedContent(content, autoFilterResult) {
+    try {
+      if (!autoFilterResult.flag) {
+        return { queued: false, reason: 'No flag generated' };
+      }
+
+      // Create ModerationFlag record
+      const flag = new ModerationFlag(autoFilterResult.flag);
+      await flag.save();
+
+      // Create or merge into queue
+      let queue = await ModerationQueue.findOne({
+        contentId: content.contentId || content._id,
+        status: { $ne: 'resolved' }
+      });
+
+      if (queue) {
+        // Merge into existing queue
+        queue = await this.mergeFlags(queue._id, [flag]);
+      } else {
+        // Create new queue entry
+        queue = await this.createQueueEntry(
+          content.contentId || content._id,
+          [flag],
+          {
+            autoFlaggedAt: new Date(),
+            autoFlagReason: autoFilterResult.assessment.reasons.join('; ')
+          }
+        );
+      }
+
+      return {
+        queued: true,
+        queueId: queue.queueId,
+        flagId: flag._id,
+        severity: queue.severity,
+        priority: queue.priority
+      };
+    } catch (error) {
+      console.error('Error processing auto-flagged content:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check if content should be auto-flagged on upload
+   */
+  async validateContentOnUpload(content) {
+    try {
+      const autoFilterResult = await this.autoFilterContent(content);
+
+      if (autoFilterResult.shouldReview) {
+        const queueResult = await this.processAutoFlaggedContent(content, autoFilterResult);
+        return {
+          valid: true,
+          autoFlagged: true,
+          flagReason: autoFilterResult.assessment.reasons.join('; '),
+          queueId: queueResult.queueId,
+          recommendation: autoFilterResult.assessment.recommendation
+        };
+      }
+
+      return {
+        valid: true,
+        autoFlagged: false,
+        flagReason: null
+      };
+    } catch (error) {
+      console.error('Error validating content on upload:', error);
+      return {
+        valid: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
    * Get moderation stats
    */
   async getStats() {
