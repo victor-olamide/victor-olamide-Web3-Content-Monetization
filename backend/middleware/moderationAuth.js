@@ -8,7 +8,9 @@ const logger = require('../utils/logger');
 
 /**
  * Parse a comma-separated list of Stacks addresses from an env var.
- * Trims whitespace from each entry and removes empty strings.
+ * Trims whitespace from each entry, removes empty strings, and filters
+ * out entries that do not match the Stacks address format (SP… / ST…).
+ * Comparison against parsed addresses should use .toLowerCase() on both sides.
  */
 function parseAddressList(envValue) {
   if (!envValue) return [];
