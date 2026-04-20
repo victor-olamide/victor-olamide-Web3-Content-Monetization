@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const express = require('express');
 const transactionHistoryService = require('../services/transactionHistoryService');
 const {
@@ -59,7 +60,7 @@ router.get('/history', verifyWalletAuth, validatePaginationParams, validateTrans
       }
     });
   } catch (error) {
-    console.error('Error fetching transaction history:', error);
+    logger.error('Error fetching transaction history', { err: error });
     res.status(500).json({
       success: false,
       message: 'Failed to fetch transaction history'
@@ -80,7 +81,7 @@ router.get('/summary', verifyWalletAuth, async (req, res) => {
       data: summary
     });
   } catch (error) {
-    console.error('Error fetching transaction summary:', error);
+    logger.error('Error fetching transaction summary', { err: error });
     res.status(500).json({
       success: false,
       message: 'Failed to fetch transaction summary'
@@ -101,7 +102,7 @@ router.get('/stats', verifyWalletAuth, async (req, res) => {
       data: stats
     });
   } catch (error) {
-    console.error('Error fetching transaction stats:', error);
+    logger.error('Error fetching transaction stats', { err: error });
     res.status(500).json({
       success: false,
       message: 'Failed to fetch transaction stats'
@@ -123,7 +124,7 @@ router.get('/pending', verifyWalletAuth, async (req, res) => {
       count: transactions.length
     });
   } catch (error) {
-    console.error('Error fetching pending transactions:', error);
+    logger.error('Error fetching pending transactions', { err: error });
     res.status(500).json({
       success: false,
       message: 'Failed to fetch pending transactions'
@@ -179,7 +180,7 @@ router.get('/by-type/:type', verifyWalletAuth, validatePaginationParams, async (
       }
     });
   } catch (error) {
-    console.error('Error fetching transactions by type:', error);
+    logger.error('Error fetching transactions by type', { err: error });
     res.status(500).json({
       success: false,
       message: 'Failed to fetch transactions'
@@ -222,7 +223,7 @@ router.get('/by-category/:category', verifyWalletAuth, validatePaginationParams,
       }
     });
   } catch (error) {
-    console.error('Error fetching transactions by category:', error);
+    logger.error('Error fetching transactions by category', { err: error });
     res.status(500).json({
       success: false,
       message: 'Failed to fetch transactions'
@@ -260,7 +261,7 @@ router.get('/date-range', verifyWalletAuth, validateDateRangeParams, validatePag
       }
     });
   } catch (error) {
-    console.error('Error fetching transactions by date range:', error);
+    logger.error('Error fetching transactions by date range', { err: error });
     res.status(500).json({
       success: false,
       message: 'Failed to fetch transactions'
@@ -290,7 +291,7 @@ router.get('/monthly/:year/:month', verifyWalletAuth, validateMonth, async (req,
       total: result.total
     });
   } catch (error) {
-    console.error('Error fetching monthly summary:', error);
+    logger.error('Error fetching monthly summary', { err: error });
     res.status(500).json({
       success: false,
       message: 'Failed to fetch monthly summary'
@@ -317,7 +318,7 @@ router.get('/balance-over-time', verifyWalletAuth, validateDaysParam, async (req
       days: parseInt(days)
     });
   } catch (error) {
-    console.error('Error fetching balance history:', error);
+    logger.error('Error fetching balance history', { err: error });
     res.status(500).json({
       success: false,
       message: 'Failed to fetch balance history'
@@ -347,7 +348,7 @@ router.get('/:txId', verifyWalletAuth, validateTransactionId, async (req, res) =
       data: transaction
     });
   } catch (error) {
-    console.error('Error fetching transaction:', error);
+    logger.error('Error fetching transaction', { err: error });
     res.status(500).json({
       success: false,
       message: 'Failed to fetch transaction'
@@ -385,7 +386,7 @@ router.get('/hash/:txHash', verifyWalletAuth, validateTransactionHash, async (re
       data: transaction
     });
   } catch (error) {
-    console.error('Error fetching transaction by hash:', error);
+    logger.error('Error fetching transaction by hash', { err: error });
     res.status(500).json({
       success: false,
       message: 'Failed to fetch transaction'
@@ -407,7 +408,7 @@ router.post('/', verifyWalletAuth, validateTransactionData, async (req, res) => 
       data: transaction
     });
   } catch (error) {
-    console.error('Error recording transaction:', error);
+    logger.error('Error recording transaction', { err: error });
     res.status(500).json({
       success: false,
       message: 'Failed to record transaction'
@@ -449,7 +450,7 @@ router.put(
         data: transaction
       });
     } catch (error) {
-      console.error('Error updating transaction status:', error);
+      logger.error('Error updating transaction status', { err: error });
       res.status(500).json({
         success: false,
         message: 'Failed to update transaction status'
@@ -489,7 +490,7 @@ router.put('/:txHash/confirmations', verifyWalletAuth, validateTransactionHash, 
       data: transaction
     });
   } catch (error) {
-    console.error('Error updating confirmations:', error);
+    logger.error('Error updating confirmations', { err: error });
     res.status(500).json({
       success: false,
       message: 'Failed to update confirmations'
@@ -512,7 +513,7 @@ router.get('/export/tax/:year', verifyWalletAuth, validateExportYear, async (req
       data: taxData
     });
   } catch (error) {
-    console.error('Error exporting tax data:', error);
+    logger.error('Error exporting tax data', { err: error });
     res.status(500).json({
       success: false,
       message: 'Failed to export tax data'
