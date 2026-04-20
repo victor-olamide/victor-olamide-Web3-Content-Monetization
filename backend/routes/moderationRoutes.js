@@ -5,299 +5,230 @@
 
 const express = require('express');
 const router = express.Router();
+const moderationController = require('../controllers/moderationController');
 const moderationService = require('../services/moderationService');
-const reportingService = require('../services/reportingService');
-const auditLogService = require('../services/auditLogService');
+const { authenticateToken, requireAdmin } = require('../middleware/auth');
 const {
   verifyModerator,
   verifyAdmin,
-  verifyQueueAccess,
-  verifyContentCreator
+  verifyQueueAccess
 } = require('../middleware/moderationAuth');
 const {
   validateFlagSubmission,
   validateModerationDecision,
-  validateAppealSubmission,
   validateQueueFilters
 } = require('../middleware/contentFlagValidation');
+
+// ===== Creator Routes (authenticated users) =====
 
 /**
  * POST /api/moderation/flag
  * Submit a flag/report for content
  */
-router.post('/flag', validateFlagSubmission, async (req, res) => {
-  try {
-    const { contentId, reason, description, evidence, userContact } = req.body;
-    const userAddress = req.user?.address || req.walletAddress;
-    const ipAddress = req.ip;
-    const userAgent = req.get('user-agent');
+router.post('/flag', authenticateToken, validateFlagSubmission, moderationController.submitContentFlag);
 
-    const result = await reportingService.submitFlag(contentId, {
-      flaggedBy: userAddress,
-      reason,
-      description,
-      evidence,
-      userContact,
-      ipAddress,
-      userAgent
-    });
-
-    res.status(201).json({
-      success: true,
-      message: result.message,
-      data: {
-        flagId: result.flag.flagId,
-        queueId: result.queue.queueId,
-        status: result.queue.status,
-        severity: result.queue.severity
-      }
-    });
-  } catch (error) {
-    console.error('Error submitting flag:', error);
-    res.status(400).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
+// ===== Moderator Routes (require moderator authentication) =====
 
 /**
  * GET /api/moderation/queue
- * Get moderation queue (requires moderator auth)
+ * Get moderation queue with filters and pagination
  */
-router.get('/queue', verifyModerator, validateQueueFilters, async (req, res) => {
-  try {
-    const { status = 'pending', severity, limit, skip, contentType, sort } = req.query;
-
-    const result = await moderationService.getQueue({
-      status,
-      severity,
-      contentType,
-      limit: parseInt(limit) || 50,
-      skip: parseInt(skip) || 0,
-      sort: sort || '-priority -createdAt'
-    });
-
-    res.json({
-      success: true,
-      data: result
-    });
-  } catch (error) {
-    console.error('Error fetching queue:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
+router.get('/queue', authenticateToken, verifyModerator, validateQueueFilters, moderationController.getModerationQueue);
 
 /**
  * GET /api/moderation/queue/:queueId
  * Get specific queue entry details
  */
-router.get('/queue/:queueId', verifyModerator, verifyQueueAccess, async (req, res) => {
-  try {
-    const queue = req.queue;
-
-    // Get related flags
-    const flags = await reportingService.getContentFlags(queue.contentId);
-
-    // Get audit trail
-    const auditTrail = await auditLogService.getAuditTrail(queue.contentId, queue.queueId);
-
-    res.json({
-      success: true,
-      data: {
-        queue,
-        flags,
-        auditTrail
-      }
-    });
-  } catch (error) {
-    console.error('Error fetching queue entry:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
+router.get('/queue/:queueId', authenticateToken, verifyModerator, moderationController.getQueueEntry);
 
 /**
  * POST /api/moderation/queue/:queueId/assign
  * Assign queue entry to moderator
  */
-router.post('/queue/:queueId/assign', verifyModerator, async (req, res) => {
-  try {
-    const { queueId } = req.params;
-    const { targetModerator = null, notes } = req.body;
-    const moderatorAddress = targetModerator || req.moderator.address;
-
-    const result = await moderationService.assignToModerator(
-      parseInt(queueId),
-      moderatorAddress,
-      notes
-    );
-
-    res.json({
-      success: true,
-      message: 'Queue entry assigned successfully',
-      data: result
-    });
-  } catch (error) {
-    console.error('Error assigning queue entry:', error);
-    res.status(400).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
+router.post('/queue/:queueId/assign', authenticateToken, verifyModerator, moderationController.assignQueueEntry);
 
 /**
- * POST /api/moderation/queue/:queueId/review/start
- * Start reviewing a queue entry
- */
-router.post('/queue/:queueId/review/start', verifyModerator, verifyQueueAccess, async (req, res) => {
-  try {
-    const { queueId } = req.params;
-    const { notes } = req.body;
-    const moderatorAddress = req.moderator.address;
-
-    const result = await moderationService.startReview(
-      parseInt(queueId),
-      moderatorAddress,
-      notes
-    );
-
-    res.json({
-      success: true,
-      message: 'Review started',
-      data: result
-    });
-  } catch (error) {
-    console.error('Error starting review:', error);
-    res.status(400).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-/**
- * POST /api/moderation/queue/:queueId/review/approve
+ * POST /api/moderation/queue/:queueId/approve
  * Approve content (resolve flags)
  */
-router.post('/queue/:queueId/review/approve', verifyModerator, verifyQueueAccess, validateModerationDecision, async (req, res) => {
-  try {
-    const { queueId } = req.params;
-    const { decisionNotes } = req.body;
-    const moderatorAddress = req.moderator.address;
-
-    const result = await moderationService.approveContent(
-      parseInt(queueId),
-      moderatorAddress,
-      decisionNotes
-    );
-
-    res.json({
-      success: true,
-      message: 'Content approved successfully',
-      data: result
-    });
-  } catch (error) {
-    console.error('Error approving content:', error);
-    res.status(400).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
+router.post('/queue/:queueId/approve', authenticateToken, verifyModerator, validateModerationDecision, moderationController.approveQueueEntry);
 
 /**
- * POST /api/moderation/queue/:queueId/review/reject
- * Reject content (mark for removal)
+ * POST /api/moderation/queue/:queueId/reject
+ * Reject/remove content
  */
-router.post('/queue/:queueId/review/reject', verifyModerator, verifyQueueAccess, validateModerationDecision, async (req, res) => {
-  try {
-    const { queueId } = req.params;
-    const { removalReason, decisionNotes } = req.body;
-    const moderatorAddress = req.moderator.address;
+router.post('/queue/:queueId/reject', authenticateToken, verifyModerator, validateModerationDecision, moderationController.rejectQueueEntry);
 
-    if (!removalReason) {
-      return res.status(400).json({
-        success: false,
-        error: 'Removal reason is required'
-      });
-    }
-
-    const result = await moderationService.rejectContent(
-      parseInt(queueId),
-      moderatorAddress,
-      removalReason,
-      decisionNotes
-    );
-
-    res.json({
-      success: true,
-      message: 'Content rejected and marked for removal',
-      data: result
-    });
-  } catch (error) {
-    console.error('Error rejecting content:', error);
-    res.status(400).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
+// ===== Admin Routes (require admin authentication) =====
 
 /**
- * POST /api/moderation/appeal/:contentId
- * File appeal against content removal
+ * GET /api/moderation/stats
+ * Get moderation statistics and metrics
  */
-router.post('/appeal/:contentId', verifyContentCreator, validateAppealSubmission, async (req, res) => {
+router.get('/stats', authenticateToken, requireAdmin, moderationController.getModerationStats);
+
+/**
+ * POST /api/moderation/content/:contentId/check
+ * Manually run auto-flagging on content
+ */
+router.post('/content/:contentId/check', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { contentId } = req.params;
-    const { appealNotes } = req.body;
-    const creatorAddress = req.user?.address || req.walletAddress;
+    const Content = require('../models/Content');
 
-    // Find the queue entry for this content
-    const ModerationQueue = require('../models/ModerationQueue');
-    const queue = await ModerationQueue.findOne({
-      contentId: parseInt(contentId),
-      status: 'removed'
-    });
-
-    if (!queue) {
+    const content = await Content.findOne({ contentId: parseInt(contentId) });
+    if (!content) {
       return res.status(404).json({
         success: false,
-        error: 'No removal record found for this content or content not removed'
+        message: 'Content not found'
       });
     }
 
-    const result = await moderationService.fileAppeal(
-      queue.queueId,
-      creatorAddress,
-      appealNotes
-    );
+    // Run auto-filter
+    const autoFilterResult = await moderationService.autoFilterContent(content);
 
     res.json({
       success: true,
-      message: 'Appeal filed successfully. Review team will assess within 7 days.',
       data: {
-        queueId: result.queueId,
-        status: result.status,
-        appealCount: result.appealCount,
-        appealDeadline: result.appealDeadline
+        contentId,
+        analysis: autoFilterResult.analysis,
+        assessment: autoFilterResult.assessment,
+        flagged: autoFilterResult.flagged,
+        shouldReview: autoFilterResult.shouldReview
       }
     });
   } catch (error) {
-    console.error('Error filing appeal:', error);
-    res.status(400).json({
+    console.error('Error checking content:', error);
+    res.status(500).json({
       success: false,
+      message: 'Error checking content',
       error: error.message
     });
   }
 });
+
+/**
+ * POST /api/moderation/keywords/add
+ * Add keyword to filter (admin only)
+ */
+router.post('/keywords/add', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { category, keyword } = req.body;
+
+    if (!category || !keyword) {
+      return res.status(400).json({
+        success: false,
+        message: 'category and keyword are required'
+      });
+    }
+
+    const keywordFilterService = require('../services/keywordFilterService');
+    keywordFilterService.addKeyword(category, keyword);
+
+    res.json({
+      success: true,
+      message: `Keyword "${keyword}" added to category "${category}"`
+    });
+  } catch (error) {
+    console.error('Error adding keyword:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error adding keyword',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/moderation/keywords/remove
+ * Remove keyword from filter (admin only)
+ */
+router.post('/keywords/remove', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { category, keyword } = req.body;
+
+    if (!category || !keyword) {
+      return res.status(400).json({
+        success: false,
+        message: 'category and keyword are required'
+      });
+    }
+
+    const keywordFilterService = require('../services/keywordFilterService');
+    keywordFilterService.removeKeyword(category, keyword);
+
+    res.json({
+      success: true,
+      message: `Keyword "${keyword}" removed from category "${category}"`
+    });
+  } catch (error) {
+    console.error('Error removing keyword:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error removing keyword',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/moderation/keywords
+ * Get all keywords by category (admin only)
+ */
+router.get('/keywords', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const keywordFilterService = require('../services/keywordFilterService');
+    const keywords = keywordFilterService.getAllKeywords();
+
+    res.json({
+      success: true,
+      data: {
+        keywords,
+        categories: keywordFilterService.getAllCategories()
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching keywords:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching keywords',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/moderation/keywords/:category
+ * Get keywords for specific category (admin only)
+ */
+router.get('/keywords/:category', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { category } = req.params;
+    const keywordFilterService = require('../services/keywordFilterService');
+    const categoryKeywords = keywordFilterService.getKeywordsByCategory(category);
+
+    if (!categoryKeywords) {
+      return res.status(404).json({
+        success: false,
+        message: `Category "${category}" not found`
+      });
+    }
+
+    res.json({
+      success: true,
+      data: categoryKeywords
+    });
+  } catch (error) {
+    console.error('Error fetching category keywords:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching category keywords',
+      error: error.message
+    });
+  }
+});
+
+module.exports = router;
 
 /**
  * GET /api/moderation/flags/user
