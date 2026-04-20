@@ -126,6 +126,12 @@ class DatabaseConnection {
       if (!process.env.MONGODB_URI) {
         validateDbCredentials();
       }
+
+      const isProduction = process.env.NODE_ENV === 'production';
+      if (isProduction && process.env.MONGO_SSL_ENABLED !== 'true') {
+        logger.warn('MongoDB SSL is disabled in production — credentials transmitted in plaintext');
+      }
+
       const mongoURI = process.env.MONGODB_URI || buildMongoURI();
 
       logger.info('Connecting to MongoDB replica set', {
