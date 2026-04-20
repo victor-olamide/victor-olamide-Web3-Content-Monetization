@@ -3,6 +3,8 @@
  * Validates flag submission data
  */
 
+const logger = require('../utils/logger');
+
 /**
  * Validate flag submission
  */
@@ -75,7 +77,7 @@ function validateFlagSubmission(req, res, next) {
 
     next();
   } catch (error) {
-    console.error('Flag validation error:', error);
+    logger.error('Flag validation error', { err: error });
     res.status(500).json({
       success: false,
       error: 'Flag validation failed'
@@ -138,7 +140,7 @@ function validateModerationDecision(req, res, next) {
 
     next();
   } catch (error) {
-    console.error('Moderation decision validation error:', error);
+    logger.error('Moderation decision validation error', { err: error });
     res.status(500).json({
       success: false,
       error: 'Validation failed'
@@ -173,7 +175,7 @@ function validateAppealSubmission(req, res, next) {
 
     next();
   } catch (error) {
-    console.error('Appeal validation error:', error);
+    logger.error('Appeal validation error', { err: error });
     res.status(500).json({
       success: false,
       error: 'Appeal validation failed'
@@ -222,7 +224,7 @@ function validateQueueFilters(req, res, next) {
 
     next();
   } catch (error) {
-    console.error('Queue filter validation error:', error);
+    logger.error('Queue filter validation error', { err: error });
     res.status(500).json({
       success: false,
       error: 'Validation failed'
