@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useJWTAuth } from '@/contexts/JWTAuthContext';
 import { validateLoginForm } from '@/utils/validationUtils';
 import { FormInput, FormSubmitButton, FormDivider } from '@/components/FormInput';
+import SocialLogin from '@/components/SocialLogin';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -146,7 +147,10 @@ export default function LoginPage() {
           />
         </form>
 
-        <FormDivider />
+        {/* Social Login Options */}
+        <div className="mt-6 mb-6">
+          <SocialLogin showDivider={true} showEmailLink={false} />
+        </div>
 
         {/* Sign Up Link */}
         <p className="text-center text-gray-600">
