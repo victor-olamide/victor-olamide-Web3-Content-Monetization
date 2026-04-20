@@ -145,7 +145,7 @@ class DatabaseConnection {
       logger.info('Connecting to MongoDB replica set', {
         hosts: process.env.MONGO_HOSTS || 'mongodb-primary:27017,mongodb-secondary1:27017,mongodb-secondary2:27017',
         replicaSet: mongoOptions.replicaSet,
-        database: process.env.MONGO_DATABASE || 'web3content',
+        database: process.env.MONGO_DATABASE,
         user: process.env.MONGODB_URI ? '[from MONGODB_URI]' : (process.env.MONGO_APP_USERNAME || '[not set]'),
       });
 
