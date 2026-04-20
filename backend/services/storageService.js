@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const axios = require('axios');
 const FormData = require('form-data');
 
@@ -38,7 +39,7 @@ const getContentFromStorage = async (url, storageType) => {
     }
     throw new Error('Unsupported storage type');
   } catch (err) {
-    console.error('Storage retrieval error:', err);
+    logger.error('Storage retrieval error:', err);
     throw err;
   }
 };

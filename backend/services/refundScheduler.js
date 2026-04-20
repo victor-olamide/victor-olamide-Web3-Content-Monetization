@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const Refund = require('../models/Refund');
 const { autoProcessRefundsForRemovedContent } = require('./refundService');
 
@@ -16,7 +17,7 @@ let isRunning = false;
  */
 function initializeScheduler(intervalMs = 3600000) {
   if (schedulerInstance) {
-    console.warn('Refund scheduler already initialized');
+    logger.warn('Refund scheduler already initialized');
     return;
   }
 
@@ -34,7 +35,7 @@ function initializeScheduler(intervalMs = 3600000) {
   }, intervalMs);
 
   isRunning = true;
-  console.log('Refund scheduler initialized');
+  logger.info('Refund scheduler initialized');
 }
 
 /**
@@ -53,7 +54,7 @@ async function processRefunds() {
       console.error(`[${timestamp}] Refund processing failed:`, result.message);
     }
   } catch (error) {
-    console.error('Refund processing error:', error);
+    logger.error('Refund processing error', { err: error });
   }
 }
 
@@ -70,7 +71,7 @@ function stopScheduler() {
     initialTimeout = null;
   }
   isRunning = false;
-  console.log('Refund scheduler stopped');
+  logger.info('Refund scheduler stopped');
 }
 
 /**
@@ -119,7 +120,7 @@ async function getPendingRefundStats() {
       }
     };
   } catch (error) {
-    console.error('Error fetching refund statistics:', error);
+    logger.error('Error fetching refund statistics', { err: error });
     return null;
   }
 }
@@ -128,7 +129,7 @@ async function getPendingRefundStats() {
  * Manually trigger refund processing (admin use)
  */
 async function triggerManualProcessing() {
-  console.log('Manually triggering refund processing...');
+  logger.info('Manually triggering refund processing...');
   return await processRefunds();
 }
 

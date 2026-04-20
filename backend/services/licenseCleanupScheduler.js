@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { markExpiredLicenses } = require('./licensingService');
 
 let licenseCleanupScheduler = null;
@@ -13,13 +14,13 @@ const initializeLicenseCleanup = (intervalMs = 3600000) => {
         const result = await markExpiredLicenses();
         console.log(`[License Cleanup] Marked ${result.modifiedCount} licenses as expired`);
       } catch (err) {
-        console.error('[License Cleanup Error]', err.message);
+        logger.error('[License Cleanup Error]', err.message);
       }
     }, intervalMs);
 
     console.log(`[License Cleanup] Scheduler initialized with interval: ${intervalMs}ms`);
   } catch (err) {
-    console.error('Failed to initialize license cleanup scheduler:', err);
+    logger.error('Failed to initialize license cleanup scheduler:', err);
   }
 };
 
@@ -30,7 +31,7 @@ const stopLicenseCleanup = () => {
   if (licenseCleanupScheduler) {
     clearInterval(licenseCleanupScheduler);
     licenseCleanupScheduler = null;
-    console.log('[License Cleanup] Scheduler stopped');
+    logger.info('[License Cleanup] Scheduler stopped');
   }
 };
 
@@ -43,7 +44,7 @@ const triggerLicenseCleanup = async () => {
     console.log(`[License Cleanup] Immediate cleanup: marked ${result.modifiedCount} licenses as expired`);
     return result;
   } catch (err) {
-    console.error('[License Cleanup Error]', err);
+    logger.error('[License Cleanup Error]', err);
     throw err;
   }
 };

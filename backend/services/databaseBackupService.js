@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { spawn } = require('child_process');
 const fs = require('fs').promises;
 const path = require('path');
@@ -329,7 +330,7 @@ class DatabaseBackupService {
 
       return backupFiles;
     } catch (error) {
-      console.error('Failed to list backups:', error);
+      logger.error('Failed to list backups', { err: error });
       return [];
     }
   }
