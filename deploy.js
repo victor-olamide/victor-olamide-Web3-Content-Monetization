@@ -104,7 +104,13 @@ async function main() {
   const wallet     = await generateWallet({ secretKey: MNEMONIC, password: '' });
   const account    = wallet.accounts[0];
   const privateKey = account.stxPrivateKey;
-  console.log(`  Derived address: ${account.address || '(check explorer)'}\n`);
+  const derivedAddr = account.address || DEPLOYER;
+  console.log(`  Derived address: ${derivedAddr}\n`);
+
+  if (derivedAddr !== DEPLOYER) {
+    console.error(`  ✗ Address mismatch: mnemonic derives ${derivedAddr} but DEPLOYER_ADDRESS is ${DEPLOYER}`);
+    process.exit(1);
+  }
 
   let nonce = await getNonce();
   console.log(`  Starting nonce: ${nonce}\n`);
