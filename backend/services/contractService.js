@@ -1,9 +1,8 @@
 const {
   makeContractCall,
   broadcastTransaction,
-  makeContractSTXPostCondition,
-  FungibleConditionCode,
   uintCV,
+  boolCV,
   stringAsciiCV,
   principalCV,
   AnchorMode,
@@ -274,27 +273,25 @@ const updateContentPrice = async (contentId, newPrice, privateKey) => {
 };
 
 /**
- * Register subscription renewal on blockchain
- * @param {number} subscriptionId - Subscription ID
- * @param {number} amount - Renewal amount in STX
- * @param {string} subscriber - Subscriber principal address
- * @param {string} creator - Creator principal address
- * @param {string} privateKey - Signer private key
- * @returns {Promise<Object>} Broadcast response with transaction ID
+ * Create a subscription tier on-chain
+ * @param {number} tierId - Tier ID
+ * @param {number} price - Tier price in uSTX
+ * @param {number} duration - Subscription duration in days
+ * @param {string} senderKey - Private key for creator wallet
+ * @returns {Promise<Object>} Broadcast response
  */
-const registerSubscriptionRenewal = async (subscriptionId, amount, subscriber, creator, privateKey) => {
+const createSubscriptionTier = async (tierId, price, duration, senderKey) => {
   try {
     const txOptions = {
       contractAddress: process.env.CONTRACT_ADDRESS,
       contractName: 'subscription',
-      functionName: 'register-renewal',
+      functionName: 'create-tier',
       functionArgs: [
-        uintCV(subscriptionId),
-        uintCV(amount),
-        principalCV(subscriber),
-        principalCV(creator)
+        uintCV(tierId),
+        uintCV(price),
+        uintCV(duration)
       ],
-      senderKey: privateKey,
+      senderKey,
       validateWithAbi: true,
       network,
       anchorMode: AnchorMode.Any,
@@ -302,81 +299,61 @@ const registerSubscriptionRenewal = async (subscriptionId, amount, subscriber, c
     };
 
     const transaction = await makeContractCall(txOptions);
-    const broadcastResponse = await broadcastTransaction(transaction, network);
-    
-    return broadcastResponse;
+    return await broadcastTransaction(transaction, network);
   } catch (error) {
-    throw new Error(`Failed to register subscription renewal on blockchain: ${error.message}`);
+    throw new Error(`Failed to create subscription tier: ${error.message}`);
   }
 };
 
 /**
- * Complete subscription renewal with payment
- * @param {number} subscriptionId - Subscription ID
- * @param {number} amount - Renewal payment amount in STX
- * @param {string} subscriber - Subscriber address
- * @param {string} creator - Creator address
- * @param {string} privateKey - Signer private key
- * @returns {Promise<Object>} Broadcast response with transaction ID
+ * Subscribe to a creator's tier on-chain
+ * @param {string} creatorPrincipal - Creator principal address
+ * @param {number} tierId - Tier ID
+ * @param {string} senderKey - Subscriber private key
+ * @returns {Promise<Object>} Broadcast response
  */
-const completeSubscriptionRenewal = async (subscriptionId, amount, subscriber, creator, privateKey) => {
+const subscribeToTier = async (creatorPrincipal, tierId, senderKey) => {
   try {
-    const postConditions = [
-      makeContractSTXPostCondition(
-        process.env.CONTRACT_ADDRESS,
-        'subscription',
-        FungibleConditionCode.LessEqual,
-        uintCV(amount)
-      )
-    ];
+    const txOptions = {
+      contractAddress: process.env.CONTRACT_ADDRESS,
+      contractName: 'subscription',
+      functionName: 'subscribe',
+      functionArgs: [
+        principalCV(creatorPrincipal),
+        uintCV(tierId)
+      ],
+      senderKey,
+      validateWithAbi: true,
+      network,
+      anchorMode: AnchorMode.Any,
+      postConditionMode: PostConditionMode.Allow,
+    };
 
+    const transaction = await makeContractCall(txOptions);
+    return await broadcastTransaction(transaction, network);
+  } catch (error) {
+    throw new Error(`Failed to subscribe to tier: ${error.message}`);
+  }
+};
+
+/**
+ * Renew a subscription on-chain
+ * @param {string} creatorPrincipal - Creator principal address
+ * @param {number} tierId - Tier ID
+ * @param {string} senderKey - Subscriber private key
+ * @returns {Promise<Object>} Broadcast response
+ */
+const renewSubscription = async (creatorPrincipal, tierId, senderKey) => {
+  try {
     const txOptions = {
       contractAddress: process.env.CONTRACT_ADDRESS,
       contractName: 'subscription',
       functionName: 'renew-subscription',
       functionArgs: [
-        uintCV(subscriptionId),
-        uintCV(amount),
-        principalCV(subscriber),
-        principalCV(creator)
+        principalCV(creatorPrincipal),
+        uintCV(tierId)
       ],
-      senderKey: privateKey,
-      validateWithAbi: true,
-      network,
-      anchorMode: AnchorMode.Any,
-      postConditionMode: PostConditionMode.Deny,
-      postConditions
-    };
-
-    const transaction = await makeContractCall(txOptions);
-    const broadcastResponse = await broadcastTransaction(transaction, network);
-    
-    return broadcastResponse;
-  } catch (error) {
-    throw new Error(`Failed to complete subscription renewal: ${error.message}`);
-  }
-};
-
-/**
- * Apply grace period for expired subscription
- * @param {number} subscriptionId - Subscription ID
- * @param {number} gracePeriodDays - Grace period duration in days
- * @param {string} subscriber - Subscriber address
- * @param {string} privateKey - Signer private key
- * @returns {Promise<Object>} Broadcast response
- */
-const applySubscriptionGracePeriod = async (subscriptionId, gracePeriodDays, subscriber, privateKey) => {
-  try {
-    const txOptions = {
-      contractAddress: process.env.CONTRACT_ADDRESS,
-      contractName: 'subscription',
-      functionName: 'apply-grace-period',
-      functionArgs: [
-        uintCV(subscriptionId),
-        uintCV(gracePeriodDays),
-        principalCV(subscriber)
-      ],
-      senderKey: privateKey,
+      senderKey,
       validateWithAbi: true,
       network,
       anchorMode: AnchorMode.Any,
@@ -384,32 +361,34 @@ const applySubscriptionGracePeriod = async (subscriptionId, gracePeriodDays, sub
     };
 
     const transaction = await makeContractCall(txOptions);
-    const broadcastResponse = await broadcastTransaction(transaction, network);
-    
-    return broadcastResponse;
+    return await broadcastTransaction(transaction, network);
   } catch (error) {
-    throw new Error(`Failed to apply grace period: ${error.message}`);
+    throw new Error(`Failed to renew subscription: ${error.message}`);
   }
 };
 
 /**
- * Cancel subscription on blockchain
- * @param {number} subscriptionId - Subscription ID
- * @param {string} subscriber - Subscriber address
- * @param {string} privateKey - Signer private key
+ * Update a subscription tier on-chain
+ * @param {number} tierId - Tier ID
+ * @param {number} newPrice - New tier price in uSTX
+ * @param {number} newDuration - New duration in days
+ * @param {boolean} isActive - Whether tier is active
+ * @param {string} senderKey - Creator private key
  * @returns {Promise<Object>} Broadcast response
  */
-const cancelSubscriptionOnChain = async (subscriptionId, subscriber, privateKey) => {
+const updateSubscriptionTier = async (tierId, newPrice, newDuration, isActive, senderKey) => {
   try {
     const txOptions = {
       contractAddress: process.env.CONTRACT_ADDRESS,
       contractName: 'subscription',
-      functionName: 'cancel-subscription',
+      functionName: 'update-tier',
       functionArgs: [
-        uintCV(subscriptionId),
-        principalCV(subscriber)
+        uintCV(tierId),
+        uintCV(newPrice),
+        uintCV(newDuration),
+        boolCV(isActive)
       ],
-      senderKey: privateKey,
+      senderKey,
       validateWithAbi: true,
       network,
       anchorMode: AnchorMode.Any,
@@ -417,59 +396,113 @@ const cancelSubscriptionOnChain = async (subscriptionId, subscriber, privateKey)
     };
 
     const transaction = await makeContractCall(txOptions);
-    const broadcastResponse = await broadcastTransaction(transaction, network);
-    
-    return broadcastResponse;
+    return await broadcastTransaction(transaction, network);
   } catch (error) {
-    throw new Error(`Failed to cancel subscription on blockchain: ${error.message}`);
+    throw new Error(`Failed to update subscription tier: ${error.message}`);
   }
 };
 
 /**
- * Get subscription status from blockchain
- * @param {number} subscriptionId - Subscription ID
- * @returns {Promise<Object>} Subscription status
+ * Deactivate a subscription tier on-chain
+ * @param {number} tierId - Tier ID
+ * @param {string} senderKey - Creator private key
+ * @returns {Promise<Object>} Broadcast response
  */
-const getSubscriptionStatusOnChain = async (subscriptionId) => {
+const deactivateSubscriptionTier = async (tierId, senderKey) => {
   try {
-    const { callReadOnlyFunction, cvToJSON } = require('@stacks/transactions');
-    
-    const result = await callReadOnlyFunction({
+    const txOptions = {
       contractAddress: process.env.CONTRACT_ADDRESS,
       contractName: 'subscription',
-      functionName: 'get-subscription',
-      functionArgs: [uintCV(subscriptionId)],
+      functionName: 'deactivate-tier',
+      functionArgs: [uintCV(tierId)],
+      senderKey,
+      validateWithAbi: true,
       network,
-      senderAddress: process.env.CONTRACT_ADDRESS,
-    });
-    
-    return cvToJSON(result).value;
+      anchorMode: AnchorMode.Any,
+      postConditionMode: PostConditionMode.Allow,
+    };
+
+    const transaction = await makeContractCall(txOptions);
+    return await broadcastTransaction(transaction, network);
   } catch (error) {
-    throw new Error(`Failed to get subscription status: ${error.message}`);
+    throw new Error(`Failed to deactivate subscription tier: ${error.message}`);
   }
 };
 
 /**
- * Check if subscription is in grace period
- * @param {number} subscriptionId - Subscription ID
- * @returns {Promise<boolean>} Whether subscription is in grace period
+ * Set platform fee on the subscription contract
+ * @param {number} newFee - New fee in basis points
+ * @param {string} senderKey - Admin private key
+ * @returns {Promise<Object>} Broadcast response
  */
-const isSubscriptionInGracePeriod = async (subscriptionId) => {
+const setSubscriptionPlatformFee = async (newFee, senderKey) => {
+  try {
+    const txOptions = {
+      contractAddress: process.env.CONTRACT_ADDRESS,
+      contractName: 'subscription',
+      functionName: 'set-platform-fee',
+      functionArgs: [uintCV(newFee)],
+      senderKey,
+      validateWithAbi: true,
+      network,
+      anchorMode: AnchorMode.Any,
+      postConditionMode: PostConditionMode.Allow,
+    };
+
+    const transaction = await makeContractCall(txOptions);
+    return await broadcastTransaction(transaction, network);
+  } catch (error) {
+    throw new Error(`Failed to set subscription platform fee: ${error.message}`);
+  }
+};
+
+/**
+ * Get subscription tier info from chain
+ * @param {string} creatorPrincipal
+ * @param {number} tierId
+ * @returns {Promise<Object|null>} Tier info or null
+ */
+const getSubscriptionTierInfo = async (creatorPrincipal, tierId) => {
   try {
     const { callReadOnlyFunction, cvToJSON } = require('@stacks/transactions');
-    
     const result = await callReadOnlyFunction({
       contractAddress: process.env.CONTRACT_ADDRESS,
       contractName: 'subscription',
-      functionName: 'is-in-grace-period',
-      functionArgs: [uintCV(subscriptionId)],
+      functionName: 'get-tier-info',
+      functionArgs: [principalCV(creatorPrincipal), uintCV(tierId)],
       network,
       senderAddress: process.env.CONTRACT_ADDRESS,
     });
-    
+
+    const data = cvToJSON(result);
+    return data.value || null;
+  } catch (error) {
+    throw new Error(`Failed to get subscription tier info: ${error.message}`);
+  }
+};
+
+/**
+ * Verify active subscription on-chain
+ * @param {string} userAddress
+ * @param {string} creatorAddress
+ * @param {number} tierId
+ * @returns {Promise<boolean>} Whether subscription is active
+ */
+const verifySubscription = async (userAddress, creatorAddress, tierId) => {
+  try {
+    const { callReadOnlyFunction, cvToJSON } = require('@stacks/transactions');
+    const result = await callReadOnlyFunction({
+      contractAddress: process.env.CONTRACT_ADDRESS,
+      contractName: 'subscription',
+      functionName: 'is-subscribed',
+      functionArgs: [principalCV(userAddress), principalCV(creatorAddress), uintCV(tierId)],
+      network,
+      senderAddress: userAddress,
+    });
+
     return cvToJSON(result).value;
   } catch (error) {
-    throw new Error(`Failed to check grace period status: ${error.message}`);
+    throw new Error(`Failed to verify subscription: ${error.message}`);
   }
 };
 
@@ -485,11 +518,13 @@ module.exports = {
   hasValidRentalLicense,
   getPlatformFee,
   calculatePlatformFee,
-  registerSubscriptionRenewal,
-  completeSubscriptionRenewal,
-  applySubscriptionGracePeriod,
-  cancelSubscriptionOnChain,
-  getSubscriptionStatusOnChain,
-  isSubscriptionInGracePeriod,
+  createSubscriptionTier,
+  subscribeToTier,
+  renewSubscription,
+  updateSubscriptionTier,
+  deactivateSubscriptionTier,
+  setSubscriptionPlatformFee,
+  getSubscriptionTierInfo,
+  verifySubscription,
 };
 
