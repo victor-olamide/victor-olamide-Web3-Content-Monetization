@@ -656,6 +656,53 @@ class AnalyticsService {
 
     return metrics;
   }
+
+  /**
+   * Categorize content by performance tier
+   */
+  categorizeContentPerformance(contentList) {
+    if (contentList.length === 0) {
+      return { topTier: [], midTier: [], lowTier: [] };
+    }
+
+    // Sort by revenue
+    const sorted = [...contentList].sort((a, b) => b.revenue - a.revenue);
+
+    // Calculate tiers by quartiles
+    const topTierCount = Math.ceil(sorted.length * 0.25); // Top 25%
+    const midTierCount = Math.ceil(sorted.length * 0.5); // Next 25-50%
+
+    return {
+      topTier: sorted.slice(0, topTierCount),
+      midTier: sorted.slice(topTierCount, topTierCount + midTierCount),
+      lowTier: sorted.slice(topTierCount + midTierCount),
+    };
+  }
+
+  /**
+   * Calculate time-based trends for metrics
+   */
+  calculateTrends(periodData) {
+    if (periodData.length < 2) {
+      return { viewsTrend: 'stable', revenueTrend: 'stable' };
+    }
+
+    // Compare first half with second half
+    const midPoint = Math.floor(periodData.length / 2);
+    const firstHalf = periodData.slice(0, midPoint);
+    const secondHalf = periodData.slice(midPoint);
+
+    const firstHalfViews = firstHalf.reduce((sum, d) => sum + d.views, 0);
+    const secondHalfViews = secondHalf.reduce((sum, d) => sum + d.views, 0);
+
+    const firstHalfRevenue = firstHalf.reduce((sum, d) => sum + d.revenue, 0);
+    const secondHalfRevenue = secondHalf.reduce((sum, d) => sum + d.revenue, 0);
+
+    return {
+      viewsTrend: secondHalfViews > firstHalfViews ? 'increasing' : 'decreasing',
+      revenueTrend: secondHalfRevenue > firstHalfRevenue ? 'increasing' : 'decreasing',
+    };
+  }
 }
 
 module.exports = new AnalyticsService();
