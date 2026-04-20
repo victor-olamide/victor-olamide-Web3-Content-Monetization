@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { JWTAuthProvider } from "@/contexts/JWTAuthContext";
 import { ToastProvider } from "@/contexts/ToastContext";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -23,10 +24,11 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <AuthProvider>
-          <ToastProvider maxToasts={5} position="top-right">
-          <ToastProvider>
-            {children}
-          </ToastProvider>
+          <JWTAuthProvider>
+            <ToastProvider maxToasts={5} position="top-right">
+              {children}
+            </ToastProvider>
+          </JWTAuthProvider>
         </AuthProvider>
       </body>
     </html>
