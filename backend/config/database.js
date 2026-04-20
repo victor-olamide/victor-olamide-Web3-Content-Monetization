@@ -132,6 +132,7 @@ class DatabaseConnection {
         hosts: process.env.MONGO_HOSTS || 'mongodb-primary:27017,mongodb-secondary1:27017,mongodb-secondary2:27017',
         replicaSet: mongoOptions.replicaSet,
         database: process.env.MONGO_DATABASE || 'web3content',
+        user: process.env.MONGODB_URI ? '[from MONGODB_URI]' : (process.env.MONGO_APP_USERNAME || '[not set]'),
       });
 
       this.connection = await mongoose.connect(mongoURI, mongoOptions);
