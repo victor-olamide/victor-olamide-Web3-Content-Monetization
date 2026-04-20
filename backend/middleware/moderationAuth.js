@@ -58,6 +58,7 @@ async function verifyModerator(req, res, next) {
       isAuthorized: true
     };
 
+    logger.info('Moderator access granted', { address: moderatorAddress.toLowerCase() });
     next();
   } catch (error) {
     logger.error('Moderator verification error', { err: error });
