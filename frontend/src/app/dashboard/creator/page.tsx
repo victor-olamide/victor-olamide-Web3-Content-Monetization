@@ -98,6 +98,11 @@ export default function CreatorDashboardPage() {
                   This workspace brings your uploaded content, subscriber count, revenue stats, and
                   analytics charts together so you can publish and iterate from one place.
                 </p>
+                {stxAddress ? (
+                  <p className="mt-4 text-xs font-medium uppercase tracking-[0.18em] text-slate-400">
+                    Connected creator: {stxAddress}
+                  </p>
+                ) : null}
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row">
