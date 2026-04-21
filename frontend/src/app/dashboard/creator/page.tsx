@@ -45,7 +45,10 @@ export default function CreatorDashboardPage() {
   } = useCreatorDashboard(stxAddress);
 
   const topContent = useMemo(
-    () => [...content].sort((a, b) => b.revenue - a.revenue || b.views - a.views).slice(0, 5),
+    () =>
+      [...content]
+        .sort((a, b) => b.revenue - a.revenue || b.purchases - a.purchases || b.views - a.views)
+        .slice(0, 5),
     [content]
   );
 
