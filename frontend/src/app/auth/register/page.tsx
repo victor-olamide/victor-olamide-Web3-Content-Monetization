@@ -63,19 +63,27 @@ export default function RegisterPage() {
     const validation = validateRegistrationForm(formData);
     if (!validation.isValid) {
       setErrors(validation.errors);
+      addToast('Please fix the errors below', 'error');
       return;
     }
 
     setIsSubmitting(true);
+    clearError();
+    
     const success = await register(formData.email, formData.password, formData.name);
 
     if (success) {
       setSuccessMessage('Registration successful! Redirecting...');
       addToast('Account created successfully! Welcome!', 'success');
+      // Store signup timestamp for tracking
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('signupTime', new Date().toISOString());
+      }
       setTimeout(() => {
         router.push('/dashboard');
       }, 1500);
     } else {
+      addToast(authError || 'Registration failed. Please try again.', 'error');
       setErrors({});
     }
 
