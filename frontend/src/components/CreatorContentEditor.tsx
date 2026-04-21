@@ -190,6 +190,9 @@ export function CreatorContentEditor({
                   }
                   className="w-full text-sm text-slate-600 file:mr-4 file:rounded-full file:border-0 file:bg-cyan-600 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-cyan-700"
                 />
+                {values.file ? (
+                  <p className="mt-3 text-sm font-medium text-slate-700">{values.file.name}</p>
+                ) : null}
                 <p className="mt-3 text-xs text-slate-500">
                   Upload replaces the URL field when both are provided.
                 </p>
