@@ -130,7 +130,7 @@ export function CreatorContentTable({
                       onClick={() => handleDelete(item.contentId)}
                       disabled={deletingId === item.contentId}
                       className="inline-flex rounded-full border border-slate-200 p-2 text-slate-600 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
-                      title="Delete content"
+                      title={deletingId === item.contentId ? 'Deleting content' : 'Delete content'}
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -184,6 +184,7 @@ export function CreatorContentTable({
                   onClick={() => handleDelete(item.contentId)}
                   disabled={deletingId === item.contentId}
                   className="rounded-full border border-slate-200 p-2 text-slate-600 disabled:opacity-50"
+                  title={deletingId === item.contentId ? 'Deleting content' : 'Delete content'}
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
