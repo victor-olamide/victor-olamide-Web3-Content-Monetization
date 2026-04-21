@@ -182,6 +182,7 @@ export function CreatorContentEditor({
               <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4">
                 <input
                   type="file"
+                  accept="image/*,video/*,audio/*,.pdf,.txt,.md"
                   onChange={(event) =>
                     setValues((current) => ({
                       ...current,
