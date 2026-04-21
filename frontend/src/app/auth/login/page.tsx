@@ -62,19 +62,27 @@ export default function LoginPage() {
     const validation = validateLoginForm(formData);
     if (!validation.isValid) {
       setErrors(validation.errors);
+      addToast('Please fix the errors below', 'error');
       return;
     }
 
     setIsSubmitting(true);
+    clearError();
+    
     const success = await login(formData.email, formData.password);
 
     if (success) {
       setSuccessMessage('Login successful! Redirecting...');
       addToast('Login successful! Welcome back.', 'success');
+      // Store login timestamp for session tracking
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('lastLoginTime', new Date().toISOString());
+      }
       setTimeout(() => {
         router.push('/dashboard');
       }, 1500);
     } else {
+      addToast(authError || 'Login failed. Please try again.', 'error');
       setErrors({});
     }
 
