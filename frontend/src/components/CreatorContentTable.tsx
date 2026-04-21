@@ -1,160 +1,138 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Trash2, Edit, Eye } from 'lucide-react';
+import { Edit, Eye, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { ContentItem } from '@/utils/creatorApi';
 
 interface CreatorContentTableProps {
   content: ContentItem[];
   loading?: boolean;
+  deletingId?: number | null;
   onDelete?: (contentId: number) => Promise<boolean>;
   onEdit?: (content: ContentItem) => void;
+  onUpload?: () => void;
 }
 
-/**
- * Component to display creator's content in a table
- */
+function formatDate(value?: string) {
+  if (!value) {
+    return 'Recently';
+  }
+
+  return new Date(value).toLocaleDateString();
+}
+
 export function CreatorContentTable({
   content,
   loading = false,
+  deletingId = null,
   onDelete,
-  onEdit
+  onEdit,
+  onUpload,
 }: CreatorContentTableProps) {
-  const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-
   const handleDelete = async (contentId: number) => {
-    if (!window.confirm('Are you sure you want to delete this content?')) return;
-
-    setDeletingId(contentId);
-    setDeleteError(null);
-
-    try {
-      if (onDelete) {
-        const success = await onDelete(contentId);
-        if (!success) {
-          setDeleteError('Failed to delete content');
-        }
-      }
-    } catch (err) {
-      setDeleteError(err instanceof Error ? err.message : 'Error deleting content');
-    } finally {
-      setDeletingId(null);
+    if (!window.confirm('Delete this content and remove it from your creator dashboard?')) {
+      return;
     }
+
+    await onDelete?.(contentId);
   };
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
-        <div className="animate-spin inline-block w-8 h-8 border-4 border-gray-300 border-t-blue-600 rounded-full"></div>
-        <p className="mt-4 text-gray-600">Loading content...</p>
+      <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
+        <div className="space-y-4 animate-pulse">
+          <div className="h-5 w-40 rounded bg-slate-200" />
+          <div className="h-20 rounded-3xl bg-slate-100" />
+          <div className="h-20 rounded-3xl bg-slate-100" />
+          <div className="h-20 rounded-3xl bg-slate-100" />
+        </div>
       </div>
     );
   }
 
   if (content.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100 mb-4">
-          <Eye className="w-6 h-6 text-gray-400" />
-        </div>
-        <h3 className="text-lg font-medium text-gray-900 mb-2">No Content Found</h3>
-        <p className="text-gray-600 mb-6">You haven't uploaded any content yet.</p>
-        <Link
-          href="/dashboard/creator/upload"
-          className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
-        >
-          Upload Content
-        </Link>
+      <div className="rounded-[2rem] border border-dashed border-slate-300 bg-white px-8 py-14 text-center shadow-sm">
+        <p className="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-700">
+          Content Library
+        </p>
+        <h3 className="mt-3 text-2xl font-semibold text-slate-900">No uploads yet</h3>
+        <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-600">
+          Start your creator dashboard with a first release so revenue, subscribers, and analytics
+          have something to track.
+        </p>
+        {onUpload ? (
+          <button
+            type="button"
+            onClick={onUpload}
+            className="mt-6 inline-flex items-center rounded-full bg-slate-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
+          >
+            Upload your first piece
+          </button>
+        ) : null}
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                Title
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                Type
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                Price
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                Views
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                Purchases
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                Revenue
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                Created
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                Actions
-              </th>
+    <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
+      <div className="hidden overflow-x-auto lg:block">
+        <table className="w-full min-w-[880px]">
+          <thead className="border-b border-slate-200 bg-slate-50">
+            <tr className="text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+              <th className="px-6 py-4">Content</th>
+              <th className="px-6 py-4">Type</th>
+              <th className="px-6 py-4">Price</th>
+              <th className="px-6 py-4">Views</th>
+              <th className="px-6 py-4">Purchases</th>
+              <th className="px-6 py-4">Revenue</th>
+              <th className="px-6 py-4">Updated</th>
+              <th className="px-6 py-4">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-slate-200">
             {content.map((item) => (
-              <tr key={item.contentId} className="hover:bg-gray-50 transition">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900 max-w-xs truncate">
-                    {item.title}
-                  </div>
-                  <div className="text-xs text-gray-500">ID: {item.contentId}</div>
+              <tr key={item.contentId} className="align-top text-sm text-slate-700 transition hover:bg-slate-50">
+                <td className="px-6 py-5">
+                  <div className="font-semibold text-slate-900">{item.title}</div>
+                  <div className="mt-1 text-xs text-slate-500">ID {item.contentId}</div>
+                  <div className="mt-2 max-w-sm text-sm text-slate-600">{item.description}</div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
+                <td className="px-6 py-5">
+                  <span className="rounded-full bg-cyan-50 px-3 py-1 text-xs font-medium capitalize text-cyan-700">
                     {item.contentType}
                   </span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  {item.price} STX
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                  {item.views || 0}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                  {item.purchases || 0}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
-                  {(item.revenue || 0).toFixed(2)} STX
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                  {new Date(item.createdAt).toLocaleDateString()}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <div className="flex gap-2">
+                <td className="px-6 py-5 font-medium text-slate-900">{item.price.toFixed(2)} STX</td>
+                <td className="px-6 py-5">{item.views}</td>
+                <td className="px-6 py-5">{item.purchases}</td>
+                <td className="px-6 py-5 font-medium text-emerald-600">{item.revenue.toFixed(2)} STX</td>
+                <td className="px-6 py-5 text-slate-500">{formatDate(item.updatedAt || item.createdAt)}</td>
+                <td className="px-6 py-5">
+                  <div className="flex items-center gap-3">
                     <Link
                       href={`/content/${item.contentId}`}
-                      className="text-blue-600 hover:text-blue-900 inline-flex items-center gap-1"
+                      className="inline-flex rounded-full border border-slate-200 p-2 text-slate-600 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
                       title="View content"
                     >
-                      <Eye className="w-4 h-4" />
+                      <Eye className="h-4 w-4" />
                     </Link>
                     <button
-                      onClick={() => onEdit && onEdit(item)}
-                      className="text-amber-600 hover:text-amber-900 inline-flex items-center gap-1"
+                      type="button"
+                      onClick={() => onEdit?.(item)}
+                      className="inline-flex rounded-full border border-slate-200 p-2 text-slate-600 transition hover:border-amber-200 hover:bg-amber-50 hover:text-amber-700"
                       title="Edit content"
                     >
-                      <Edit className="w-4 h-4" />
+                      <Edit className="h-4 w-4" />
                     </button>
                     <button
+                      type="button"
                       onClick={() => handleDelete(item.contentId)}
                       disabled={deletingId === item.contentId}
-                      className="text-red-600 hover:text-red-900 inline-flex items-center gap-1 disabled:opacity-50"
+                      className="inline-flex rounded-full border border-slate-200 p-2 text-slate-600 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
                       title="Delete content"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
                 </td>
@@ -163,11 +141,57 @@ export function CreatorContentTable({
           </tbody>
         </table>
       </div>
-      {deleteError && (
-        <div className="bg-red-50 border-t border-red-200 px-6 py-4 text-sm text-red-700">
-          {deleteError}
-        </div>
-      )}
+
+      <div className="grid gap-4 p-4 lg:hidden">
+        {content.map((item) => (
+          <article key={item.contentId} className="rounded-[1.5rem] border border-slate-200 p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900">{item.title}</h3>
+                <p className="mt-1 text-sm capitalize text-cyan-700">{item.contentType}</p>
+              </div>
+              <span className="text-sm font-medium text-emerald-600">{item.revenue.toFixed(2)} STX</span>
+            </div>
+
+            <p className="mt-4 text-sm leading-6 text-slate-600">{item.description}</p>
+
+            <div className="mt-5 grid grid-cols-3 gap-3 rounded-[1.25rem] bg-slate-50 p-4 text-center">
+              <div>
+                <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Price</p>
+                <p className="mt-2 font-semibold text-slate-900">{item.price.toFixed(2)}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Views</p>
+                <p className="mt-2 font-semibold text-slate-900">{item.views}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Sales</p>
+                <p className="mt-2 font-semibold text-slate-900">{item.purchases}</p>
+              </div>
+            </div>
+
+            <div className="mt-5 flex items-center justify-between">
+              <p className="text-xs text-slate-500">Updated {formatDate(item.updatedAt || item.createdAt)}</p>
+              <div className="flex items-center gap-2">
+                <Link href={`/content/${item.contentId}`} className="rounded-full border border-slate-200 p-2 text-slate-600">
+                  <Eye className="h-4 w-4" />
+                </Link>
+                <button type="button" onClick={() => onEdit?.(item)} className="rounded-full border border-slate-200 p-2 text-slate-600">
+                  <Edit className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDelete(item.contentId)}
+                  disabled={deletingId === item.contentId}
+                  className="rounded-full border border-slate-200 p-2 text-slate-600 disabled:opacity-50"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
     </div>
   );
 }
