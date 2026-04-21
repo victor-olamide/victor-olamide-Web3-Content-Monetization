@@ -25,18 +25,37 @@ const roleProtectedRoutes: Record<string, string[]> = {
   '/moderators': ['admin', 'moderator']
 };
 
+// Routes that don't require authentication
+const publicRoutes = [
+  '/',
+  '/about',
+  '/contact',
+  '/terms',
+  '/privacy',
+  '/unauthorized'
+];
+
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'your-secret-key-change-in-production'
 );
 
 /**
- * Verify JWT token from request
+ * Verify JWT token from request with expiry check
  */
 async function verifyToken(token: string): Promise<any | null> {
   try {
     const verified = await jwtVerify(token, JWT_SECRET);
-    return verified.payload;
+    const payload = verified.payload;
+    
+    // Check token expiry
+    if (payload.exp && payload.exp * 1000 < Date.now()) {
+      console.warn('[Auth Middleware] Token expired');
+      return null;
+    }
+    
+    return payload;
   } catch (err) {
+    console.error('[Auth Middleware] Token verification failed:', err instanceof Error ? err.message : 'Unknown error');
     return null;
   }
 }
@@ -49,6 +68,14 @@ function getToken(request: NextRequest): string | null {
 }
 
 /**
+ * Log auth events for debugging
+ */
+function logAuthEvent(pathname: string, event: string, details?: Record<string, any>) {
+  const timestamp = new Date().toISOString();
+  console.log(`[Auth Middleware] ${timestamp} | ${pathname} | ${event}`, details || {});
+}
+
+/**
  * Middleware for authentication and authorization
  */
 export async function middleware(request: NextRequest) {
@@ -58,6 +85,7 @@ export async function middleware(request: NextRequest) {
   // Check if route is protected
   const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
   const isPublicAuthRoute = publicAuthRoutes.some(route => pathname.startsWith(route));
+  const isPublicRoute = publicRoutes.some(route => pathname === route);
   const isRoleProtectedRoute = Object.keys(roleProtectedRoutes).some(route =>
     pathname.startsWith(route)
   );
@@ -67,15 +95,22 @@ export async function middleware(request: NextRequest) {
   // Verify token if exists
   if (token) {
     user = await verifyToken(token);
+    if (user) {
+      logAuthEvent(pathname, 'token_verified', { user_id: user.sub });
+    } else {
+      logAuthEvent(pathname, 'token_invalid_or_expired');
+    }
   }
 
   // Redirect: If accessing public auth routes while authenticated
   if (isPublicAuthRoute && user) {
+    logAuthEvent(pathname, 'authenticated_user_accessing_auth_route', { redirect_to: '/dashboard' });
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
   // Redirect: If accessing protected routes without authentication
   if (isProtectedRoute && !user) {
+    logAuthEvent(pathname, 'unauthenticated_access_attempt');
     const loginUrl = new URL('/auth/login', request.url);
     loginUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(loginUrl);
@@ -87,9 +122,15 @@ export async function middleware(request: NextRequest) {
     if (route) {
       const allowedRoles = roleProtectedRoutes[route];
       if (!allowedRoles.includes(user.role)) {
+        logAuthEvent(pathname, 'insufficient_role', { user_role: user.role, required_roles: allowedRoles });
         return NextResponse.redirect(new URL('/unauthorized', request.url));
       }
     }
+  }
+
+  // Log successful auth checks
+  if ((isProtectedRoute || isRoleProtectedRoute) && user) {
+    logAuthEvent(pathname, 'access_granted', { user_role: user.role });
   }
 
   // Continue to next middleware or route handler
