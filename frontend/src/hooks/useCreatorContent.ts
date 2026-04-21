@@ -40,8 +40,13 @@ export function useCreatorContent(creatorAddress?: string): UseCreatorContentRet
 
   const handleDeleteContent = useCallback(
     async (contentId: number): Promise<boolean> => {
+      if (!creatorAddress) {
+        setError('Creator address is required');
+        return false;
+      }
+
       try {
-        await creatorApi.deleteContent(contentId);
+        await creatorApi.deleteContent(contentId, creatorAddress);
         setContent(prev => prev.filter(item => item.contentId !== contentId));
         return true;
       } catch (err) {
@@ -50,13 +55,21 @@ export function useCreatorContent(creatorAddress?: string): UseCreatorContentRet
         return false;
       }
     },
-    []
+    [creatorAddress]
   );
 
   const handleUpdateContent = useCallback(
     async (contentId: number, data: Partial<ContentItem>): Promise<boolean> => {
+      if (!creatorAddress) {
+        setError('Creator address is required');
+        return false;
+      }
+
       try {
-        const updated = await creatorApi.updateContent(contentId, data);
+        const updated = await creatorApi.updateContent(contentId, creatorAddress, {
+          ...data,
+          creator: creatorAddress,
+        });
         setContent(prev =>
           prev.map(item => (item.contentId === contentId ? updated : item))
         );
@@ -67,7 +80,7 @@ export function useCreatorContent(creatorAddress?: string): UseCreatorContentRet
         return false;
       }
     },
-    []
+    [creatorAddress]
   );
 
   return {
