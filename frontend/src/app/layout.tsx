@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { JWTAuthProvider } from "@/contexts/JWTAuthContext";
 import { ToastProvider } from "@/contexts/ToastContext";
+import { SessionWarning } from "@/components/SessionWarning";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -14,6 +16,9 @@ export const metadata: Metadata = {
   },
 };
 
+/**
+ * Root layout component with all providers and global components
+ */
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -23,10 +28,16 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <AuthProvider>
-          <ToastProvider maxToasts={5} position="top-right">
-          <ToastProvider>
-            {children}
-          </ToastProvider>
+          <JWTAuthProvider>
+            <ToastProvider maxToasts={5} position="top-right">
+              {/* Session timeout warning component */}
+              <SessionWarning 
+                warningTime={5 * 60}
+                timeoutTime={30 * 60}
+              />
+              {children}
+            </ToastProvider>
+          </JWTAuthProvider>
         </AuthProvider>
       </body>
     </html>
