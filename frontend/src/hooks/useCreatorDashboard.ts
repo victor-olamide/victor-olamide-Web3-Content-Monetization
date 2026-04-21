@@ -51,7 +51,11 @@ export function useCreatorDashboard(creatorAddress?: string | null): UseCreatorD
         creatorApi.getDashboardMetrics(creatorAddress),
       ]);
 
-      setContent(contentItems);
+      setContent(
+        [...contentItems].sort(
+          (a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime()
+        )
+      );
       setMetrics(dashboardMetrics);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load creator dashboard');
@@ -79,12 +83,20 @@ export function useCreatorDashboard(creatorAddress?: string | null): UseCreatorD
 
         setContent((currentContent) => {
           if (contentToEdit) {
-            return currentContent.map((item) =>
-              item.contentId === contentToEdit.contentId ? savedContent : item
-            );
+            return currentContent
+              .map((item) => (item.contentId === contentToEdit.contentId ? savedContent : item))
+              .sort(
+                (a, b) =>
+                  new Date(b.updatedAt || b.createdAt).getTime() -
+                  new Date(a.updatedAt || a.createdAt).getTime()
+              );
           }
 
-          return [savedContent, ...currentContent];
+          return [savedContent, ...currentContent].sort(
+            (a, b) =>
+              new Date(b.updatedAt || b.createdAt).getTime() -
+              new Date(a.updatedAt || a.createdAt).getTime()
+          );
         });
 
         const dashboardMetrics = await creatorApi.getDashboardMetrics(creatorAddress);
