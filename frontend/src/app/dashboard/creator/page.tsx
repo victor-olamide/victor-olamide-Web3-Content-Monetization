@@ -235,6 +235,40 @@ export default function CreatorDashboardPage() {
                 <TopContentChart topContent={topContent} loading={loading} />
               </section>
 
+              <section className="mt-6 grid gap-4 md:grid-cols-3">
+                <article className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                    PPV Revenue
+                  </p>
+                  <p className="mt-3 text-2xl font-semibold text-slate-900">
+                    {metrics?.earnings.ppvEarnings.toFixed(2) || '0.00'} STX
+                  </p>
+                  <p className="mt-2 text-sm text-slate-600">
+                    Direct purchases remain your fastest conversion path on this dashboard.
+                  </p>
+                </article>
+                <article className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                    Subscription Revenue
+                  </p>
+                  <p className="mt-3 text-2xl font-semibold text-slate-900">
+                    {metrics?.earnings.subscriptionEarnings.toFixed(2) || '0.00'} STX
+                  </p>
+                  <p className="mt-2 text-sm text-slate-600">
+                    Recurring revenue helps steady out content release cycles across the month.
+                  </p>
+                </article>
+                <article className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                    Audience Reach
+                  </p>
+                  <p className="mt-3 text-2xl font-semibold text-slate-900">{totals.totalViews}</p>
+                  <p className="mt-2 text-sm text-slate-600">
+                    Total content views across every uploaded piece currently in your library.
+                  </p>
+                </article>
+              </section>
+
               <section className="mt-8 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
                 <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
                   <div>
