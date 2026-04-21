@@ -1,22 +1,26 @@
 /**
- * Creator analytics and content API client
+ * Creator dashboard API helpers.
  */
 
 import { httpClient } from './httpClient';
+import { API_URL } from './constants';
+
+export type CreatorContentType = 'video' | 'article' | 'image' | 'music';
 
 export interface ContentItem {
   contentId: number;
   title: string;
   description: string;
-  contentType: 'video' | 'audio' | 'document' | 'image';
+  contentType: CreatorContentType;
   price: number;
   views: number;
   purchases: number;
   revenue: number;
   createdAt: string;
   updatedAt: string;
-  metadataUrl: string;
+  metadataUrl?: string;
   creator: string;
+  url?: string;
 }
 
 export interface CreatorStats {
@@ -25,245 +29,245 @@ export interface CreatorStats {
   subscriptionEarnings: number;
   ppvCount: number;
   subCount: number;
-  totalViews: number;
-  totalPurchases: number;
+  totalViews?: number;
+  totalPurchases?: number;
   currency: string;
 }
 
 export interface SubscriberInfo {
-  id: string;
-  name: string;
-  email: string;
+  user?: string;
+  name?: string;
+  email?: string;
   avatar?: string;
-  subscriptionTier: string;
-  subscribedAt: string;
-  expiresAt: string;
+  subscriptionTier?: string;
+  subscribedAt?: string;
+  expiresAt?: string;
   amount: number;
+  timestamp?: string;
+  expiry?: string;
+  transactionId?: string;
+  tierId?: number;
 }
 
-export interface CreatorAnalytics {
-  contentStats: {
-    totalContent: number;
-    totalViews: number;
-    totalPurchases: number;
-    averagePrice: number;
-  };
-  revenueStats: {
-    dailyEarnings: { date: string; amount: number }[];
-    monthlyEarnings: { month: string; amount: number }[];
-    topContent: ContentItem[];
-  };
-  performanceMetrics: {
-    conversionRate: number;
-    avgViewDuration: number;
-    engagementRate: number;
-  };
+export interface GrowthData {
+  current: number;
+  previous: number;
+  growth: string | number;
 }
 
-export interface ContentAnalytics {
+export interface RevenueSeriesPoint {
+  date: string;
+  ppv: number;
+  subscription: number;
+  total: number;
+}
+
+export interface CreatorAnalyticsPoint {
+  date: string;
+  amount: number;
+  views?: number;
+}
+
+export interface CreatorDashboardMetrics {
+  earnings: CreatorStats;
+  subscribers: { count: number; subscribers: SubscriberInfo[] };
+  growth: GrowthData;
+  analytics: RevenueSeriesPoint[];
+}
+
+export interface CreatorContentInput {
   contentId: number;
   title: string;
-  views: number;
-  purchases: number;
-  revenue: number;
-  conversionRate: number;
-  avgViewDuration: number;
-  topRegions: { region: string; views: number }[];
-  viewsOverTime: { date: string; views: number }[];
+  description: string;
+  contentType: CreatorContentType;
+  price: number;
+  creator: string;
+  url?: string;
 }
+
+export interface CreatorContentFormValues {
+  title: string;
+  description: string;
+  contentType: CreatorContentType;
+  price: number;
+  existingUrl?: string;
+  file?: File | null;
+}
+
+type ContentSearchResponse =
+  | ContentItem[]
+  | {
+      page?: number;
+      limit?: number;
+      total?: number;
+      pages?: number;
+      results?: ContentItem[];
+    };
 
 class CreatorApiClient {
-  private baseURL: string;
+  constructor(private baseURL: string = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api') {}
 
-  constructor(baseURL: string = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api') {
-    this.baseURL = baseURL;
+  private normalizeContentItem(item: ContentItem): ContentItem {
+    return {
+      ...item,
+      views: Number(item.views || 0),
+      purchases: Number(item.purchases || 0),
+      revenue: Number(item.revenue || 0),
+      price: Number(item.price || 0),
+    };
   }
 
-  /**
-   * Get all content for creator
-   */
-  async getCreatorContent(creatorAddress?: string): Promise<ContentItem[]> {
-    try {
-      const endpoint = creatorAddress
-        ? `/content?creator=${creatorAddress}`
-        : '/content/creator/my-content';
+  private normalizeContent(payload: ContentSearchResponse): ContentItem[] {
+    const items = Array.isArray(payload) ? payload : payload.results || [];
 
-      const response = await httpClient.get<ContentItem[]>(endpoint);
-      return response.data;
-    } catch (err) {
-      console.error('Failed to fetch creator content:', err);
-      throw err;
+    return items.map((item) => this.normalizeContentItem(item));
+  }
+
+  private normalizeRevenueSeries(payload: Record<string, { ppv: number; subscription: number; total: number }>): RevenueSeriesPoint[] {
+    return Object.entries(payload)
+      .map(([date, value]) => ({
+        date,
+        ppv: Number(value.ppv || 0),
+        subscription: Number(value.subscription || 0),
+        total: Number(value.total || 0),
+      }))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }
+
+  private buildCreatorHeaders(creatorAddress: string): Record<string, string> {
+    return {
+      'x-creator-address': creatorAddress,
+    };
+  }
+
+  async getCreatorContent(creatorAddress: string): Promise<ContentItem[]> {
+    const response = await httpClient.get<ContentSearchResponse>('/content', {
+      params: { creator: creatorAddress },
+    });
+
+    return this.normalizeContent(response.data);
+  }
+
+  async createContent(data: CreatorContentInput): Promise<ContentItem> {
+    const response = await httpClient.post<ContentItem>('/content', data);
+    return this.normalizeContentItem(response.data);
+  }
+
+  async updateContent(
+    contentId: number,
+    creatorAddress: string,
+    data: Partial<CreatorContentInput>
+  ): Promise<ContentItem> {
+    const response = await httpClient.patch<{ content: ContentItem }>(`/content/${contentId}`, data, {
+      headers: this.buildCreatorHeaders(creatorAddress),
+    });
+
+    return this.normalizeContentItem(response.data.content);
+  }
+
+  async deleteContent(contentId: number, creatorAddress: string): Promise<{ success: boolean }> {
+    await httpClient.post(
+      `/content/${contentId}/remove`,
+      { creator: creatorAddress, reason: 'Removed from creator dashboard' },
+      { headers: this.buildCreatorHeaders(creatorAddress) }
+    );
+
+    return { success: true };
+  }
+
+  async uploadContentFile(file: File): Promise<{ url: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${this.baseURL}/content/upload`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => null);
+      throw new Error(error?.message || 'Failed to upload file');
     }
+
+    return response.json();
   }
 
-  /**
-   * Get single content item
-   */
-  async getContent(contentId: number): Promise<ContentItem> {
-    try {
-      const response = await httpClient.get<ContentItem>(`/content/${contentId}`);
-      return response.data;
-    } catch (err) {
-      console.error('Failed to fetch content:', err);
-      throw err;
-    }
-  }
-
-  /**
-   * Create new content
-   */
-  async createContent(data: Partial<ContentItem>): Promise<ContentItem> {
-    try {
-      const response = await httpClient.post<ContentItem>('/content', { data });
-      return response.data;
-    } catch (err) {
-      console.error('Failed to create content:', err);
-      throw err;
-    }
-  }
-
-  /**
-   * Update content
-   */
-  async updateContent(contentId: number, data: Partial<ContentItem>): Promise<ContentItem> {
-    try {
-      const response = await httpClient.put<ContentItem>(`/content/${contentId}`, { data });
-      return response.data;
-    } catch (err) {
-      console.error('Failed to update content:', err);
-      throw err;
-    }
-  }
-
-  /**
-   * Delete content
-   */
-  async deleteContent(contentId: number): Promise<{ success: boolean }> {
-    try {
-      const response = await httpClient.delete(`/content/${contentId}`);
-      return response.data;
-    } catch (err) {
-      console.error('Failed to delete content:', err);
-      throw err;
-    }
-  }
-
-  /**
-   * Get creator earnings summary
-   */
   async getEarnings(address: string): Promise<CreatorStats> {
-    try {
-      const response = await httpClient.get<CreatorStats>(`/creator/earnings/${address}`);
-      return response.data;
-    } catch (err) {
-      console.error('Failed to fetch earnings:', err);
-      throw err;
-    }
+    const response = await httpClient.get<CreatorStats>(`/creator/earnings/${address}`);
+    return response.data;
   }
 
-  /**
-   * Get creator subscribers
-   */
   async getSubscribers(address: string): Promise<{ count: number; subscribers: SubscriberInfo[] }> {
-    try {
-      const response = await httpClient.get(`/creator/subscribers/${address}`);
-      return response.data;
-    } catch (err) {
-      console.error('Failed to fetch subscribers:', err);
-      throw err;
-    }
+    const response = await httpClient.get<{ count: number; subscribers: SubscriberInfo[] }>(
+      `/creator/subscribers/${address}`
+    );
+    return response.data;
   }
 
-  /**
-   * Get revenue history
-   */
-  async getRevenueHistory(address: string): Promise<any[]> {
-    try {
-      const response = await httpClient.get(`/creator/history/${address}`);
-      return response.data;
-    } catch (err) {
-      console.error('Failed to fetch revenue history:', err);
-      throw err;
-    }
+  async getGrowth(address: string): Promise<GrowthData> {
+    const response = await httpClient.get<GrowthData>(`/creator/growth/${address}`);
+    return response.data;
   }
 
-  /**
-   * Get content access statistics
-   */
-  async getContentStats(contentId: number): Promise<ContentAnalytics> {
-    try {
-      const response = await httpClient.get<ContentAnalytics>(`/analytics/stats/${contentId}`);
-      return response.data;
-    } catch (err) {
-      console.error('Failed to fetch content stats:', err);
-      throw err;
-    }
+  async getRevenueAnalytics(address: string, period: '7d' | '30d' = '30d'): Promise<RevenueSeriesPoint[]> {
+    const response = await httpClient.get<Record<string, { ppv: number; subscription: number; total: number }>>(
+      `/creator/analytics/${address}`,
+      { params: { period } }
+    );
+
+    return this.normalizeRevenueSeries(response.data);
   }
 
-  /**
-   * Get creator analytics dashboard data
-   */
-  async getCreatorAnalytics(address: string): Promise<CreatorAnalytics> {
-    try {
-      const [earnings, content, history] = await Promise.all([
-        this.getEarnings(address),
-        this.getCreatorContent(address),
-        this.getRevenueHistory(address)
-      ]);
+  async getDashboardMetrics(address: string, period: '7d' | '30d' = '30d'): Promise<CreatorDashboardMetrics> {
+    const [earnings, subscribers, growth, analytics] = await Promise.all([
+      this.getEarnings(address),
+      this.getSubscribers(address),
+      this.getGrowth(address),
+      this.getRevenueAnalytics(address, period),
+    ]);
 
-      const totalViews = content.reduce((sum, c) => sum + (c.views || 0), 0);
-      const totalPurchases = content.reduce((sum, c) => sum + (c.purchases || 0), 0);
-      const avgPrice = content.length > 0
-        ? content.reduce((sum, c) => sum + c.price, 0) / content.length
-        : 0;
-
-      // Process daily earnings from history
-      const dailyEarnings: Record<string, number> = {};
-      history.forEach((h: any) => {
-        const date = new Date(h.timestamp).toISOString().split('T')[0];
-        dailyEarnings[date] = (dailyEarnings[date] || 0) + (h.amount || 0);
-      });
-
-      const dailyEarningsArray = Object.entries(dailyEarnings)
-        .map(([date, amount]) => ({ date, amount }))
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-      return {
-        contentStats: {
-          totalContent: content.length,
-          totalViews,
-          totalPurchases,
-          averagePrice: avgPrice
-        },
-        revenueStats: {
-          dailyEarnings: dailyEarningsArray,
-          monthlyEarnings: [], // Can be computed from dailyEarnings
-          topContent: content.sort((a, b) => (b.revenue || 0) - (a.revenue || 0)).slice(0, 5)
-        },
-        performanceMetrics: {
-          conversionRate: totalViews > 0 ? (totalPurchases / totalViews) * 100 : 0,
-          avgViewDuration: 0, // Would come from more detailed analytics
-          engagementRate: 0 // Would come from more detailed analytics
-        }
-      };
-    } catch (err) {
-      console.error('Failed to fetch creator analytics:', err);
-      throw err;
-    }
+    return {
+      earnings,
+      subscribers,
+      growth,
+      analytics,
+    };
   }
 
-  /**
-   * Get content access logs
-   */
-  async getContentAccessLogs(contentId: number, limit: number = 50): Promise<any[]> {
-    try {
-      const response = await httpClient.get(`/analytics/content/${contentId}?limit=${limit}`);
-      return response.data.logs || [];
-    } catch (err) {
-      console.error('Failed to fetch access logs:', err);
-      throw err;
+  nextContentId(content: ContentItem[]): number {
+    const maxContentId = content.reduce((max, item) => Math.max(max, item.contentId), 0);
+    return maxContentId + 1;
+  }
+
+  async saveContent(
+    creatorAddress: string,
+    existingContent: ContentItem[],
+    values: CreatorContentFormValues,
+    contentToEdit?: ContentItem | null
+  ): Promise<ContentItem> {
+    let uploadedUrl = values.existingUrl?.trim() || '';
+
+    if (values.file) {
+      const uploadResult = await this.uploadContentFile(values.file);
+      uploadedUrl = uploadResult.url;
     }
+
+    const payload: CreatorContentInput = {
+      contentId: contentToEdit?.contentId ?? this.nextContentId(existingContent),
+      title: values.title.trim(),
+      description: values.description.trim(),
+      contentType: values.contentType,
+      price: Number(values.price),
+      creator: creatorAddress,
+      url: uploadedUrl || undefined,
+    };
+
+    if (contentToEdit) {
+      return this.updateContent(contentToEdit.contentId, creatorAddress, payload);
+    }
+
+    return this.createContent(payload);
   }
 }
 
-export const creatorApi = new CreatorApiClient();
+export const creatorApi = new CreatorApiClient(API_URL);
