@@ -144,6 +144,22 @@ export const JWTAuthProvider: React.FC<{ children: React.ReactNode }> = ({ child
       // Clear auth cookies
       deleteCookie('accessToken');
       deleteCookie('refreshToken');
+      
+      // Clear auth-related session data
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('authVerified');
+        sessionStorage.removeItem('userEmail');
+        sessionStorage.removeItem('auth_state');
+        sessionStorage.removeItem('auth_expiry');
+        sessionStorage.removeItem('lastLoginTime');
+        sessionStorage.removeItem('signupTime');
+      }
+      
+      // Emit logout event for listeners
+      if (typeof window !== 'undefined') {
+        const event = new CustomEvent('auth:logout', { detail: { timestamp: new Date().toISOString() } });
+        window.dispatchEvent(event);
+      }
     } catch (err) {
       console.error('Logout error:', err);
     } finally {
