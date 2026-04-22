@@ -1,50 +1,78 @@
 # Creator Dashboard Documentation
 
 ## Overview
-The Creator Dashboard provides comprehensive earnings tracking and subscriber management for content creators on the Stacks blockchain.
 
-## Features
+The Creator Dashboard (`/dashboard/creator`) is a comprehensive platform for creators to manage their content, track analytics, monitor revenue, and engage with subscribers. It provides real-time insights into content performance and audience metrics.
 
-### 1. Stats Overview
-- Total Revenue (STX)
-- Active Subscribers Count
-- Pay-Per-View Sales Count
-- Subscription Sales Count
+## Core Features
 
-### 2. Earnings Card
-- Total earnings display
-- Breakdown by PPV and Subscriptions
-- Creator wallet address
+### 1. Content Management
+- **Upload New Content**: Add videos, articles, images, or music directly to the dashboard
+- **Edit Content**: Modify title, description, pricing, and other metadata
+- **Delete Content**: Remove content from your dashboard
+- **Content Browser**: Advanced content viewing with sorting and filtering
 
-### 3. Subscribers Card
-- Active subscriber count
-- Recent subscribers list
-- Month-over-month growth percentage
+#### Supported Content Types
+- Video
+- Article
+- Image
+- Music
 
-### 4. Revenue Chart
-- 7-day revenue visualization
-- Interactive bar chart
-- Hover tooltips with exact amounts
+### 2. Analytics & Insights
 
-### 5. Earnings Breakdown
-- Visual percentage breakdown
-- Transaction counts per type
-- Progress bars for each revenue stream
+#### Dashboard Metrics
+- **Total Revenue**: Combined earnings from PPV and subscriptions
+- **Subscribers**: Active paid subscribers count with growth trends
+- **Uploaded Content**: Total content items with average pricing
+- **Conversion Rate**: Purchase-to-view ratio
 
-### 6. Transaction List
-- Recent 10 transactions
-- Transaction type badges (PPV/SUB)
-- Timestamp and amount details
+#### Advanced Analytics
+- **Content Performance Metrics**
+  - Total views and purchases
+  - Revenue breakdown by content type
+  - Top performing content identification
+  - Engagement rate analysis
 
-### 7. Top Content
-- Top 5 performing content by revenue
-- Sales count per content
-- Revenue ranking
+- **Revenue Comparison**
+  - PPV vs Subscription revenue mix
+  - Revenue trend visualization
+  - Daily revenue breakdown
+  - Actionable insights based on revenue patterns
 
-### 8. Export Functionality
-- Export all earnings data to CSV
-- Date range filtering support
-- Includes all transaction details
+- **Subscriber Engagement**
+  - Monthly recurring revenue (MRR)
+  - Subscriber retention rates
+  - Churn risk identification
+  - High-value subscriber tracking
+
+### 3. Date Range Selection
+
+Use the Analytics Date Range Picker to:
+- Select preset ranges (7 days, 30 days, 90 days)
+- Create custom date ranges
+- Filter analytics based on specific time periods
+
+### 4. Data Export
+
+Export your dashboard data in multiple formats:
+
+#### CSV Export
+- Content list (title, description, type, price, views, purchases, revenue)
+- Analytics data (date, PPV revenue, subscription revenue, total revenue)
+- Combined reports
+
+#### JSON Export
+- Full metadata with structured format
+- Ideal for data analysis tools
+- Includes export timestamp and summary
+
+### 5. Content Browser
+
+The enhanced Content Browser provides:
+- **Search**: Find content by title or description
+- **Filter by Type**: Filter by video, article, image, or music
+- **Sort**: Sort by date, views, revenue, or price
+- **Quick Actions**: Edit, delete, or view content inline
 
 ## API Endpoints
 
@@ -70,6 +98,86 @@ Returns top performing content.
 Returns exportable transaction data.
 
 ## Components
+
+### Core Components
+
+1. **AnalyticsDateRangePicker**
+   - Preset date range selection
+   - Custom date range input
+   - Date validation
+
+2. **AnalyticsSummaryCard**
+   - Display key metrics
+   - Show trending indicators
+   - Export functionality
+
+3. **ContentBrowser**
+   - Sortable and filterable content table
+   - Search functionality
+   - Inline actions
+
+4. **ContentPerformanceMetrics**
+   - Performance overview
+   - Top performers visualization
+   - Performance insights
+
+5. **RevenueComparison**
+   - Revenue mix visualization
+   - Trend analysis
+   - Revenue insights
+
+6. **SubscriberEngagementMetrics**
+   - Subscriber statistics
+   - Retention analytics
+   - Churn risk tracking
+
+7. **ExportAnalytics**
+   - CSV/JSON export options
+   - Multiple export types
+   - Download functionality
+
+### Utility Components
+
+- **DashboardLoadingSkeleton**: Loading states
+- **DashboardErrorBoundary**: Error handling
+- **ResponsiveDashboardLayout**: Responsive design
+- **EmptyState**: No data scenarios
+
+## Hooks
+
+### useCreatorDashboard
+Main hook for dashboard data management
+
+```typescript
+const {
+  content,           // Array of content items
+  metrics,           // Dashboard metrics
+  loading,           // Loading state
+  saving,            // Save operation state
+  deletingId,        // Current deleting content ID
+  error,             // Error message
+  refresh,           // Refresh data function
+  saveContent,       // Save/create content function
+  removeContent,     // Delete content function
+  totals,            // Aggregated totals
+} = useCreatorDashboard(stxAddress);
+```
+
+### useAutoRefresh
+Automatic data refresh with intervals
+
+```typescript
+const {
+  isRefreshing,
+  lastRefresh,
+  nextRefresh,
+  refresh,
+  startAutoRefresh,
+  stopAutoRefresh,
+} = useAutoRefresh(onRefresh, { interval: 5 * 60 * 1000 });
+```
+
+## API Endpoints
 
 - `EarningsCard` - Displays total earnings
 - `SubscribersCard` - Shows active subscribers
