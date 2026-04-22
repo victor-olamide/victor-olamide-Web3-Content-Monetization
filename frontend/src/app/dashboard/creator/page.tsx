@@ -6,6 +6,13 @@ import DashboardShell from '@/components/DashboardShell';
 import { CreatorContentEditor, CreatorContentEditorTrigger } from '@/components/CreatorContentEditor';
 import { CreatorContentTable } from '@/components/CreatorContentTable';
 import { RevenueChart, RevenueMixChart, TopContentChart } from '@/components/ContentAnalyticsChart';
+import { AnalyticsDateRangePicker, DateRange } from '@/components/AnalyticsDateRangePicker';
+import { AnalyticsSummaryCard } from '@/components/AnalyticsSummaryCard';
+import { ContentBrowser } from '@/components/ContentBrowser';
+import { ContentPerformanceMetrics } from '@/components/ContentPerformanceMetrics';
+import { RevenueComparison } from '@/components/RevenueComparison';
+import { SubscriberEngagementMetrics } from '@/components/SubscriberEngagementMetrics';
+import { ExportAnalytics } from '@/components/ExportAnalytics';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCreatorDashboard } from '@/hooks/useCreatorDashboard';
 import { ContentItem } from '@/utils/creatorApi';
@@ -30,6 +37,11 @@ export default function CreatorDashboardPage() {
   const { stxAddress, isLoggedIn, authenticate } = useAuth();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingContent, setEditingContent] = useState<ContentItem | null>(null);
+  const [dateRange, setDateRange] = useState<DateRange>({
+    startDate: new Date(new Date().getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    endDate: new Date().toISOString().split('T')[0],
+    label: 'Last 30 days',
+  });
 
   const {
     content,
@@ -315,6 +327,73 @@ export default function CreatorDashboardPage() {
                     }}
                   />
                 </div>
+              </section>
+
+              {/* Analytics Date Range Picker */}
+              <section className="mt-8 flex items-center justify-between rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-900">Analytics Period</h2>
+                  <p className="mt-1 text-sm text-slate-600">Select a date range to analyze your performance</p>
+                </div>
+                <AnalyticsDateRangePicker
+                  onDateRangeChange={setDateRange}
+                  isLoading={loading}
+                />
+              </section>
+
+              {/* Content Browser */}
+              <section className="mt-8">
+                <ContentBrowser
+                  items={content}
+                  isLoading={loading}
+                  onEdit={(item) => {
+                    setEditingContent(item);
+                    setIsEditorOpen(true);
+                  }}
+                  onDelete={removeContent}
+                  isDeletingId={deletingId}
+                />
+              </section>
+
+              {/* Content Performance Metrics */}
+              <section className="mt-8">
+                <ContentPerformanceMetrics
+                  items={content}
+                  isLoading={loading}
+                />
+              </section>
+
+              {/* Revenue Comparison */}
+              <section className="mt-8">
+                {metrics && (
+                  <RevenueComparison
+                    stats={metrics.earnings}
+                    analytics={metrics.analytics}
+                    isLoading={loading}
+                  />
+                )}
+              </section>
+
+              {/* Subscriber Engagement */}
+              <section className="mt-8">
+                {metrics && (
+                  <SubscriberEngagementMetrics
+                    subscribers={metrics.subscribers.subscribers}
+                    totalCount={metrics.subscribers.count}
+                    isLoading={loading}
+                  />
+                )}
+              </section>
+
+              {/* Export Analytics */}
+              <section className="mt-8">
+                {metrics && (
+                  <ExportAnalytics
+                    content={content}
+                    stats={metrics.earnings}
+                    analytics={metrics.analytics}
+                  />
+                )}
               </section>
             </>
           )}
