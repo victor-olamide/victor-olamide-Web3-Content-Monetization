@@ -2,8 +2,22 @@ const logger = require('../utils/logger');
 const express = require('express');
 const router = express.Router();
 const Content = require('../models/Content');
+const ContentEncryption = require('../models/ContentEncryption');
+const encryptionService = require('../services/encryptionService');
 const { verifyContentAccess, rateLimitMiddleware } = require('../middleware/accessControl');
 const { getContentFromStorage } = require('../services/storageService');
+
+const getMasterKey = () => {
+  const masterKeyHex = process.env.CONTENT_ENCRYPTION_MASTER_KEY;
+  if (!masterKeyHex) {
+    throw new Error('Master encryption key not configured');
+  }
+  const masterKey = Buffer.from(masterKeyHex, 'hex');
+  if (masterKey.length !== encryptionService.ENCRYPTION_CONFIG.keyLength) {
+    throw new Error('Master encryption key must be 32 bytes in hex format');
+  }
+  return masterKey;
+};
 
 /**
  * Serve gated content with access verification
@@ -17,7 +31,39 @@ router.get('/:contentId/stream', verifyContentAccess, rateLimitMiddleware, async
       return res.status(404).json({ message: 'Content not found' });
     }
 
-    const contentData = await getContentFromStorage(content.url, content.storageType);
+    let contentData = await getContentFromStorage(content.url, content.storageType);
+
+    if (content.isEncrypted) {
+      const encryptionRecord = await ContentEncryption.findOne({
+        contentId: parseInt(contentId),
+        encryptedFileUrl: content.url,
+        isEncryptedContent: true,
+        isActive: true
+      }).sort({ createdAt: -1 });
+
+      if (!encryptionRecord) {
+        return res.status(500).json({ message: 'Encrypted content metadata missing' });
+      }
+
+      const masterKey = getMasterKey();
+      const contentKey = encryptionService.unwrapContentKey(
+        encryptionRecord.encryptedFileKey,
+        encryptionRecord.encryptionKeyIv,
+        encryptionRecord.encryptionKeyTag,
+        masterKey
+      );
+
+      const encryptedBytes = Buffer.isBuffer(contentData)
+        ? contentData
+        : Buffer.from(contentData);
+
+      contentData = encryptionService.decryptBuffer(
+        encryptedBytes,
+        encryptionRecord.fileEncryptionIv,
+        encryptionRecord.fileEncryptionTag,
+        contentKey
+      );
+    }
     
     res.setHeader('Content-Type', getContentType(content.contentType));
     res.setHeader('X-Access-Method', req.accessInfo.method);
