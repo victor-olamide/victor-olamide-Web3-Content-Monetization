@@ -34,6 +34,7 @@ router.get('/:contentId/stream', verifyContentAccess, rateLimitMiddleware, async
     let contentData;
 
     if (content.isEncrypted) {
+      logger.info(`Decrypting premium content ${contentId} for authorized user`);
       const masterKey = getMasterKey();
       contentData = await encryptionService.decryptFileForAuthorizedUser(ContentEncryption, parseInt(contentId), masterKey);
     } else {
