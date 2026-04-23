@@ -9,7 +9,7 @@
 
 const logger = require('./logger');
 
-const REQUIRED_VARS = ['DB_URI', 'JWT_SECRET', 'PORT'];
+const REQUIRED_VARS = ['DB_URI', 'JWT_SECRET', 'PORT', 'CONTENT_ENCRYPTION_MASTER_KEY'];
 
 /**
  * Validate that all required environment variables are set.

@@ -4,6 +4,10 @@ const router = express.Router();
 const multer = require('multer');
 const Content = require('../models/Content');
 const Purchase = require('../models/Purchase');
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
+const encryptionService = require('../services/encryptionService');
+const ContentEncryption = require('../models/ContentEncryption');
 const { uploadToIPFS } = require('../services/storageService');
 const { uploadFileToIPFS, uploadMetadataToIPFS, getGatewayUrl } = require('../services/ipfsService');
 const { pinningManager } = require('../services/pinningManager');
@@ -12,6 +16,33 @@ const { verifyCreatorOwnership, checkContentNotRemoved } = require('../middlewar
 const { initiateRefund, getPendingRefundsForCreator } = require('../services/refundService');
 const searchService = require('../services/searchService');
 const { validateContentBody } = require('../middleware/inputValidation');
+const { shouldEncryptContent } = require('../utils/contentUtils');
+
+const getTokenFromRequest = (req) => {
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+    return req.headers.authorization.split(' ')[1];
+  }
+  if (req.cookies && req.cookies.token) {
+    return req.cookies.token;
+  }
+  return null;
+};
+
+const authenticateUser = async (req) => {
+  const token = getTokenFromRequest(req);
+  if (!token) {
+    throw new Error('Authentication required');
+  }
+
+  const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+  const user = await User.findById(decoded.id);
+  if (!user) {
+    throw new Error('Authentication required');
+  }
+
+  req.user = user;
+  return user;
+};
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -147,18 +178,57 @@ router.post('/upload-and-register', (req, res) => {
     if (err) return res.status(400).json({ message: 'Upload error', error: err.message });
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
 
-    const { contentId, price, title, description, contentType, creator } = req.body;
-    
+    const { contentId, price, title, description, contentType, creator, encrypt } = req.body;
+    const shouldEncrypt = shouldEncryptContent(parseFloat(price), String(encrypt || req.body.isEncrypted || '').toLowerCase() === 'true');
+
+    // Premium content (price > 0) is automatically encrypted for security
+
     if (!contentId || !price || !title || !creator) {
       return res.status(400).json({ message: 'Missing required fields: contentId, price, title, creator' });
     }
 
     try {
-      // 1. Upload to IPFS
-      const ipfsUrl = await uploadToIPFS(req.file.buffer, req.file.originalname);
-      
+      let ipfsUrl;
+      let isEncrypted = false;
+      let uploadBuffer = req.file.buffer;
+
+      if (shouldEncrypt) {
+        let user;
+        try {
+          user = await authenticateUser(req);
+        } catch (authErr) {
+          return res.status(401).json({ message: 'Authentication required for encrypted uploads', error: authErr.message });
+        }
+
+        const masterKeyHex = process.env.CONTENT_ENCRYPTION_MASTER_KEY;
+        if (!masterKeyHex) {
+          return res.status(500).json({ message: 'Content encryption master key is not configured' });
+        }
+
+        const masterKey = Buffer.from(masterKeyHex, 'hex');
+
+        // Encrypt file for premium content
+        const encryptionResult = await encryptionService.encryptFileForPremiumContent(ContentEncryption, {
+          contentId: parseInt(contentId),
+          buffer: req.file.buffer,
+          originalName: req.file.originalname,
+          contentType: contentType || 'file',
+          uploadedBy: user._id,
+          masterKey
+        });
+
+        uploadBuffer = encryptionResult.encryptedBuffer;
+        ipfsUrl = await uploadToIPFS(uploadBuffer, req.file.originalname);
+        isEncrypted = true;
+
+        // Update the encryption record with the IPFS URL
+        encryptionResult.encryptionRecord.encryptedFileUrl = ipfsUrl;
+        await encryptionResult.encryptionRecord.save();
+      } else {
+        ipfsUrl = await uploadToIPFS(uploadBuffer, req.file.originalname);
+      }
+
       // 2. Register on Smart Contract
-      const { contentId, price } = req.body;
       const txResult = await addContentToContract(
         parseInt(contentId), 
         parseInt(price), 
@@ -175,14 +245,16 @@ router.post('/upload-and-register', (req, res) => {
         price,
         creator: req.body.creator,
         url: ipfsUrl,
-        storageType: 'ipfs'
+        storageType: 'ipfs',
+        isEncrypted,
+        encryptionAlgorithm: shouldEncrypt ? encryptionService.ENCRYPTION_CONFIG.algorithm : undefined
       });
       const newContent = await content.save();
 
       // 4. Pin content for reliability
       try {
         console.log(`[Content Creation] Starting to pin content ${contentId}`);
-        await pinningManager.pinContent(newContent, req.file.buffer, req.file.originalname);
+        await pinningManager.pinContent(newContent, uploadBuffer, req.file.originalname);
         console.log(`[Content Creation] Successfully pinned content ${contentId}`);
       } catch (pinningError) {
         console.error(`[Content Creation] Failed to pin content ${contentId}:`, pinningError.message);
@@ -192,7 +264,8 @@ router.post('/upload-and-register', (req, res) => {
       res.status(201).json({
         message: 'Content uploaded and registered successfully',
         content: newContent,
-        transactionId: txResult.txid
+        transactionId: txResult.txid,
+        encrypted: isEncrypted
       });
     } catch (err) {
       res.status(500).json({ message: 'Integration failed', error: err.message });
