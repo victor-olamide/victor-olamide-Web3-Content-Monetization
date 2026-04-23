@@ -179,7 +179,7 @@ router.post('/upload-and-register', (req, res) => {
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
 
     const { contentId, price, title, description, contentType, creator, encrypt } = req.body;
-    const shouldEncrypt = String(encrypt || req.body.isEncrypted || '').toLowerCase() === 'true';
+    const shouldEncrypt = shouldEncryptContent(parseFloat(price), String(encrypt || req.body.isEncrypted || '').toLowerCase() === 'true');
 
     if (!contentId || !price || !title || !creator) {
       return res.status(400).json({ message: 'Missing required fields: contentId, price, title, creator' });
