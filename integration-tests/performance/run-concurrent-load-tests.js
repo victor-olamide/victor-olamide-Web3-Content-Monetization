@@ -10,6 +10,7 @@ const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const BaselineCalculator = require('./baseline-calculator');
+const { storeArtifacts } = require('./store-ci-artifacts');
 
 const TESTS_DIR = __dirname;
 const RESULTS_DIR = path.join(TESTS_DIR, 'test-results');
