@@ -2,6 +2,7 @@
  * Encryption Service
  * Handles content URL encryption/decryption and key management
  * Uses AES-256-GCM for authenticated encryption
+ * Premium content is automatically encrypted before IPFS upload
  */
 
 const crypto = require('crypto');
