@@ -181,6 +181,8 @@ router.post('/upload-and-register', (req, res) => {
     const { contentId, price, title, description, contentType, creator, encrypt } = req.body;
     const shouldEncrypt = shouldEncryptContent(parseFloat(price), String(encrypt || req.body.isEncrypted || '').toLowerCase() === 'true');
 
+    // Premium content (price > 0) is automatically encrypted for security
+
     if (!contentId || !price || !title || !creator) {
       return res.status(400).json({ message: 'Missing required fields: contentId, price, title, creator' });
     }
