@@ -57,16 +57,22 @@ async function recommendForUser(userId, limit = 10) {
 }
 
 async function getFallbackRecommendations(limit = 10) {
-  // Simple fallback: return most recent content
-  const candidates = await ContentPreview.find({})
-    .sort({ createdAt: -1 })
-    .limit(limit)
-    .lean();
+  try {
+    // Simple fallback: return most recent content
+    const candidates = await ContentPreview.find({})
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
 
-  return candidates.map(c => ({
-    ...c,
-    recommendationScore: 0
-  }));
+    logger.warn(`Using fallback recommendations, returning ${candidates.length} recent items`);
+    return candidates.map(c => ({
+      ...c,
+      recommendationScore: 0
+    }));
+  } catch (fallbackError) {
+    logger.error('Fallback recommendations also failed:', fallbackError);
+    return [];
+  }
 }
 
 async function recordViewingHistory(userId, contentData, viewData = {}) {
