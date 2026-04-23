@@ -392,9 +392,58 @@ async function verifyAndDecryptContent(ContentEncryption, contentId, userId, mas
 }
 
 /**
- * Revoke content access
+ * Decrypt file buffer for authorized user access
  */
-async function revokeContentAccess(ContentEncryption, contentId, userId) {
+async function decryptFileForAuthorizedUser(ContentEncryption, contentId, masterKey) {
+  try {
+    // Find the global encryption record for the content
+    const encryptionRecord = await ContentEncryption.findOne({
+      contentId,
+      isEncryptedContent: true,
+      isActive: true
+    });
+
+    if (!encryptionRecord) {
+      throw new Error('Encryption record not found');
+    }
+
+    // Unwrap the content key
+    const contentKey = unwrapContentKey(
+      encryptionRecord.encryptedFileKey,
+      encryptionRecord.encryptionKeyIv,
+      encryptionRecord.encryptionKeyTag,
+      masterKey
+    );
+
+    // Get the encrypted file from IPFS
+    const { getContentFromStorage } = require('../services/storageService');
+    const encryptedBuffer = await getContentFromStorage(encryptionRecord.encryptedFileUrl, 'ipfs');
+
+    if (!Buffer.isBuffer(encryptedBuffer)) {
+      throw new Error('Failed to retrieve encrypted content');
+    }
+
+    // Decrypt the buffer
+    const decryptedBuffer = decryptBuffer(
+      encryptedBuffer,
+      encryptionRecord.fileEncryptionIv,
+      encryptionRecord.fileEncryptionTag,
+      contentKey
+    );
+
+    // Update access tracking
+    encryptionRecord.accessAttempts = (encryptionRecord.accessAttempts || 0) + 1;
+    encryptionRecord.lastAccessedAt = new Date();
+    await encryptionRecord.save();
+
+    logger.info(`Content ${contentId} decrypted for authorized access (attempt ${encryptionRecord.accessAttempts})`);
+
+    return decryptedBuffer;
+  } catch (error) {
+    logger.error('Error decrypting file for authorized user:', error);
+    throw error;
+  }
+}
   try {
     const result = await ContentEncryption.updateOne(
       { contentId, userId },
@@ -563,6 +612,7 @@ module.exports = {
   encryptContent,
   encryptFileForPremiumContent,
   verifyAndDecryptContent,
+  decryptFileForAuthorizedUser,
   revokeContentAccess,
   extendContentAccess,
   getContentAccessStatus,
