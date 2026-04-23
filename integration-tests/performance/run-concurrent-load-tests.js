@@ -218,6 +218,9 @@ async function runAllTests() {
     // Calculate and store performance baselines
     await calculateBaselines();
     
+    // Generate performance summary
+    generatePerformanceSummary();
+    
     // Store results as CI artifacts
     storeArtifacts();
     
