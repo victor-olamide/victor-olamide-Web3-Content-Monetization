@@ -16,6 +16,7 @@ const { verifyCreatorOwnership, checkContentNotRemoved } = require('../middlewar
 const { initiateRefund, getPendingRefundsForCreator } = require('../services/refundService');
 const searchService = require('../services/searchService');
 const { validateContentBody } = require('../middleware/inputValidation');
+const { shouldEncryptContent } = require('../utils/contentUtils');
 
 const getTokenFromRequest = (req) => {
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
