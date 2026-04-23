@@ -31,38 +31,13 @@ router.get('/:contentId/stream', verifyContentAccess, rateLimitMiddleware, async
       return res.status(404).json({ message: 'Content not found' });
     }
 
-    let contentData = await getContentFromStorage(content.url, content.storageType);
+    let contentData;
 
     if (content.isEncrypted) {
-      const encryptionRecord = await ContentEncryption.findOne({
-        contentId: parseInt(contentId),
-        encryptedFileUrl: content.url,
-        isEncryptedContent: true,
-        isActive: true
-      }).sort({ createdAt: -1 });
-
-      if (!encryptionRecord) {
-        return res.status(500).json({ message: 'Encrypted content metadata missing' });
-      }
-
       const masterKey = getMasterKey();
-      const contentKey = encryptionService.unwrapContentKey(
-        encryptionRecord.encryptedFileKey,
-        encryptionRecord.encryptionKeyIv,
-        encryptionRecord.encryptionKeyTag,
-        masterKey
-      );
-
-      const encryptedBytes = Buffer.isBuffer(contentData)
-        ? contentData
-        : Buffer.from(contentData);
-
-      contentData = encryptionService.decryptBuffer(
-        encryptedBytes,
-        encryptionRecord.fileEncryptionIv,
-        encryptionRecord.fileEncryptionTag,
-        contentKey
-      );
+      contentData = await encryptionService.decryptFileForAuthorizedUser(ContentEncryption, parseInt(contentId), masterKey);
+    } else {
+      contentData = await getContentFromStorage(content.url, content.storageType);
     }
     
     res.setHeader('Content-Type', getContentType(content.contentType));
