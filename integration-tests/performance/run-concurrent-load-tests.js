@@ -3,18 +3,24 @@
 /**
  * Concurrent User Load Test Runner
  * Orchestrates load tests with various concurrent user scenarios
+ * Includes baseline calculation and CI artifact storage
  */
 
 const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const BaselineCalculator = require('./baseline-calculator');
 
 const TESTS_DIR = __dirname;
 const RESULTS_DIR = path.join(TESTS_DIR, 'test-results');
+const ARTIFACTS_DIR = path.join(TESTS_DIR, 'ci-artifacts');
 
-// Ensure results directory exists
+// Ensure directories exist
 if (!fs.existsSync(RESULTS_DIR)) {
   fs.mkdirSync(RESULTS_DIR, { recursive: true });
+}
+if (!fs.existsSync(ARTIFACTS_DIR)) {
+  fs.mkdirSync(ARTIFACTS_DIR, { recursive: true });
 }
 
 /**
