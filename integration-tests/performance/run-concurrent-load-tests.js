@@ -213,11 +213,15 @@ async function runAllTests() {
       throw new Error(`Unknown test mode: ${testMode}`);
     }
     
+    // Calculate and store performance baselines
+    await calculateBaselines();
+    
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
     console.log(`\n${'='.repeat(80)}`);
     console.log('ALL TESTS COMPLETED SUCCESSFULLY');
     console.log(`Total Duration: ${duration}s`);
     console.log(`Results Location: ${RESULTS_DIR}`);
+    console.log(`CI Artifacts: ${ARTIFACTS_DIR}`);
     console.log(`${'='.repeat(80)}\n`);
     
   } catch (error) {
