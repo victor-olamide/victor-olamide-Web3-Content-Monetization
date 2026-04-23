@@ -5,26 +5,204 @@ on:
     branches: [ main, develop ]
     paths:
       - 'backend/**'
+      - '.github/workflows/ci-backend.yml'
   pull_request:
     branches: [ main, develop ]
     paths:
       - 'backend/**'
+      - '.github/workflows/ci-backend.yml'
 
 jobs:
-  test:
+  lint:
+    name: Lint Backend Code
     runs-on: ubuntu-latest
-
+    
     steps:
-    - uses: actions/checkout@v4
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
-        cache-dependency-path: backend/package-lock.json
-    - name: Install dependencies
-      run: npm ci
-      working-directory: backend
-    - name: Run tests
-      run: npm test
-      working-directory: backend
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      
+      - name: Install dependencies
+        run: npm ci
+        working-directory: backend
+      
+      - name: Run ESLint
+        run: npm run lint
+        working-directory: backend
+        continue-on-error: false
+
+  test:
+    name: Test Backend
+    runs-on: ubuntu-latest
+    needs: lint
+    
+    strategy:
+      matrix:
+        node-version: [16, 18]
+    
+    services:
+      mongodb:
+        image: mongo:6
+        options: >-
+          --health-cmd mongosh
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 27017:27017
+        env:
+          MONGO_INITDB_ROOT_USERNAME: root
+          MONGO_INITDB_ROOT_PASSWORD: password
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      
+      - name: Install dependencies
+        run: npm ci
+        working-directory: backend
+      
+      - name: Run unit and integration tests
+        run: npm test -- --coverage --testPathIgnorePatterns=integration
+        working-directory: backend
+        env:
+          NODE_ENV: test
+          MONGODB_URI: mongodb://root:password@localhost:27017/test-db
+          JWT_SECRET: test-secret-key
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY || 'sk_test_dummy' }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID || 'test' }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY || 'test' }}
+          AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET || 'test-bucket' }}
+          IPFS_API_URL: ${{ secrets.IPFS_API_URL || 'http://localhost:5001' }}
+          STACKS_API_URL: ${{ secrets.STACKS_API_URL || 'http://localhost:20443' }}
+      
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        if: matrix.node-version == '18'
+        with:
+          files: ./backend/coverage/lcov.info
+          flags: backend
+          name: backend-coverage
+          fail_ci_if_error: false
+      
+      - name: Check coverage threshold
+        run: |
+          # Extract coverage percentage from coverage summary
+          COVERAGE=$(npm test -- --coverage --coverageReporters=text 2>&1 | grep -oP '(?<=Lines\s+:\s+)\S+' | head -1 | cut -d'.' -f1)
+          THRESHOLD=70
+          
+          if [ -z "$COVERAGE" ]; then
+            echo "::error::Could not determine coverage percentage"
+            exit 1
+          fi
+          
+          echo "Coverage: ${COVERAGE}%"
+          
+          if [ "$COVERAGE" -lt "$THRESHOLD" ]; then
+            echo "::error::Test coverage ${COVERAGE}% is below threshold of ${THRESHOLD}%"
+            exit 1
+          else
+            echo "✓ Test coverage ${COVERAGE}% meets threshold of ${THRESHOLD}%"
+          fi
+        working-directory: backend
+        env:
+          NODE_ENV: test
+          MONGODB_URI: mongodb://root:password@localhost:27017/test-db
+          JWT_SECRET: test-secret-key
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: lint
+    
+    services:
+      mongodb:
+        image: mongo:6
+        options: >-
+          --health-cmd mongosh
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 27017:27017
+        env:
+          MONGO_INITDB_ROOT_USERNAME: root
+          MONGO_INITDB_ROOT_PASSWORD: password
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      
+      - name: Install dependencies
+        run: npm ci
+        working-directory: backend
+      
+      - name: Run integration tests
+        run: npm test -- --testPathPattern=Integration
+        working-directory: backend
+        env:
+          NODE_ENV: test
+          MONGODB_URI: mongodb://root:password@localhost:27017/test-db
+          JWT_SECRET: test-secret-key
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY || 'sk_test_dummy' }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID || 'test' }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY || 'test' }}
+          AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET || 'test-bucket' }}
+          IPFS_API_URL: ${{ secrets.IPFS_API_URL || 'http://localhost:5001' }}
+          STACKS_API_URL: ${{ secrets.STACKS_API_URL || 'http://localhost:20443' }}
+
+  ci-summary:
+    name: CI Summary
+    runs-on: ubuntu-latest
+    needs: [lint, test, integration-tests]
+    if: always()
+    
+    steps:
+      - name: Check CI Status
+        run: |
+          if [[ "${{ needs.lint.result }}" == "failure" || "${{ needs.test.result }}" == "failure" || "${{ needs.integration-tests.result }}" == "failure" ]]; then
+            echo "::error::CI pipeline failed. Please check the logs above."
+            exit 1
+          fi
+          echo "✓ All CI checks passed!"
+      
+      - name: Comment PR on Success
+        if: success() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '✅ All backend CI checks passed!\n\n- ✓ Linting\n- ✓ Unit & Integration Tests\n- ✓ Coverage Threshold\n- ✓ Node.js 16 & 18 Compatibility'
+            })
+      
+      - name: Comment PR on Failure
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '❌ Backend CI checks failed!\n\nPlease check the workflow logs to see what failed.'
+            })
