@@ -240,9 +240,62 @@ function generateContentKey(userId, contentId, masterKey) {
 }
 
 /**
- * Create encrypted content record
+ * Encrypt file buffer for premium content upload
  */
-async function encryptContent(ContentEncryption, data) {
+async function encryptFileForPremiumContent(ContentEncryption, data) {
+  try {
+    const {
+      contentId,
+      buffer,
+      originalName,
+      contentType,
+      uploadedBy,
+      masterKey
+    } = data;
+
+    // Generate content-specific key
+    const contentKey = generateEncryptionKey();
+
+    // Encrypt the file buffer
+    const { encryptedData, iv, authTag } = encryptBuffer(buffer, contentKey);
+
+    // Wrap the content key
+    const wrappedKey = wrapContentKey(contentKey, masterKey);
+
+    // Create encrypted content record
+    const encryptedContent = new ContentEncryption({
+      contentId,
+      // userId not set for global record
+      contentType,
+      encryptedFileKey: wrappedKey.encryptedKey,
+      encryptionKeyIv: wrappedKey.iv,
+      encryptionKeyTag: wrappedKey.authTag,
+      fileEncryptionIv: iv,
+      fileEncryptionTag: authTag,
+      encryptedFileUrl: '', // To be set after IPFS upload
+      isEncryptedContent: true,
+      accessAttempts: 0,
+      lastAccessedAt: null,
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+      isActive: true,
+      metadata: {
+        uploadedBy: uploadedBy.toString(),
+        originalFileName: originalName
+      }
+    });
+
+    await encryptedContent.save();
+    logger.info(`File encrypted for premium content ${contentId}`);
+
+    return {
+      encryptedBuffer: encryptedData,
+      encryptionRecord: encryptedContent
+    };
+  } catch (error) {
+    logger.error('Error encrypting file for premium content:', error);
+    throw error;
+  }
+}
   try {
     const {
       contentId,
@@ -508,6 +561,7 @@ module.exports = {
 
   // Content management
   encryptContent,
+  encryptFileForPremiumContent,
   verifyAndDecryptContent,
   revokeContentAccess,
   extendContentAccess,
