@@ -8,3 +8,11 @@ This directory contains monitoring configurations and scripts for the Web3 Conte
 - Grafana: Dashboards
 - Alertmanager: Alerting
 - Custom scripts: Health checks and monitoring
+
+## Quick start
+
+Run the monitoring stack with Docker Compose:
+
+```bash
+docker-compose -f monitoring/docker-compose.yml up -d
+```
