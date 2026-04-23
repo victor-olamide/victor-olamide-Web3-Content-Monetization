@@ -17,6 +17,13 @@ const contentEncryptionSchema = new mongoose.Schema({
   encryptedUrl: { type: String, required: true },
   encryptionIv: { type: String, required: true }, // Initialization Vector
   encryptionTag: { type: String, required: true }, // Authentication Tag for GCM
+  encryptedFileKey: { type: String },
+  encryptionKeyIv: { type: String },
+  encryptionKeyTag: { type: String },
+  fileEncryptionIv: { type: String },
+  fileEncryptionTag: { type: String },
+  encryptedFileUrl: { type: String },
+  isEncryptedContent: { type: Boolean, default: false },
 
   // Access control
   isActive: { type: Boolean, default: true, indexed: true },

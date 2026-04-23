@@ -107,6 +107,125 @@ function decryptContentUrl(encryptedData, iv, authTag, encryptionKey) {
 }
 
 /**
+ * Encrypt a raw file buffer with AES-256-GCM
+ */
+function encryptBuffer(buffer, encryptionKey) {
+  try {
+    if (!Buffer.isBuffer(buffer)) {
+      throw new Error('Buffer data is required for file encryption');
+    }
+
+    if (!encryptionKey || encryptionKey.length !== ENCRYPTION_CONFIG.keyLength) {
+      throw new Error('Invalid encryption key');
+    }
+
+    const iv = generateIv();
+    const cipher = crypto.createCipheriv(ENCRYPTION_CONFIG.algorithm, encryptionKey, iv);
+
+    const encrypted = Buffer.concat([cipher.update(buffer), cipher.final()]);
+    const authTag = cipher.getAuthTag();
+
+    return {
+      encryptedData: encrypted,
+      iv: iv.toString(ENCRYPTION_CONFIG.encoding),
+      authTag: authTag.toString(ENCRYPTION_CONFIG.encoding)
+    };
+  } catch (error) {
+    logger.error('Error encrypting buffer:', error);
+    throw error;
+  }
+}
+
+/**
+ * Decrypt a raw file buffer encrypted with AES-256-GCM
+ */
+function decryptBuffer(encryptedBuffer, iv, authTag, encryptionKey) {
+  try {
+    if (!Buffer.isBuffer(encryptedBuffer)) {
+      throw new Error('Encrypted buffer data is required for file decryption');
+    }
+
+    if (!encryptionKey || encryptionKey.length !== ENCRYPTION_CONFIG.keyLength) {
+      throw new Error('Invalid encryption key');
+    }
+
+    const decipher = crypto.createDecipheriv(
+      ENCRYPTION_CONFIG.algorithm,
+      encryptionKey,
+      Buffer.from(iv, ENCRYPTION_CONFIG.encoding)
+    );
+
+    decipher.setAuthTag(Buffer.from(authTag, ENCRYPTION_CONFIG.encoding));
+
+    return Buffer.concat([decipher.update(encryptedBuffer), decipher.final()]);
+  } catch (error) {
+    logger.error('Error decrypting buffer:', error);
+    throw new Error('Failed to decrypt content data. Unauthorized or corrupted data.');
+  }
+}
+
+/**
+ * Wrap a content encryption key with the master key so it can be stored safely
+ */
+function wrapContentKey(contentKey, masterKey) {
+  try {
+    if (!contentKey || contentKey.length !== ENCRYPTION_CONFIG.keyLength) {
+      throw new Error('Invalid content key');
+    }
+
+    if (!masterKey || masterKey.length !== ENCRYPTION_CONFIG.keyLength) {
+      throw new Error('Invalid master key');
+    }
+
+    const iv = generateIv();
+    const cipher = crypto.createCipheriv(ENCRYPTION_CONFIG.algorithm, masterKey, iv);
+
+    const encryptedKey = Buffer.concat([cipher.update(contentKey), cipher.final()]);
+    const authTag = cipher.getAuthTag();
+
+    return {
+      encryptedKey: encryptedKey.toString(ENCRYPTION_CONFIG.encoding),
+      iv: iv.toString(ENCRYPTION_CONFIG.encoding),
+      authTag: authTag.toString(ENCRYPTION_CONFIG.encoding)
+    };
+  } catch (error) {
+    logger.error('Error wrapping content key:', error);
+    throw error;
+  }
+}
+
+/**
+ * Unwrap a stored content encryption key using the master key
+ */
+function unwrapContentKey(encryptedKey, iv, authTag, masterKey) {
+  try {
+    if (!encryptedKey || !iv || !authTag) {
+      throw new Error('Missing wrapped content key metadata');
+    }
+
+    if (!masterKey || masterKey.length !== ENCRYPTION_CONFIG.keyLength) {
+      throw new Error('Invalid master key');
+    }
+
+    const decipher = crypto.createDecipheriv(
+      ENCRYPTION_CONFIG.algorithm,
+      masterKey,
+      Buffer.from(iv, ENCRYPTION_CONFIG.encoding)
+    );
+
+    decipher.setAuthTag(Buffer.from(authTag, ENCRYPTION_CONFIG.encoding));
+
+    return Buffer.concat([
+      decipher.update(Buffer.from(encryptedKey, ENCRYPTION_CONFIG.encoding)),
+      decipher.final()
+    ]);
+  } catch (error) {
+    logger.error('Error unwrapping content key:', error);
+    throw new Error('Failed to unwrap encryption key. Unauthorized or corrupted data.');
+  }
+}
+
+/**
  * Generate a content encryption key specific to user and content
  */
 function generateContentKey(userId, contentId, masterKey) {
@@ -382,6 +501,10 @@ module.exports = {
   // Encryption/Decryption
   encryptContentUrl,
   decryptContentUrl,
+  encryptBuffer,
+  decryptBuffer,
+  wrapContentKey,
+  unwrapContentKey,
 
   // Content management
   encryptContent,
