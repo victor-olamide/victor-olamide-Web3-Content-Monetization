@@ -24,8 +24,40 @@ if (!fs.existsSync(ARTIFACTS_DIR)) {
 }
 
 /**
- * Run Artillery load test
+ * Calculate and store performance baselines
  */
+async function calculateBaselines() {
+  console.log(`\n${'='.repeat(80)}`);
+  console.log('CALCULATING PERFORMANCE BASELINES');
+  console.log(`${'='.repeat(80)}`);
+
+  const calculator = new BaselineCalculator(RESULTS_DIR);
+
+  // Process Artillery results
+  const artilleryResults = path.join(RESULTS_DIR, 'concurrent-users-artillery-results.json');
+  if (fs.existsSync(artilleryResults)) {
+    console.log('Processing Artillery results...');
+    const success = calculator.setBaseline('concurrent-users-artillery-results.json');
+    if (success) {
+      console.log('✓ Artillery baseline established');
+    }
+  }
+
+  // For Locust, we need to parse CSV results (Locust doesn't output JSON by default)
+  // This is a simplified version - in production, you'd parse Locust's CSV output
+  console.log('Note: Locust results parsing would require CSV output configuration');
+
+  // Store baseline as CI artifact
+  const baselinePath = path.join(RESULTS_DIR, 'baseline.json');
+  const artifactPath = path.join(ARTIFACTS_DIR, `baseline-${Date.now()}.json`);
+
+  if (fs.existsSync(baselinePath)) {
+    fs.copyFileSync(baselinePath, artifactPath);
+    console.log(`✓ Baseline stored as CI artifact: ${artifactPath}`);
+  }
+
+  return calculator;
+}
 function runArtilleryTest(configFile, outputFile, testName) {
   return new Promise((resolve, reject) => {
     console.log(`\n${'='.repeat(80)}`);
