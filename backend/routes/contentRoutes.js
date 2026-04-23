@@ -204,40 +204,24 @@ router.post('/upload-and-register', (req, res) => {
         }
 
         const masterKey = Buffer.from(masterKeyHex, 'hex');
-        const contentKey = encryptionService.generateEncryptionKey();
-        const fileEncryption = encryptionService.encryptBuffer(req.file.buffer, contentKey);
-        const wrappedKey = encryptionService.wrapContentKey(contentKey, masterKey);
 
-        uploadBuffer = fileEncryption.encryptedData;
+        // Encrypt file for premium content
+        const encryptionResult = await encryptionService.encryptFileForPremiumContent(ContentEncryption, {
+          contentId: parseInt(contentId),
+          buffer: req.file.buffer,
+          originalName: req.file.originalname,
+          contentType: contentType || 'file',
+          uploadedBy: user._id,
+          masterKey
+        });
+
+        uploadBuffer = encryptionResult.encryptedBuffer;
         ipfsUrl = await uploadToIPFS(uploadBuffer, req.file.originalname);
         isEncrypted = true;
 
-        const contentEncryptionRecord = new ContentEncryption({
-          contentId: parseInt(contentId),
-          // userId: user._id, // Global record, not per user
-          contentType: contentType || 'file',
-          encryptedUrl: wrappedKey.encryptedKey,
-          encryptionIv: wrappedKey.iv,
-          encryptionTag: wrappedKey.authTag,
-          encryptedFileKey: wrappedKey.encryptedKey,
-          encryptionKeyIv: wrappedKey.iv,
-          encryptionKeyTag: wrappedKey.authTag,
-          fileEncryptionIv: fileEncryption.iv,
-          fileEncryptionTag: fileEncryption.authTag,
-          encryptedFileUrl: ipfsUrl,
-          isEncryptedContent: true,
-          accessAttempts: 0,
-          lastAccessedAt: null,
-          expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-          isActive: true,
-          purchaseTransactionId: null,
-          metadata: {
-            uploadedBy: user._id.toString(),
-            originalFileName: req.file.originalname
-          }
-        });
-
-        await contentEncryptionRecord.save();
+        // Update the encryption record with the IPFS URL
+        encryptionResult.encryptionRecord.encryptedFileUrl = ipfsUrl;
+        await encryptionResult.encryptionRecord.save();
       } else {
         ipfsUrl = await uploadToIPFS(uploadBuffer, req.file.originalname);
       }
