@@ -2,8 +2,22 @@ const logger = require('../utils/logger');
 const express = require('express');
 const router = express.Router();
 const Content = require('../models/Content');
+const ContentEncryption = require('../models/ContentEncryption');
+const encryptionService = require('../services/encryptionService');
 const { verifyContentAccess, rateLimitMiddleware } = require('../middleware/accessControl');
 const { getContentFromStorage } = require('../services/storageService');
+
+const getMasterKey = () => {
+  const masterKeyHex = process.env.CONTENT_ENCRYPTION_MASTER_KEY;
+  if (!masterKeyHex) {
+    throw new Error('Master encryption key not configured');
+  }
+  const masterKey = Buffer.from(masterKeyHex, 'hex');
+  if (masterKey.length !== encryptionService.ENCRYPTION_CONFIG.keyLength) {
+    throw new Error('Master encryption key must be 32 bytes in hex format');
+  }
+  return masterKey;
+};
 
 /**
  * Serve gated content with access verification
@@ -17,7 +31,15 @@ router.get('/:contentId/stream', verifyContentAccess, rateLimitMiddleware, async
       return res.status(404).json({ message: 'Content not found' });
     }
 
-    const contentData = await getContentFromStorage(content.url, content.storageType);
+    let contentData;
+
+    if (content.isEncrypted) {
+      logger.info(`Decrypting premium content ${contentId} for authorized user`);
+      const masterKey = getMasterKey();
+      contentData = await encryptionService.decryptFileForAuthorizedUser(ContentEncryption, parseInt(contentId), masterKey);
+    } else {
+      contentData = await getContentFromStorage(content.url, content.storageType);
+    }
     
     res.setHeader('Content-Type', getContentType(content.contentType));
     res.setHeader('X-Access-Method', req.accessInfo.method);

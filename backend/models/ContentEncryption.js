@@ -8,7 +8,7 @@ const mongoose = require('mongoose');
 const contentEncryptionSchema = new mongoose.Schema({
   // References
   contentId: { type: Number, required: true, indexed: true },
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, indexed: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // Optional for global content encryption
 
   // Content metadata
   contentType: { type: String, enum: ['video', 'article', 'image', 'music', 'file'], required: true },
@@ -17,6 +17,13 @@ const contentEncryptionSchema = new mongoose.Schema({
   encryptedUrl: { type: String, required: true },
   encryptionIv: { type: String, required: true }, // Initialization Vector
   encryptionTag: { type: String, required: true }, // Authentication Tag for GCM
+  encryptedFileKey: { type: String },
+  encryptionKeyIv: { type: String },
+  encryptionKeyTag: { type: String },
+  fileEncryptionIv: { type: String },
+  fileEncryptionTag: { type: String },
+  encryptedFileUrl: { type: String },
+  isEncryptedContent: { type: Boolean, default: false },
 
   // Access control
   isActive: { type: Boolean, default: true, indexed: true },
