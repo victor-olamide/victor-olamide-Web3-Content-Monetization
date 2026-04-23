@@ -1,6 +1,11 @@
 const recommendationService = require('../services/recommendationService');
 const logger = require('../utils/logger');
 
+/**
+ * Get personalized content recommendations for a user
+ * Uses viewing history and preferences for scoring
+ */
+
 exports.getRecommendations = async (req, res) => {
   try {
     const userId = req.params.userId || req.query.userId;
