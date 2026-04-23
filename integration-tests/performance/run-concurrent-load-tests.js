@@ -11,6 +11,7 @@ const fs = require('fs');
 const path = require('path');
 const BaselineCalculator = require('./baseline-calculator');
 const { storeArtifacts } = require('./store-ci-artifacts');
+const { generatePerformanceSummary } = require('./generate-performance-summary');
 
 const TESTS_DIR = __dirname;
 const RESULTS_DIR = path.join(TESTS_DIR, 'test-results');
