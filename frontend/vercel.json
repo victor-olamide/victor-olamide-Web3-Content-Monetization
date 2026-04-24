@@ -1,4 +1,9 @@
 {
   "version": 2,
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "env": {
+    "NEXT_PUBLIC_API_URL": "https://api.web3monetization.com",
+    "NEXT_PUBLIC_STACKS_NETWORK": "mainnet",
+    "NEXT_PUBLIC_ANALYTICS_ID": "GA_MEASUREMENT_ID"
+  }
 }
