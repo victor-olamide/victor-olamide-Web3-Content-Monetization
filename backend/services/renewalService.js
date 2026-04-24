@@ -1,7 +1,8 @@
 const Subscription = require('../models/Subscription');
 const SubscriptionRenewal = require('../models/SubscriptionRenewal');
 const Content = require('../models/Content');
-const { calculatePlatformFee } = require('./contractService');
+const { calculatePlatformFee, renewSubscription } = require('./contractService');
+const notificationService = require('./notificationService');
 const logger = require('../utils/logger');
 
 /**
@@ -194,6 +195,90 @@ async function completeRenewal(renewalId, txId) {
       message: 'Renewal completed successfully'
     };
   } catch (error) {
+    return {
+      success: false,
+      message: error.message
+    };
+  }
+}
+
+function getAutoRenewalSenderKey() {
+  return process.env.AUTO_RENEWAL_SENDER_KEY || process.env.CREATOR_PRIVATE_KEY || process.env.PRIVATE_KEY;
+}
+
+/**
+ * Process an automatic on-chain subscription renewal.
+ * @param {Object} subscription - Subscription document
+ * @returns {Promise<Object>}
+ */
+async function processAutomaticRenewal(subscription) {
+  try {
+    if (!subscription) {
+      throw new Error('Subscription data is required for automatic renewal');
+    }
+
+    const validation = validateRenewalEligibility(subscription);
+    if (!validation.valid) {
+      return {
+        success: false,
+        message: validation.error
+      };
+    }
+
+    const initiationResult = await initiateRenewal(subscription._id, 'automatic');
+    if (!initiationResult.success) {
+      return initiationResult;
+    }
+
+    const renewal = initiationResult.renewal;
+    const senderKey = getAutoRenewalSenderKey();
+    if (!senderKey) {
+      const message = 'Automatic renewal sender key is not configured';
+      await handleRenewalFailure(renewal._id, message);
+      return {
+        success: false,
+        message
+      };
+    }
+
+    const txResponse = await renewSubscription(subscription.creator, subscription.tierId, senderKey);
+    const txId = txResponse?.txId || txResponse?.tx_id || txResponse?.transactionId;
+
+    if (!txId) {
+      throw new Error('Renewal transaction did not return a transaction ID');
+    }
+
+    const completionResult = await completeRenewal(renewal._id, txId);
+    if (!completionResult.success) {
+      throw new Error(completionResult.message);
+    }
+
+    notificationService.sendSubscriptionEmail(subscription.user, {
+      planName: subscription.tierName || `Tier ${subscription.tierId}`,
+      subscriptionId: subscription._id.toString(),
+      email: subscription.email
+    }).catch((emailError) => {
+      logger.warn('Failed to send subscription confirmation email', {
+        err: emailError.message,
+        subscriptionId: subscription._id
+      });
+    });
+
+    return {
+      success: true,
+      renewal: completionResult.renewal,
+      transactionId: txId,
+      message: 'Automatic renewal processed successfully'
+    };
+  } catch (error) {
+    if (error && error.message && error.message !== 'Renewal transaction did not return a transaction ID') {
+      logger.error('Automatic renewal failed', { err: error.message, subscriptionId: subscription?._id });
+    }
+
+    if (typeof renewal !== 'undefined' && renewal && renewal._id) {
+      await handleRenewalFailure(renewal._id, error.message);
+    }
+
     return {
       success: false,
       message: error.message
@@ -491,6 +576,7 @@ module.exports = {
   getExpiredSubscriptionsInGracePeriod,
   getExpiredSubscriptionsGraceEnded,
   cancelSubscription,
+  processAutomaticRenewal,
   getRenewalHistory,
   getUserSubscriptionStatus
 };
