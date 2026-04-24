@@ -114,6 +114,11 @@ async function initiateRenewal(subscriptionId, renewalType = 'automatic') {
       throw new Error(validation.error);
     }
 
+    // Validate subscription amount
+    if (!subscription.amount || subscription.amount <= 0) {
+      throw new Error('Invalid subscription amount for renewal');
+    }
+
     // Calculate platform fee
     let platformFee = 0;
     try {
