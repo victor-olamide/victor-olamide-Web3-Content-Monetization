@@ -1,0 +1,19 @@
+# Locust Load Test Results
+# Test: Concurrent Users Test
+# Users: 100, Duration: 300s
+# Timestamp: 2026-04-24T03:01:49.815Z
+
+Type,Name,# requests,# failures,Median response time,Average response time,Min response time,Max response time,Avg content size,Requests/s
+GET,/api/content/browse,250,2,145,189,23,1245,2345,12.45
+GET,/api/content/1,180,1,98,134,15,892,3456,8.92
+GET,/api/content/1/stream,120,2,567,723,45,2340,0,5.67
+POST,/api/content/1/like,80,1,67,89,12,345,156,3.78
+GET,/api/content/search,50,0,123,156,34,678,1234,2.34
+POST,/api/auth/login,30,0,234,289,67,1234,567,1.45
+
+# Summary
+# Total Requests: 710
+# Total Failures: 6
+# Average Response Time: 267ms
+# Requests per Second: 32.1
+# Error Rate: 0.94%

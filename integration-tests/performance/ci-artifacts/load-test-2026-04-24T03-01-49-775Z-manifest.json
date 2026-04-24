@@ -1,0 +1,16 @@
+{
+  "timestamp": "2026-04-24T03:01:49.794Z",
+  "testType": "concurrent-users-load-test",
+  "artifacts": [
+    "load-test-2026-04-24T03-01-49-775Z-artillery.json",
+    "load-test-2026-04-24T03-01-49-775Z-baseline.json",
+    "load-test-2026-04-24T03-01-49-775Z-locust.csv",
+    "load-test-2026-04-24T03-01-49-775Z-summary.json"
+  ],
+  "metadata": {
+    "artilleryResults": true,
+    "locustResults": true,
+    "baseline": true,
+    "summary": true
+  }
+}
