@@ -143,6 +143,32 @@ function runLocustTest(pythonFile, numUsers, spawnRate, duration, testName) {
  */
 async function runAllTests() {
   const testMode = process.argv[2] || 'all';
+
+  // Show help if requested
+  if (testMode === '--help' || testMode === '-h') {
+    console.log(`
+Concurrent User Load Test Runner
+
+Usage: node run-concurrent-load-tests.js [MODE]
+
+Modes:
+  all              Run all tests (Artillery + Locust + Stress + Soak)
+  artillery-only   Run only Artillery tests
+  locust-only      Run only Locust tests
+  stress           Run stress test (high load)
+  soak             Run soak test (extended duration)
+
+Examples:
+  node run-concurrent-load-tests.js all
+  node run-concurrent-load-tests.js artillery-only
+  node run-concurrent-load-tests.js stress
+
+Results will be stored in: ${RESULTS_DIR}
+CI Artifacts will be stored in: ${ARTIFACTS_DIR}
+`);
+    process.exit(0);
+  }
+
   const startTime = Date.now();
   
   console.log(`\n${'='.repeat(80)}`);
