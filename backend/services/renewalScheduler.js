@@ -1,3 +1,13 @@
+/**
+ * Subscription Renewal Scheduler
+ *
+ * Manages automatic subscription renewal processing:
+ * - Daily execution of renewal checks
+ * - Processing subscriptions due for renewal
+ * - Grace period management for expired subscriptions
+ * - Integration with renewal service for payment processing
+ */
+
 const logger = require('../utils/logger');
 const {
   getSubscriptionsDueForRenewal,
