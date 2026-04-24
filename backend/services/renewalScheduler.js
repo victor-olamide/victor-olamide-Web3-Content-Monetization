@@ -40,13 +40,21 @@ function initializeRenewalScheduler(intervalMs = null) {
   
   // Run immediately on startup (with delay to ensure DB connection)
   const timeoutId = setTimeout(async () => {
-    await processRenewals();
+    try {
+      await processRenewals();
+    } catch (error) {
+      logger.error('Error during initial renewal processing', { err: error.message });
+    }
   }, 5000);
   initialTimeout = timeoutId;
 
   // Schedule recurring processing daily by default
   schedulerInstance = setInterval(async () => {
-    await processRenewals();
+    try {
+      await processRenewals();
+    } catch (error) {
+      logger.error('Error during scheduled renewal processing', { err: error.message });
+    }
   }, effectiveIntervalMs);
 
   isRunning = true;
