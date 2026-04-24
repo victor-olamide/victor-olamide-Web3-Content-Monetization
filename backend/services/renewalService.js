@@ -1,3 +1,13 @@
+/**
+ * Subscription Renewal Service
+ *
+ * Handles automatic subscription renewals including:
+ * - Eligibility validation
+ * - On-chain payment processing
+ * - Email notifications
+ * - Failure handling and retries
+ */
+
 const Subscription = require('../models/Subscription');
 const SubscriptionRenewal = require('../models/SubscriptionRenewal');
 const Content = require('../models/Content');
