@@ -146,6 +146,14 @@ async function initiateRenewal(subscriptionId, renewalType = 'automatic') {
     });
 
     const savedRenewal = await renewalRecord.save();
+    logger.info('Renewal record created', {
+      renewalId: savedRenewal._id,
+      subscriptionId,
+      renewalType,
+      amount: subscription.amount,
+      platformFee,
+      creatorAmount
+    });
 
     // Update subscription status
     subscription.renewalStatus = 'renewal-pending';
