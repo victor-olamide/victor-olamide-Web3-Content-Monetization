@@ -1,3 +1,4 @@
+// PostCSS config with production minification for Vercel deployment
 module.exports = {
   plugins: {
     tailwindcss: {},
