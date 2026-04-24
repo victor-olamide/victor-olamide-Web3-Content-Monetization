@@ -177,6 +177,7 @@ async function initializeServices() {
   startCacheEvictionJob();
 
   const renewalIntervalMs = parseInt(process.env.RENEWAL_SCHEDULER_INTERVAL_MS, 10) || 86400000;
+  // Initialize automatic subscription renewal scheduler to run daily
   initializeRenewalScheduler(renewalIntervalMs);
 }
 
