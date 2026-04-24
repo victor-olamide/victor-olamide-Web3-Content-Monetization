@@ -4,12 +4,12 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const mongoose = require('mongoose');
 require('dotenv').config();
-const logger = require('./utils/logger');
-
 const logger = require('./utils/logger');
 const { validateEnv } = require('./utils/validateEnv');
 const { connectDB, disconnectDB } = require('./config/database');
+const { initializeRenewalScheduler, stopRenewalScheduler } = require('./services/renewalScheduler');
 
 // Import routes
 const contentRoutes = require('./routes/contentRoutes');
@@ -166,21 +166,6 @@ app.use('*', (req, res) => {
 
 // Error handling middleware (must be last)
 app.use(errorHandler);
-// Database connection
-async function connectDB() {
-  try {
-    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/web3-content-platform';
-    await mongoose.connect(mongoUri, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-    logger.info('Connected to MongoDB');
-  } catch (error) {
-    logger.error('MongoDB connection error', { err: error });
-    process.exit(1);
-  }
-}
-
 // Initialize optional services — non-fatal if they fail
 async function initializeServices() {
   try {
@@ -190,6 +175,9 @@ async function initializeServices() {
     logger.error('Failed to initialize pinning service', { err: error });
   }
   startCacheEvictionJob();
+
+  const renewalIntervalMs = parseInt(process.env.RENEWAL_SCHEDULER_INTERVAL_MS, 10) || 86400000;
+  initializeRenewalScheduler(renewalIntervalMs);
 }
 
 // Start server — validates env, connects to MongoDB, then binds HTTP port
@@ -213,7 +201,8 @@ async function startServer() {
 process.on('SIGTERM', async () => {
   logger.info('SIGTERM received — shutting down gracefully');
   await disconnectDB();
-  logger.info('SIGTERM received, shutting down gracefully');
+  stopRenewalScheduler();
+  logger.info('Renewal scheduler stopped');
   await mongoose.connection.close();
   process.exit(0);
 });
