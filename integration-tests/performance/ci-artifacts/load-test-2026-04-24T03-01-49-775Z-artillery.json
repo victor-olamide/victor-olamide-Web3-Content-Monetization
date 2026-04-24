@@ -1,0 +1,47 @@
+{
+  "aggregate": {
+    "timestamp": "2026-04-24T03:01:49.717Z",
+    "duration": 780000,
+    "scenariosCreated": 1500,
+    "scenariosCompleted": 1475,
+    "requestsCompleted": 8850,
+    "latency": {
+      "min": 45.2,
+      "max": 2340.8,
+      "median": 156.7,
+      "p95": 892.3,
+      "p99": 1456.9
+    },
+    "rps": {
+      "mean": 18.95,
+      "count": 14750
+    },
+    "codes": {
+      "200": 8234,
+      "201": 412,
+      "400": 156,
+      "401": 23,
+      "500": 25
+    },
+    "errors": [
+      {
+        "name": "ECONNRESET",
+        "count": 12
+      },
+      {
+        "name": "ETIMEDOUT",
+        "count": 8
+      }
+    ],
+    "summary": {
+      "numRequests": 8850,
+      "numErrors": 45,
+      "numCompleted": 1475,
+      "rps": {
+        "mean": 18.95,
+        "count": 14750
+      }
+    }
+  },
+  "intermediate": []
+}
