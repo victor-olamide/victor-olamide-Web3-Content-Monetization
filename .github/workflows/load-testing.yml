@@ -55,29 +55,14 @@ jobs:
           cd integration-tests/performance
           mkdir -p test-results
 
-      - name: Run concurrent load test
-        if: github.event.inputs.test_type == 'concurrent' || github.event_name == 'schedule'
+      - name: Run load tests
+        id: load-test
         run: |
           cd integration-tests/performance
-          ./run-concurrent-load-tests.sh --ci
+          node ci-integration.js
         env:
-          LOAD_TEST_URL: ${{ secrets.LOAD_TEST_URL }}
-
-      - name: Run stress test
-        if: github.event.inputs.test_type == 'stress'
-        run: |
-          cd integration-tests/performance
-          ./run-concurrent-load-tests.sh --stress --skip-verify
-        env:
-          LOAD_TEST_URL: ${{ secrets.LOAD_TEST_URL }}
-
-      - name: Run soak test
-        if: github.event.inputs.test_type == 'soak'
-        run: |
-          cd integration-tests/performance
-          ./run-concurrent-load-tests.sh --soak --skip-verify
-        env:
-          LOAD_TEST_URL: ${{ secrets.LOAD_TEST_URL }}
+          LOAD_TEST_URL: ${{ secrets.LOAD_TEST_URL || 'http://localhost:5000' }}
+          CI: true
 
       - name: Analyze results
         run: |
@@ -86,47 +71,70 @@ jobs:
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: load-test-results-${{ github.run_number }}
+          name: load-test-results-${{ github.run_id }}
           path: integration-tests/performance/test-results/
+          retention-days: 30
 
-      - name: Generate performance report
-        run: |
-          cd integration-tests/performance
-          node load-test-reporter.js test-results/ --html > performance-report.html
-
-      - name: Upload performance report
+      - name: Upload CI artifacts
         uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: performance-report-${{ github.run_number }}
-          path: integration-tests/performance/performance-report.html
+          name: load-test-artifacts-${{ github.run_id }}
+          path: integration-tests/performance/ci-artifacts/
+          retention-days: 30
 
       - name: Comment on PR (if triggered from PR)
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && always()
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
-            const reportPath = 'integration-tests/performance/performance-report.html';
-            const report = fs.readFileSync(reportPath, 'utf8');
+            const path = require('path');
 
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `## Load Test Results
+            const summaryPath = path.join(
+              process.env.GITHUB_WORKSPACE,
+              'integration-tests/performance/test-results/ci-summary.md'
+            );
 
-**Test Type:** ${{ github.event.inputs.test_type || 'concurrent' }}
-**Environment:** ${{ github.event.inputs.environment || 'staging' }}
+            if (fs.existsSync(summaryPath)) {
+              const summary = fs.readFileSync(summaryPath, 'utf8');
 
-### Performance Summary
-${report.substring(0, 1000)}...
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: summary
+              });
+            }
 
-[View Full Report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})`
-            })
-
-      - name: Notify on failure
-        if: failure()
+      - name: Performance regression check
+        if: always()
         run: |
-          echo "Load test failed. Check the logs and artifacts for details."
-          # Add notification logic here (Slack, email, etc.)
+          if [ "${{ steps.load-test.outputs.status }}" = "degraded" ]; then
+            echo "🚨 Performance regression detected!"
+            echo "Risk Level: ${{ steps.load-test.outputs.risk-level }}"
+            exit 1
+          elif [ "${{ steps.load-test.outputs.status }}" = "concerning" ]; then
+            echo "⚠️ Performance concerns detected"
+            echo "Risk Level: ${{ steps.load-test.outputs.risk-level }}"
+          else
+            echo "✅ Performance checks passed"
+          fi
+
+      - name: Generate performance report
+        if: always()
+        run: |
+          echo "## 🚀 Load Testing Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Status | ${{ steps.load-test.outputs.status }} | ${{ steps.load-test.outputs.status == 'stable' && '✅' || steps.load-test.outputs.status == 'improving' && '✅' || '⚠️' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| P95 Latency | ${{ steps.load-test.outputs.p95-latency }}ms | - |" >> $GITHUB_STEP_SUMMARY
+          echo "| Throughput | ${{ steps.load-test.outputs.throughput }} req/s | - |" >> $GITHUB_STEP_SUMMARY
+          echo "| Regressions | ${{ steps.load-test.outputs.regressions }} | ${{ steps.load-test.outputs.regressions == '0' && '✅' || '⚠️' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📊 Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "- Results: [\`load-test-results-${{ github.run_id }}\`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts)" >> $GITHUB_STEP_SUMMARY
+          echo "- Artifacts: [\`load-test-artifacts-${{ github.run_id }}\`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts)" >> $GITHUB_STEP_SUMMARY
