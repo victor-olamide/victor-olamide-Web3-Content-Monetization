@@ -1,5 +1,6 @@
 import type { Config } from "tailwindcss";
 
+// Tailwind config for production deployment on Vercel
 const config: Config = {
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
