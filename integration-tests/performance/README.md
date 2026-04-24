@@ -1,53 +1,280 @@
-# Content Delivery and Concurrent User Load Testing Suite
+# Load Testing Suite
 
-This directory contains comprehensive performance testing tools for content streaming endpoints and concurrent user load testing in the Web3 Content Monetization platform.
+Comprehensive load testing framework for the Web3 Content Monetization Platform with concurrent user simulation, baseline calculation, and CI/CD integration.
 
-## Overview
-
-The performance testing suite provides:
-- **Load Testing**: Artillery-based load tests for content delivery endpoints
-- **Concurrent User Testing**: Comprehensive concurrent user load testing with multiple scenarios
-- **Video Streaming Tests**: Specialized tests for video content delivery
-- **Locust Load Tests**: Python-based load testing with Locust for content streaming
-- **Real-time Monitoring**: Live performance dashboard and metrics
-- **Performance Analysis**: Automated analysis and reporting tools
-- **CI/CD Integration**: Automated performance regression testing
-
-## Test Scenarios
-
-### Content Delivery Load Test (`content-delivery-load-test.yml`)
-- **Metadata Access**: Testing content metadata retrieval performance
-- **Content Streaming**: Authenticated content access with rate limiting
-- **Content Previews**: Preview generation and batch access performance
-- **CDN Integration**: Content delivery network performance validation
-- **Access Tokens**: Temporary access token generation and validation
-
-### Video Streaming Load Test (`video-streaming-load-test.yml`)
-- **HD Video Streaming**: High-definition video delivery with chunking
-- **CDN Video Delivery**: Video content distribution through CDN
-- **Adaptive Bitrate**: Quality-based streaming performance
-- **Live Streaming**: Real-time streaming simulation
-- **Analytics**: Performance metrics collection and analysis
-
-### Locust Load Test (`content-streaming-locust.py`)
-- **Python-based Load Testing**: Using Locust for flexible content streaming tests
-- **Multiple Tasks**: Stream content and fetch metadata with different weights
-- **Error Handling**: Built-in response validation and failure detection
-- **Scalable**: Easy to configure user count and test duration
-
-### Concurrent User Load Test (`concurrent-users-artillery.yml`)
-- **High Concurrent Load**: Testing system behavior under high concurrent user load
-- **Multiple Scenarios**: Content viewers, creators, and admin users
-- **Load Phases**: Warm-up, ramp-up, sustained, peak, and recovery phases
-- **Realistic Behavior**: Simulates user interactions with think times and error handling
-- **Comprehensive Metrics**: Response times, throughput, error rates, and custom metrics
-
-## Quick Start
+## 🚀 Quick Start
 
 ### Prerequisites
+
+- Node.js 18+
+- MongoDB running locally or remote
+- Backend server running on port 5000
+
+### Installation
+
 ```bash
-# Install dependencies
+# Install integration test dependencies
+cd integration-tests
 npm install
+
+# Install Artillery globally (optional, fallback to mock results)
+npm install -g artillery
+
+# Install Locust (optional, fallback to mock results)
+pip install locust
+```
+
+### Running Tests
+
+```bash
+# Run all load tests
+cd integration-tests/performance
+node run-concurrent-load-tests.js all
+
+# Run specific test modes
+node run-concurrent-load-tests.js artillery-only    # Artillery only
+node run-concurrent-load-tests.js locust-only       # Locust only
+node run-concurrent-load-tests.js stress           # Stress test
+node run-concurrent-load-tests.js soak             # Soak test
+
+# Show help
+node run-concurrent-load-tests.js --help
+```
+
+## 📊 Test Scenarios
+
+### User Types
+
+1. **Content Viewer** (50% of traffic)
+   - Browse content catalog
+   - View content details
+   - Stream premium content
+   - Like/comment on content
+
+2. **Content Creator** (20% of traffic)
+   - Publish new content
+   - Update existing content
+   - View analytics
+   - Manage content library
+
+3. **Subscriber** (20% of traffic)
+   - Access premium content
+   - Manage subscriptions
+   - View payment methods
+   - Check subscription status
+
+4. **Mixed/Admin** (10% of traffic)
+   - General browsing
+   - Admin dashboard access
+
+### Test Phases
+
+- **Warm up**: 5 concurrent users for 60s
+- **Ramp up**: 25 concurrent users for 120s
+- **Sustained load**: 50 concurrent users for 180s
+- **Peak load**: 100 concurrent users for 240s
+- **Maintain peak**: 75 concurrent users for 180s
+- **Cool down**: 50→10 concurrent users for 120s
+
+## 📈 Baseline Management
+
+### Setting Baselines
+
+```bash
+# Set baseline from current test results
+node baseline-calculator.js --set test-results/concurrent-users-artillery-results.json
+
+# Compare against baseline
+node baseline-calculator.js --compare test-results/latest-results.json
+
+# View performance trends
+node baseline-calculator.js --trend
+```
+
+### Baseline Metrics
+
+- **P95 Latency**: 95th percentile response time
+- **Throughput**: Requests per second
+- **Error Rate**: Percentage of failed requests
+- **P99 Latency**: 99th percentile response time
+- **Max Latency**: Maximum response time
+
+## 🔧 CI/CD Integration
+
+### GitHub Actions
+
+The load testing suite integrates with GitHub Actions for automated testing:
+
+```yaml
+# Trigger load tests on PR or push to main
+on:
+  pull_request:
+    paths: ['backend/**', 'integration-tests/performance/**']
+  push:
+    branches: [main]
+    paths: ['backend/**', 'integration-tests/performance/**']
+
+jobs:
+  load-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run load tests
+        run: |
+          cd integration-tests/performance
+          node ci-integration.js
+```
+
+### CI Outputs
+
+The CI integration provides:
+
+- **Test Results**: JSON files with detailed metrics
+- **CI Artifacts**: Stored test data and baselines
+- **Performance Summary**: Human-readable analysis
+- **PR Comments**: Automatic performance reports
+- **Status Checks**: Pass/fail based on regression detection
+
+## 📋 Configuration
+
+### Environment Variables
+
+```bash
+# Target URL for testing
+LOAD_TEST_URL=http://localhost:5000
+
+# Enable CI mode
+CI=true
+
+# GitHub Actions output file
+GITHUB_OUTPUT=/dev/stdout
+```
+
+### Customizing Tests
+
+#### Artillery Configuration
+
+Edit `concurrent-users-artillery.yml` to modify:
+- Load phases and user counts
+- Request scenarios and weights
+- Target endpoints and headers
+
+#### Locust Configuration
+
+Edit `concurrent-users-locust.py` to modify:
+- User behavior and task weights
+- Wait times between requests
+- Test scenarios and logic
+
+## 📊 Results Analysis
+
+### Performance Summary
+
+After running tests, view the performance summary:
+
+```bash
+cat test-results/performance-summary.json
+```
+
+Key sections:
+- **Results**: Raw metrics from Artillery/Locust
+- **Baselines**: Performance baselines
+- **Analysis**: Regression detection and risk assessment
+- **Trends**: Historical performance trends
+- **Recommendations**: Actionable improvement suggestions
+
+### CI Artifacts
+
+Test artifacts are stored in `ci-artifacts/`:
+- `*-artillery.json`: Artillery test results
+- `*-locust.csv`: Locust test results
+- `*-baseline.json`: Performance baselines
+- `*-summary.json`: Analysis summary
+- `*-manifest.json`: Artifact inventory
+
+## 🚨 Regression Detection
+
+The system automatically detects performance regressions:
+
+### Risk Levels
+
+- **Low**: Minor improvements or stable performance
+- **Medium**: Moderate performance changes
+- **High**: Significant regressions requiring attention
+
+### Failure Conditions
+
+Tests fail if:
+- Performance status is "degraded"
+- Critical regressions are detected
+- Required artifacts are missing
+
+## 🛠️ Troubleshooting
+
+### Common Issues
+
+1. **Artillery/Locust not found**
+   - Tests run with mock data
+   - Install tools for real testing: `npm install -g artillery && pip install locust`
+
+2. **Backend connection failed**
+   - Ensure backend is running on port 5000
+   - Check `LOAD_TEST_URL` environment variable
+
+3. **MongoDB connection issues**
+   - Ensure MongoDB is running
+   - Check connection string in backend config
+
+### Debug Mode
+
+```bash
+# Run with verbose logging
+DEBUG=* node run-concurrent-load-tests.js all
+
+# Test backend connectivity
+curl http://localhost:5000/api/health
+```
+
+## 📈 Performance Monitoring
+
+### Key Metrics to Monitor
+
+1. **Latency**: P95 should stay under 500ms
+2. **Throughput**: Should handle 50+ concurrent users
+3. **Error Rate**: Should be under 1%
+4. **Memory Usage**: Monitor for leaks during soak tests
+
+### Baseline Updates
+
+Update baselines when:
+- Infrastructure changes
+- Code optimizations are deployed
+- Performance improvements are verified
+
+```bash
+# Update baseline after improvements
+node baseline-calculator.js --set test-results/new-baseline.json
+```
+
+## 🤝 Contributing
+
+### Adding New Test Scenarios
+
+1. Update Artillery/Locust configurations
+2. Add scenario documentation
+3. Update baseline expectations
+4. Test in CI environment
+
+### Performance Standards
+
+- P95 latency: < 500ms
+- Error rate: < 1%
+- Throughput: > 50 req/s
+- Memory usage: < 512MB sustained
+
+---
+
+For questions or issues, check the [integration tests README](../README.md) or create an issue in the repository.
 
 # Install Locust for Python-based load testing
 pip install locust
