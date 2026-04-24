@@ -1,8 +1,33 @@
+/**
+ * Subscription Renewal Service
+ *
+ * Handles automatic subscription renewals including:
+ * - Eligibility validation
+ * - On-chain payment processing
+ * - Email notifications
+ * - Failure handling and retries
+ */
+
 const Subscription = require('../models/Subscription');
 const SubscriptionRenewal = require('../models/SubscriptionRenewal');
 const Content = require('../models/Content');
-const { calculatePlatformFee } = require('./contractService');
+const { calculatePlatformFee, renewSubscription } = require('./contractService');
+const notificationService = require('./notificationService');
 const logger = require('../utils/logger');
+
+/**
+ * Renewal Configuration Constants
+ */
+const RENEWAL_CONFIG = {
+  // Standard renewal period in days
+  RENEWAL_PERIOD_DAYS: 30,
+  // Grace period threshold in days before expiry
+  GRACE_PERIOD_THRESHOLD_DAYS: 3,
+  // Default platform fee percentage (2.5%)
+  DEFAULT_PLATFORM_FEE_PERCENTAGE: 0.025,
+  // Milliseconds per day for date calculations
+  MS_PER_DAY: 1000 * 60 * 60 * 24
+};
 
 /**
  * Validate renewal eligibility parameters
@@ -51,7 +76,7 @@ function isInGracePeriod(subscription) {
 function calculateRenewalStatus(subscription) {
   const now = new Date();
   const expiryDate = new Date(subscription.expiry);
-  const daysUntilExpiry = Math.ceil((expiryDate - now) / (1000 * 60 * 60 * 24));
+  const daysUntilExpiry = Math.ceil((expiryDate - now) / RENEWAL_CONFIG.MS_PER_DAY);
 
   let status = 'active';
   let daysRemaining = daysUntilExpiry;
@@ -63,7 +88,7 @@ function calculateRenewalStatus(subscription) {
     } else {
       status = 'expired';
     }
-  } else if (daysUntilExpiry <= 3) {
+  } else if (daysUntilExpiry <= RENEWAL_CONFIG.GRACE_PERIOD_THRESHOLD_DAYS) {
     status = 'expiring-soon';
   }
 
@@ -103,13 +128,18 @@ async function initiateRenewal(subscriptionId, renewalType = 'automatic') {
       throw new Error(validation.error);
     }
 
+    // Validate subscription amount
+    if (!subscription.amount || subscription.amount <= 0) {
+      throw new Error('Invalid subscription amount for renewal');
+    }
+
     // Calculate platform fee
     let platformFee = 0;
     try {
       platformFee = await calculatePlatformFee(subscription.amount);
     } catch (error) {
       logger.warn('Could not calculate platform fee', { err: error.message });
-      platformFee = Math.floor(subscription.amount * 0.025); // Fallback to 2.5%
+      platformFee = Math.floor(subscription.amount * RENEWAL_CONFIG.DEFAULT_PLATFORM_FEE_PERCENTAGE); // Fallback to 2.5%
     }
 
     const creatorAmount = subscription.amount - platformFee;
@@ -121,7 +151,7 @@ async function initiateRenewal(subscriptionId, renewalType = 'automatic') {
       creator: subscription.creator,
       tierId: subscription.tierId,
       previousExpiryDate: subscription.expiry,
-      newExpiryDate: new Date(subscription.expiry.getTime() + 30 * 24 * 60 * 60 * 1000), // 30 days
+      newExpiryDate: new Date(subscription.expiry.getTime() + RENEWAL_CONFIG.RENEWAL_PERIOD_DAYS * RENEWAL_CONFIG.MS_PER_DAY), // 30 days
       renewalAmount: subscription.amount,
       platformFee,
       creatorAmount,
@@ -130,11 +160,19 @@ async function initiateRenewal(subscriptionId, renewalType = 'automatic') {
     });
 
     const savedRenewal = await renewalRecord.save();
+    logger.info('Renewal record created', {
+      renewalId: savedRenewal._id,
+      subscriptionId,
+      renewalType,
+      amount: subscription.amount,
+      platformFee,
+      creatorAmount
+    });
 
     // Update subscription status
     subscription.renewalStatus = 'renewal-pending';
     subscription.lastRenewalAttempt = new Date();
-    subscription.nextRenewalDate = new Date(subscription.expiry.getTime() + 30 * 24 * 60 * 60 * 1000);
+    subscription.nextRenewalDate = new Date(subscription.expiry.getTime() + RENEWAL_CONFIG.RENEWAL_PERIOD_DAYS * RENEWAL_CONFIG.MS_PER_DAY);
     await subscription.save();
 
     return {
@@ -194,6 +232,98 @@ async function completeRenewal(renewalId, txId) {
       message: 'Renewal completed successfully'
     };
   } catch (error) {
+    return {
+      success: false,
+      message: error.message
+    };
+  }
+}
+
+function getAutoRenewalSenderKey() {
+  return process.env.AUTO_RENEWAL_SENDER_KEY || process.env.CREATOR_PRIVATE_KEY || process.env.PRIVATE_KEY;
+}
+
+/**
+ * Process an automatic on-chain subscription renewal.
+ * @param {Object} subscription - Subscription document
+ * @returns {Promise<Object>}
+ */
+async function processAutomaticRenewal(subscription) {
+  try {
+    if (!subscription) {
+      throw new Error('Subscription data is required for automatic renewal');
+    }
+
+    const validation = validateRenewalEligibility(subscription);
+    if (!validation.valid) {
+      return {
+        success: false,
+        message: validation.error
+      };
+    }
+
+    const initiationResult = await initiateRenewal(subscription._id, 'automatic');
+    if (!initiationResult.success) {
+      return initiationResult;
+    }
+
+    const renewal = initiationResult.renewal;
+    const senderKey = getAutoRenewalSenderKey();
+    if (!senderKey) {
+      const message = 'Automatic renewal sender key is not configured';
+      await handleRenewalFailure(renewal._id, message);
+      return {
+        success: false,
+        message
+      };
+    }
+
+    const txResponse = await renewSubscription(subscription.creator, subscription.tierId, senderKey);
+    const txId = txResponse?.txId || txResponse?.tx_id || txResponse?.transactionId;
+
+    if (!txId) {
+      throw new Error('Renewal transaction did not return a transaction ID');
+    }
+
+    const completionResult = await completeRenewal(renewal._id, txId);
+    if (!completionResult.success) {
+      throw new Error(completionResult.message);
+    }
+
+    // Send confirmation email (non-blocking)
+    if (subscription.email) {
+      notificationService.sendSubscriptionEmail(subscription.user, {
+        planName: subscription.tierName || `Tier ${subscription.tierId}`,
+        subscriptionId: subscription._id.toString(),
+        email: subscription.email
+      }).catch((emailError) => {
+        logger.warn('Failed to send subscription confirmation email', {
+          err: emailError.message,
+          subscriptionId: subscription._id
+        });
+      });
+    } else {
+      logger.warn('No email address found for subscription confirmation', {
+        subscriptionId: subscription._id,
+        userId: subscription.user
+      });
+    }
+
+    return {
+      success: true,
+      renewal: completionResult.renewal,
+      transactionId: txId,
+      message: 'Automatic renewal processed successfully'
+    };
+  } catch (error) {
+    if (error && error.message && error.message !== 'Renewal transaction did not return a transaction ID') {
+      logger.error('Automatic renewal failed', { err: error.message, subscriptionId: subscription?._id });
+    }
+
+    if (typeof renewal !== 'undefined' && renewal && renewal._id) {
+      await handleRenewalFailure(renewal._id, error.message);
+    }
+
     return {
       success: false,
       message: error.message
@@ -491,6 +621,7 @@ module.exports = {
   getExpiredSubscriptionsInGracePeriod,
   getExpiredSubscriptionsGraceEnded,
   cancelSubscription,
+  processAutomaticRenewal,
   getRenewalHistory,
   getUserSubscriptionStatus
 };
