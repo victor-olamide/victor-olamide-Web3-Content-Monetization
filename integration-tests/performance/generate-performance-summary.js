@@ -62,6 +62,14 @@ function generatePerformanceSummary() {
   // Generate analysis
   summary.analysis = analyzePerformance(summary.results, summary.baselines);
 
+  // Add trend analysis if history exists
+  if (summary.baselines.history && summary.baselines.history.length > 1) {
+    summary.trends = analyzeTrends(summary.baselines.history);
+  }
+
+  // Add recommendations based on analysis
+  summary.recommendations = generateRecommendations(summary.analysis, summary.trends);
+
   // Write summary
   fs.writeFileSync(SUMMARY_FILE, JSON.stringify(summary, null, 2));
   console.log(`✓ Performance summary saved: ${SUMMARY_FILE}`);
@@ -217,6 +225,107 @@ function analyzePerformance(results, baselines) {
   }
 
   return analysis;
+}
+
+/**
+ * Analyze performance trends from historical data
+ */
+function analyzeTrends(history) {
+  if (history.length < 2) return null;
+
+  const trends = {};
+  const metrics = ['p95Latency', 'throughput', 'errorRate'];
+
+  for (const metric of metrics) {
+    const values = history.map(h => h.current[metric]).filter(v => v !== undefined);
+    if (values.length < 2) continue;
+
+    const recent = values.slice(-3); // Last 3 tests
+    const older = values.slice(-6, -3); // Previous 3 tests
+
+    if (older.length > 0) {
+      const recentAvg = recent.reduce((a, b) => a + b, 0) / recent.length;
+      const olderAvg = older.reduce((a, b) => a + b, 0) / older.length;
+      const change = ((recentAvg - olderAvg) / olderAvg) * 100;
+
+      trends[metric] = {
+        direction: change > 5 ? 'increasing' : change < -5 ? 'decreasing' : 'stable',
+        changePercent: change.toFixed(1) + '%',
+        recentAverage: recentAvg.toFixed(2),
+        olderAverage: olderAvg.toFixed(2),
+        volatility: calculateVolatility(values)
+      };
+    }
+  }
+
+  return trends;
+}
+
+/**
+ * Generate actionable recommendations based on analysis and trends
+ */
+function generateRecommendations(analysis, trends) {
+  const recommendations = [];
+
+  if (analysis.overall === 'degraded') {
+    recommendations.push({
+      priority: 'high',
+      category: 'performance',
+      action: 'Investigate critical performance regressions immediately',
+      rationale: 'System performance has degraded significantly'
+    });
+  }
+
+  if (trends && trends.p95Latency && trends.p95Latency.direction === 'increasing') {
+    recommendations.push({
+      priority: 'medium',
+      category: 'latency',
+      action: 'Optimize P95 latency - consider caching, database tuning, or scaling',
+      rationale: `P95 latency trending upward by ${trends.p95Latency.changePercent}`
+    });
+  }
+
+  if (analysis.regressions.some(r => r.metric === 'errorRate')) {
+    recommendations.push({
+      priority: 'high',
+      category: 'reliability',
+      action: 'Review error handling and system stability',
+      rationale: 'Error rate has increased - check logs and error patterns'
+    });
+  }
+
+  if (trends && trends.throughput && trends.throughput.direction === 'decreasing') {
+    recommendations.push({
+      priority: 'medium',
+      category: 'capacity',
+      action: 'Scale infrastructure or optimize resource usage',
+      rationale: `Throughput declining by ${trends.throughput.changePercent}`
+    });
+  }
+
+  if (analysis.improvements.length > 2) {
+    recommendations.push({
+      priority: 'low',
+      category: 'optimization',
+      action: 'Update performance baselines to reflect improvements',
+      rationale: 'Multiple performance metrics have improved'
+    });
+  }
+
+  return recommendations;
+}
+
+/**
+ * Calculate volatility (coefficient of variation) for a metric
+ */
+function calculateVolatility(values) {
+  if (values.length < 2) return 0;
+
+  const mean = values.reduce((a, b) => a + b, 0) / values.length;
+  const variance = values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / values.length;
+  const stdDev = Math.sqrt(variance);
+
+  return mean !== 0 ? ((stdDev / mean) * 100).toFixed(1) + '%' : '0%';
 }
 
 /**
