@@ -16,6 +16,20 @@ const notificationService = require('./notificationService');
 const logger = require('../utils/logger');
 
 /**
+ * Renewal Configuration Constants
+ */
+const RENEWAL_CONFIG = {
+  // Standard renewal period in days
+  RENEWAL_PERIOD_DAYS: 30,
+  // Grace period threshold in days before expiry
+  GRACE_PERIOD_THRESHOLD_DAYS: 3,
+  // Default platform fee percentage (2.5%)
+  DEFAULT_PLATFORM_FEE_PERCENTAGE: 0.025,
+  // Milliseconds per day for date calculations
+  MS_PER_DAY: 1000 * 60 * 60 * 24
+};
+
+/**
  * Validate renewal eligibility parameters
  * @param {Object} subscription - Subscription document
  * @returns {Object} { valid: boolean, error?: string }
@@ -62,7 +76,7 @@ function isInGracePeriod(subscription) {
 function calculateRenewalStatus(subscription) {
   const now = new Date();
   const expiryDate = new Date(subscription.expiry);
-  const daysUntilExpiry = Math.ceil((expiryDate - now) / (1000 * 60 * 60 * 24));
+  const daysUntilExpiry = Math.ceil((expiryDate - now) / RENEWAL_CONFIG.MS_PER_DAY);
 
   let status = 'active';
   let daysRemaining = daysUntilExpiry;
@@ -74,7 +88,7 @@ function calculateRenewalStatus(subscription) {
     } else {
       status = 'expired';
     }
-  } else if (daysUntilExpiry <= 3) {
+  } else if (daysUntilExpiry <= RENEWAL_CONFIG.GRACE_PERIOD_THRESHOLD_DAYS) {
     status = 'expiring-soon';
   }
 
@@ -125,7 +139,7 @@ async function initiateRenewal(subscriptionId, renewalType = 'automatic') {
       platformFee = await calculatePlatformFee(subscription.amount);
     } catch (error) {
       logger.warn('Could not calculate platform fee', { err: error.message });
-      platformFee = Math.floor(subscription.amount * 0.025); // Fallback to 2.5%
+      platformFee = Math.floor(subscription.amount * RENEWAL_CONFIG.DEFAULT_PLATFORM_FEE_PERCENTAGE); // Fallback to 2.5%
     }
 
     const creatorAmount = subscription.amount - platformFee;
@@ -137,7 +151,7 @@ async function initiateRenewal(subscriptionId, renewalType = 'automatic') {
       creator: subscription.creator,
       tierId: subscription.tierId,
       previousExpiryDate: subscription.expiry,
-      newExpiryDate: new Date(subscription.expiry.getTime() + 30 * 24 * 60 * 60 * 1000), // 30 days
+      newExpiryDate: new Date(subscription.expiry.getTime() + RENEWAL_CONFIG.RENEWAL_PERIOD_DAYS * RENEWAL_CONFIG.MS_PER_DAY), // 30 days
       renewalAmount: subscription.amount,
       platformFee,
       creatorAmount,
@@ -158,7 +172,7 @@ async function initiateRenewal(subscriptionId, renewalType = 'automatic') {
     // Update subscription status
     subscription.renewalStatus = 'renewal-pending';
     subscription.lastRenewalAttempt = new Date();
-    subscription.nextRenewalDate = new Date(subscription.expiry.getTime() + 30 * 24 * 60 * 60 * 1000);
+    subscription.nextRenewalDate = new Date(subscription.expiry.getTime() + RENEWAL_CONFIG.RENEWAL_PERIOD_DAYS * RENEWAL_CONFIG.MS_PER_DAY);
     await subscription.save();
 
     return {
