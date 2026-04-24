@@ -1,6 +1,7 @@
 {
   "name": "frontend",
   "version": "0.1.0",
+  "description": "Next.js frontend for Stacks Content Monetization, deployed on Vercel",
   "private": true,
   "scripts": {
     "dev": "next dev",
