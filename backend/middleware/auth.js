@@ -2,6 +2,10 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const logger = require('../utils/logger');
 
+// JWT Authentication Middleware
+// Validates JWT tokens and attaches user to req.user
+// Returns 401 for missing or invalid tokens
+
 // Protect routes with JWT authentication
 exports.protect = async (req, res, next) => {
   let token;
