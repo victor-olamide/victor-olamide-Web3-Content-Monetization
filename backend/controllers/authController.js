@@ -8,13 +8,14 @@ const jwt = require('jsonwebtoken');
  */
 exports.register = async (req, res, next) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, role } = req.body;
 
     // Create user
     const user = await User.create({
       name,
       email,
-      password
+      password,
+      role: role || 'subscriber'
     });
 
     sendTokenResponse(user, 201, res);
