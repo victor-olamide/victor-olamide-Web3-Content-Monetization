@@ -68,6 +68,7 @@ exports.authorize = (...roles) => {
     }
 
     // Proceed to next middleware if authorized
+    logger.info('User authorized for route', { userId: req.user._id, role: req.user.role });
     next();
   };
 };
