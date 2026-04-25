@@ -81,6 +81,7 @@ function requireCreator(req, res, next) {
     });
   }
 
+  // Check if user has creator role
   if (req.user.role !== 'creator') {
     logger.warn('Creator access denied', {
       userId: req.user._id,
