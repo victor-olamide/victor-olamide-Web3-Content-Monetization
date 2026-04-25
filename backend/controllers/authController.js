@@ -53,7 +53,7 @@ exports.login = async (req, res, next) => {
       });
     }
 
-    // Check for user
+    // Check for user and include password for comparison
     const user = await User.findOne({ email }).select('+password');
 
     if (!user) {
