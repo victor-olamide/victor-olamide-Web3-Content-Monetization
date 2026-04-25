@@ -17,6 +17,7 @@ function requireRole(...allowedRoles) {
 
     // Check if user's role is allowed
     if (!allowedRoles.includes(req.user.role)) {
+      // Log access denial
       logger.warn('Access denied: Insufficient role', {
         userId: req.user._id,
         userRole: req.user.role,
@@ -28,6 +29,7 @@ function requireRole(...allowedRoles) {
       });
     }
 
+    // Log successful access
     logger.info('Role-based access granted', {
       userId: req.user._id,
       role: req.user.role,
