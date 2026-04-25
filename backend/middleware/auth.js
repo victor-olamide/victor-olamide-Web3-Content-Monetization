@@ -60,6 +60,8 @@ exports.authorize = (...roles) => {
         message: `User role ${req.user.role} is not authorized to access this route`
       });
     }
+
+    // Proceed to next middleware if authorized
     next();
   };
 };
