@@ -37,40 +37,6 @@ function requireRole(...allowedRoles) {
 }
 
 /**
- * Middleware to enforce role-based access control
- * Requires user to be authenticated (req.user must exist)
- */
-function requireRole(...allowedRoles) {
-  return (req, res, next) => {
-    if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required'
-      });
-    }
-
-    if (!allowedRoles.includes(req.user.role)) {
-      logger.warn('Access denied: Insufficient role', {
-        userId: req.user._id,
-        userRole: req.user.role,
-        requiredRoles: allowedRoles
-      });
-      return res.status(403).json({
-        success: false,
-        message: `Access denied. Required role: ${allowedRoles.join(' or ')}`
-      });
-    }
-
-    logger.info('Role-based access granted', {
-      userId: req.user._id,
-      role: req.user.role,
-      allowedRoles
-    });
-    next();
-  };
-}
-
-/**
  * Middleware to require admin role
  * Only allows users with 'admin' role to proceed
  */
