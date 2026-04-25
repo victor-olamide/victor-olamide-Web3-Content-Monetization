@@ -10,6 +10,15 @@ exports.register = async (req, res, next) => {
   try {
     const { name, email, password, role } = req.body;
 
+    // Validate role if provided
+    const allowedRoles = ['subscriber', 'creator', 'admin'];
+    if (role && !allowedRoles.includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid role. Must be one of: subscriber, creator, admin'
+      });
+    }
+
     // Create user
     const user = await User.create({
       name,
