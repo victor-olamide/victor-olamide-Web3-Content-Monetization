@@ -126,6 +126,7 @@ function requireCreator(req, res, next) {
 
 /**
  * Middleware to require subscriber role
+ * Only allows users with 'subscriber' role to proceed
  */
 function requireSubscriber(req, res, next) {
   if (!req.user) {
