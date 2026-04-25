@@ -12,6 +12,7 @@ const { validateEnv } = require('./utils/validateEnv');
 const { connectDB, disconnectDB } = require('./config/database');
 
 // Import routes
+const authRoutes = require('./routes/authRoutes');
 const contentRoutes = require('./routes/contentRoutes');
 const creatorRoutes = require('./routes/creatorRoutes');
 const subscriptionRoutes = require('./routes/subscriptionRoutes');
