@@ -41,6 +41,7 @@ exports.protect = async (req, res, next) => {
       });
     }
 
+    logger.info('User authenticated successfully', { userId: req.user._id, role: req.user.role });
     next();
   } catch (err) {
     // Handle JWT verification errors
