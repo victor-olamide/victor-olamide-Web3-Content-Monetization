@@ -142,6 +142,7 @@ const sendTokenResponse = (user, statusCode, res) => {
   }
 
   // Set JWT token as httpOnly cookie
+  // Send response with token and user data
   res
     .status(statusCode)
     .cookie('token', token, options)
