@@ -11,6 +11,8 @@ const logger = require('../utils/logger');
 /**
  * Middleware to enforce role-based access control
  * Requires user to be authenticated (req.user must exist)
+ * Accepts multiple roles and grants access if user has any of them
+ * Returns 403 if role is insufficient
  */
 function requireRole(...allowedRoles) {
   return (req, res, next) => {
