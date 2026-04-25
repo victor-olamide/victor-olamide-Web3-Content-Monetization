@@ -63,7 +63,7 @@ exports.login = async (req, res, next) => {
       });
     }
 
-    // Check if password matches
+    // Check if password matches using bcrypt
     const isMatch = await user.matchPassword(password);
 
     if (!isMatch) {
