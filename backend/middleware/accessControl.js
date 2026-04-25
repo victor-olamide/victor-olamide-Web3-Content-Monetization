@@ -51,6 +51,7 @@ function requireAdmin(req, res, next) {
     });
   }
 
+  // Check if user has admin role
   if (req.user.role !== 'admin') {
     logger.warn('Admin access denied', {
       userId: req.user._id,
