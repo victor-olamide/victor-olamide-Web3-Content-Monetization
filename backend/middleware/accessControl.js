@@ -3,6 +3,12 @@ const { logAccess } = require('../services/accessLogger');
 const logger = require('../utils/logger');
 
 /**
+ * Role-based access control middleware
+ * Provides functions to enforce user roles on routes
+ * Supports creator, subscriber, and admin roles
+ */
+
+/**
  * Middleware to enforce role-based access control
  * Requires user to be authenticated (req.user must exist)
  */
