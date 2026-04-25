@@ -60,6 +60,7 @@ exports.protect = async (req, res, next) => {
 };
 
 // Grant access to specific roles
+// Returns 403 if user role is not in allowed roles
 exports.authorize = (...roles) => {
   return (req, res, next) => {
     // Check if user role is authorized
