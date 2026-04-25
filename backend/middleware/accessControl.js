@@ -99,6 +99,7 @@ function requireAdmin(req, res, next) {
 
 /**
  * Middleware to require creator role
+ * Only allows users with 'creator' role to proceed
  */
 function requireCreator(req, res, next) {
   if (!req.user) {
