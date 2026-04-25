@@ -125,7 +125,7 @@ exports.getMe = async (req, res, next) => {
  * Get token from model, create cookie and send response
  */
 const sendTokenResponse = (user, statusCode, res) => {
-  // Create token
+  // Create JWT token with user ID and role
   const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET || 'your-secret-key', {
     expiresIn: process.env.JWT_EXPIRE || '30d'
   });
