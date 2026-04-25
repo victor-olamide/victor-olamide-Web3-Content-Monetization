@@ -60,6 +60,7 @@ exports.authorize = (...roles) => {
   return (req, res, next) => {
     // Check if user role is authorized
     if (!roles.includes(req.user.role)) {
+      logger.warn('Authorization failed: Insufficient role', { userId: req.user._id, role: req.user.role, requiredRoles: roles });
       return res.status(403).json({
         success: false,
         message: `User role ${req.user.role} is not authorized to access this route`
