@@ -73,6 +73,7 @@ exports.login = async (req, res, next) => {
       });
     }
 
+    // Send JWT token response
     sendTokenResponse(user, 200, res);
   } catch (err) {
     res.status(500).json({
