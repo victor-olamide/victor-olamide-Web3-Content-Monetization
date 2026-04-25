@@ -210,6 +210,7 @@ function rateLimitMiddleware(req, res, next) {
   next();
 }
 
+// Export all middleware functions
 module.exports = {
   verifyContentAccess,
   rateLimitMiddleware,
