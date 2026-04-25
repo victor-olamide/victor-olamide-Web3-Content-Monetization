@@ -36,6 +36,7 @@ exports.protect = async (req, res, next) => {
     req.user = await User.findById(decoded.id);
 
     if (!req.user) {
+      logger.warn('Authentication failed: User not found', { userId: decoded.id });
       return res.status(401).json({
         success: false,
         message: 'User not found'
