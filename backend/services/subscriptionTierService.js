@@ -3,6 +3,9 @@
 
 const SubscriptionTier = require('../models/SubscriptionTier');
 const Subscription = require('../models/Subscription');
+const TierLogger = require('../utils/subscriptionTierLogger');
+
+const logger = new TierLogger('SubscriptionTierService');
 
 /**
  * Create a new subscription tier for a creator
@@ -11,15 +14,28 @@ const Subscription = require('../models/Subscription');
  * @returns {Object} Created tier
  */
 const createSubscriptionTier = async (creatorId, tierData) => {
-  if (!creatorId || !tierData) {
-    throw new Error('Creator ID and tier data are required');
-  }
-
-  if (!tierData.name || !tierData.description || tierData.price === undefined) {
-    throw new Error('Tier name, description, and price are required');
-  }
-
   try {
+    if (!creatorId || !tierData) {
+      logger.logValidationFailure('createSubscriptionTier', 'Missing required parameters');
+      return { success: false, error: 'Creator ID and tier data are required' };
+    }
+
+    if (!tierData.name || !tierData.description || tierData.price === undefined) {
+      logger.logValidationFailure('createSubscriptionTier', 'Missing tier data fields');
+      return { success: false, error: 'Tier name, description, and price are required' };
+    }
+
+    // Check for duplicate tier names for this creator
+    const duplicateTier = await SubscriptionTier.findOne({
+      creatorId,
+      name: tierData.name
+    });
+
+    if (duplicateTier) {
+      logger.logDuplicateTierName(creatorId, tierData.name);
+      return { success: false, error: 'A tier with this name already exists for this creator' };
+    }
+
     // Get the count of existing tiers for this creator to set position
     const existingTiers = await SubscriptionTier.find({ creatorId }).select('position');
     const position = existingTiers.length > 0 
@@ -33,8 +49,10 @@ const createSubscriptionTier = async (creatorId, tierData) => {
     });
 
     await tier.save();
+    logger.logTierCreated(tier._id, creatorId, tierData);
     return { success: true, tier };
   } catch (error) {
+    logger.logError('createSubscriptionTier', creatorId, error);
     return { success: false, error: error.message };
   }
 };
@@ -46,11 +64,12 @@ const createSubscriptionTier = async (creatorId, tierData) => {
  * @returns {Array} Array of tiers
  */
 const getCreatorTiers = async (creatorId, options = {}) => {
-  if (!creatorId) {
-    throw new Error('Creator ID is required');
-  }
-
   try {
+    if (!creatorId) {
+      logger.logValidationFailure('getCreatorTiers', 'Missing creator ID');
+      return { success: false, error: 'Creator ID is required' };
+    }
+
     const {
       includeInactive = false,
       onlyVisible = true,
@@ -73,12 +92,14 @@ const getCreatorTiers = async (creatorId, options = {}) => {
 
     const tiers = await SubscriptionTier.find(query).sort(sortOption).lean();
 
+    logger.logCreatorTiersFetched(creatorId, tiers.length, options);
     return {
       success: true,
       count: tiers.length,
       tiers
     };
   } catch (error) {
+    logger.logError('getCreatorTiers', creatorId, error);
     return { success: false, error: error.message };
   }
 };
@@ -89,19 +110,23 @@ const getCreatorTiers = async (creatorId, options = {}) => {
  * @returns {Object} Tier document
  */
 const getTierById = async (tierId) => {
-  if (!tierId) {
-    throw new Error('Tier ID is required');
-  }
-
   try {
+    if (!tierId) {
+      logger.logValidationFailure('getTierById', 'Missing tier ID');
+      return { success: false, error: 'Tier ID is required' };
+    }
+
     const tier = await SubscriptionTier.findById(tierId);
     
     if (!tier) {
+      logger.logError('getTierById', tierId, new Error('Tier not found'));
       return { success: false, error: 'Tier not found' };
     }
 
+    logger.logTierFetched(tierId, 'direct');
     return { success: true, tier };
   } catch (error) {
+    logger.logError('getTierById', tierId, error);
     return { success: false, error: error.message };
   }
 };
@@ -113,11 +138,12 @@ const getTierById = async (tierId) => {
  * @returns {Object} Updated tier
  */
 const updateSubscriptionTier = async (tierId, updateData) => {
-  if (!tierId || !updateData) {
-    throw new Error('Tier ID and update data are required');
-  }
-
   try {
+    if (!tierId || !updateData) {
+      logger.logValidationFailure('updateSubscriptionTier', 'Missing required parameters');
+      return { success: false, error: 'Tier ID and update data are required' };
+    }
+
     const tier = await SubscriptionTier.findByIdAndUpdate(
       tierId,
       { ...updateData, updatedAt: new Date() },
@@ -125,11 +151,14 @@ const updateSubscriptionTier = async (tierId, updateData) => {
     );
 
     if (!tier) {
+      logger.logError('updateSubscriptionTier', tierId, new Error('Tier not found'));
       return { success: false, error: 'Tier not found' };
     }
 
+    logger.logTierUpdated(tierId, updateData);
     return { success: true, tier };
   } catch (error) {
+    logger.logError('updateSubscriptionTier', tierId, error);
     return { success: false, error: error.message };
   }
 };
@@ -141,11 +170,12 @@ const updateSubscriptionTier = async (tierId, updateData) => {
  * @returns {Object} Result
  */
 const deleteSubscriptionTier = async (tierId, hardDelete = false) => {
-  if (!tierId) {
-    throw new Error('Tier ID is required');
-  }
-
   try {
+    if (!tierId) {
+      logger.logValidationFailure('deleteSubscriptionTier', 'Missing tier ID');
+      return { success: false, error: 'Tier ID is required' };
+    }
+
     // Check if tier has active subscribers
     const activeSubscribers = await Subscription.countDocuments({
       subscriptionTierId: tierId,
@@ -153,6 +183,7 @@ const deleteSubscriptionTier = async (tierId, hardDelete = false) => {
     });
 
     if (activeSubscribers > 0 && !hardDelete) {
+      logger.logError('deleteSubscriptionTier', tierId, new Error(`Tier has ${activeSubscribers} active subscribers`));
       return {
         success: false,
         error: `Cannot delete tier with ${activeSubscribers} active subscribers. Archive the tier instead.`
@@ -161,6 +192,7 @@ const deleteSubscriptionTier = async (tierId, hardDelete = false) => {
 
     if (hardDelete) {
       await SubscriptionTier.findByIdAndDelete(tierId);
+      logger.logTierDeleted(tierId, true);
     } else {
       // Soft delete by deactivating and hiding
       await SubscriptionTier.findByIdAndUpdate(tierId, {
@@ -169,10 +201,12 @@ const deleteSubscriptionTier = async (tierId, hardDelete = false) => {
         visibility: 'hidden',
         updatedAt: new Date()
       });
+      logger.logTierDeleted(tierId, false);
     }
 
     return { success: true, message: 'Tier deleted successfully' };
   } catch (error) {
+    logger.logError('deleteSubscriptionTier', tierId, error);
     return { success: false, error: error.message };
   }
 };
