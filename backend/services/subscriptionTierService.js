@@ -532,6 +532,480 @@ const getTierStatistics = async (creatorId) => {
   }
 };
 
+/**
+ * Create multiple subscription tiers in bulk
+ * @param {Array} tiers - Array of tier objects to create
+ * @param {string} creatorId - Creator ID
+ * @returns {Object} Bulk creation result
+ */
+const createBulkTiers = async (tiers, creatorId) => {
+  try {
+    if (!Array.isArray(tiers) || tiers.length === 0) {
+      logger.logValidationFailure('createBulkTiers', 'Invalid tiers array');
+      return { success: false, error: 'Tiers array is required and must not be empty' };
+    }
+
+    if (!creatorId) {
+      logger.logValidationFailure('createBulkTiers', 'Missing creator ID');
+      return { success: false, error: 'Creator ID is required' };
+    }
+
+    const createdTiers = [];
+    const failedTiers = [];
+
+    // Get existing tier names for duplicate checking
+    const existingTiers = await SubscriptionTier.find({ creatorId }).select('name');
+    const existingNames = new Set(existingTiers.map(t => t.name));
+
+    // Get the highest position for ordering
+    const positionResult = await SubscriptionTier.find({ creatorId }).select('position').sort({ position: -1 }).limit(1);
+    let nextPosition = positionResult.length > 0 ? positionResult[0].position + 1 : 0;
+
+    for (let i = 0; i < tiers.length; i++) {
+      const tierData = tiers[i];
+
+      try {
+        // Validate required fields
+        if (!tierData.name || !tierData.description || tierData.price === undefined) {
+          failedTiers.push({
+            index: i,
+            error: 'Tier name, description, and price are required'
+          });
+          continue;
+        }
+
+        // Check for duplicate names
+        if (existingNames.has(tierData.name)) {
+          failedTiers.push({
+            index: i,
+            error: `Tier name "${tierData.name}" already exists`
+          });
+          continue;
+        }
+
+        // Create the tier
+        const tier = new SubscriptionTier({
+          creatorId,
+          ...tierData,
+          position: tierData.position !== undefined ? tierData.position : nextPosition++
+        });
+
+        await tier.save();
+        createdTiers.push(tier);
+        existingNames.add(tierData.name);
+
+        logger.logTierCreated(tier._id, creatorId);
+      } catch (error) {
+        failedTiers.push({
+          index: i,
+          error: error.message
+        });
+      }
+    }
+
+    return {
+      success: true,
+      createdTiers,
+      failedTiers,
+      totalAttempted: tiers.length,
+      totalCreated: createdTiers.length,
+      totalFailed: failedTiers.length
+    };
+  } catch (error) {
+    logger.logError('createBulkTiers', creatorId, error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Update multiple subscription tiers in bulk
+ * @param {Array} updates - Array of { tierId, updateData } objects
+ * @param {string} creatorId - Creator ID
+ * @returns {Object} Bulk update result
+ */
+const updateBulkTiers = async (updates, creatorId) => {
+  try {
+    if (!Array.isArray(updates) || updates.length === 0) {
+      logger.logValidationFailure('updateBulkTiers', 'Invalid updates array');
+      return { success: false, error: 'Updates array is required and must not be empty' };
+    }
+
+    if (!creatorId) {
+      logger.logValidationFailure('updateBulkTiers', 'Missing creator ID');
+      return { success: false, error: 'Creator ID is required' };
+    }
+
+    const updatedTiers = [];
+    const failedUpdates = [];
+
+    for (let i = 0; i < updates.length; i++) {
+      const { tierId, updateData } = updates[i];
+
+      try {
+        if (!tierId || !updateData) {
+          failedUpdates.push({
+            index: i,
+            error: 'Tier ID and update data are required'
+          });
+          continue;
+        }
+
+        // Verify ownership
+        const tier = await SubscriptionTier.findOne({ _id: tierId, creatorId });
+        if (!tier) {
+          failedUpdates.push({
+            index: i,
+            error: 'Tier not found or access denied'
+          });
+          continue;
+        }
+
+        // Update the tier
+        const updatedTier = await SubscriptionTier.findByIdAndUpdate(
+          tierId,
+          { ...updateData, updatedAt: new Date() },
+          { new: true, runValidators: true }
+        );
+
+        updatedTiers.push(updatedTier);
+        logger.logTierUpdated(tierId, updateData);
+      } catch (error) {
+        failedUpdates.push({
+          index: i,
+          error: error.message
+        });
+      }
+    }
+
+    return {
+      success: true,
+      updatedTiers,
+      failedUpdates,
+      totalAttempted: updates.length,
+      totalUpdated: updatedTiers.length,
+      totalFailed: failedUpdates.length
+    };
+  } catch (error) {
+    logger.logError('updateBulkTiers', creatorId, error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Delete multiple subscription tiers in bulk
+ * @param {Array} tierIds - Array of tier IDs to delete
+ * @param {string} creatorId - Creator ID
+ * @returns {Object} Bulk deletion result
+ */
+const deleteBulkTiers = async (tierIds, creatorId) => {
+  try {
+    if (!Array.isArray(tierIds) || tierIds.length === 0) {
+      logger.logValidationFailure('deleteBulkTiers', 'Invalid tier IDs array');
+      return { success: false, error: 'Tier IDs array is required and must not be empty' };
+    }
+
+    if (!creatorId) {
+      logger.logValidationFailure('deleteBulkTiers', 'Missing creator ID');
+      return { success: false, error: 'Creator ID is required' };
+    }
+
+    const deletedTiers = [];
+    const failedDeletions = [];
+
+    for (let i = 0; i < tierIds.length; i++) {
+      const tierId = tierIds[i];
+
+      try {
+        // Check if tier has active subscribers
+        const activeSubscribers = await Subscription.countDocuments({
+          subscriptionTierId: tierId,
+          cancelledAt: null
+        });
+
+        if (activeSubscribers > 0) {
+          failedDeletions.push({
+            index: i,
+            tierId,
+            error: `Tier has ${activeSubscribers} active subscribers`
+          });
+          continue;
+        }
+
+        // Verify ownership and delete
+        const tier = await SubscriptionTier.findOneAndDelete({ _id: tierId, creatorId });
+        if (!tier) {
+          failedDeletions.push({
+            index: i,
+            tierId,
+            error: 'Tier not found or access denied'
+          });
+          continue;
+        }
+
+        deletedTiers.push(tier);
+        logger.logTierDeleted(tierId, true);
+      } catch (error) {
+        failedDeletions.push({
+          index: i,
+          tierId,
+          error: error.message
+        });
+      }
+    }
+
+    return {
+      success: true,
+      deletedTiers,
+      failedDeletions,
+      totalAttempted: tierIds.length,
+      totalDeleted: deletedTiers.length,
+      totalFailed: failedDeletions.length
+    };
+  } catch (error) {
+    logger.logError('deleteBulkTiers', creatorId, error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Duplicate multiple subscription tiers
+ * @param {Array} tierIds - Array of tier IDs to duplicate
+ * @param {string} creatorId - Creator ID
+ * @param {Object} modifications - Optional modifications to apply
+ * @returns {Object} Bulk duplication result
+ */
+const duplicateBulkTiers = async (tierIds, creatorId, modifications = {}) => {
+  try {
+    if (!Array.isArray(tierIds) || tierIds.length === 0) {
+      logger.logValidationFailure('duplicateBulkTiers', 'Invalid tier IDs array');
+      return { success: false, error: 'Tier IDs array is required and must not be empty' };
+    }
+
+    if (!creatorId) {
+      logger.logValidationFailure('duplicateBulkTiers', 'Missing creator ID');
+      return { success: false, error: 'Creator ID is required' };
+    }
+
+    const duplicatedTiers = [];
+    const failedDuplications = [];
+
+    // Get existing tier names for duplicate checking
+    const existingTiers = await SubscriptionTier.find({ creatorId }).select('name');
+    const existingNames = new Set(existingTiers.map(t => t.name));
+
+    // Get the highest position for ordering
+    const positionResult = await SubscriptionTier.find({ creatorId }).select('position').sort({ position: -1 }).limit(1);
+    let nextPosition = positionResult.length > 0 ? positionResult[0].position + 1 : 0;
+
+    for (let i = 0; i < tierIds.length; i++) {
+      const tierId = tierIds[i];
+
+      try {
+        // Get the original tier
+        const originalTier = await SubscriptionTier.findOne({ _id: tierId, creatorId });
+        if (!originalTier) {
+          failedDuplications.push({
+            index: i,
+            tierId,
+            error: 'Tier not found or access denied'
+          });
+          continue;
+        }
+
+        // Create duplicate data
+        const duplicateData = {
+          ...originalTier.toObject(),
+          _id: undefined,
+          name: modifications.name || `${originalTier.name} (Copy)`,
+          position: modifications.position !== undefined ? modifications.position : nextPosition++,
+          subscriberCount: 0,
+          revenueTotal: 0,
+          isPopular: false,
+          createdAt: undefined,
+          updatedAt: undefined
+        };
+
+        // Apply modifications
+        Object.assign(duplicateData, modifications);
+
+        // Check for duplicate names
+        if (existingNames.has(duplicateData.name)) {
+          duplicateData.name = `${duplicateData.name} (${Date.now()})`;
+        }
+
+        // Create the duplicate
+        const duplicateTier = new SubscriptionTier(duplicateData);
+        await duplicateTier.save();
+
+        duplicatedTiers.push(duplicateTier);
+        existingNames.add(duplicateData.name);
+
+        logger.logTierCreated(duplicateTier._id, creatorId, 'duplicated');
+      } catch (error) {
+        failedDuplications.push({
+          index: i,
+          tierId,
+          error: error.message
+        });
+      }
+    }
+
+    return {
+      success: true,
+      duplicatedTiers,
+      failedDuplications,
+      totalAttempted: tierIds.length,
+      totalDuplicated: duplicatedTiers.length,
+      totalFailed: failedDuplications.length
+    };
+  } catch (error) {
+    logger.logError('duplicateBulkTiers', creatorId, error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Archive multiple subscription tiers
+ * @param {Array} tierIds - Array of tier IDs to archive
+ * @param {string} creatorId - Creator ID
+ * @returns {Object} Bulk archive result
+ */
+const archiveBulkTiers = async (tierIds, creatorId) => {
+  try {
+    if (!Array.isArray(tierIds) || tierIds.length === 0) {
+      logger.logValidationFailure('archiveBulkTiers', 'Invalid tier IDs array');
+      return { success: false, error: 'Tier IDs array is required and must not be empty' };
+    }
+
+    if (!creatorId) {
+      logger.logValidationFailure('archiveBulkTiers', 'Missing creator ID');
+      return { success: false, error: 'Creator ID is required' };
+    }
+
+    const archivedTiers = [];
+    const failedArchives = [];
+
+    for (let i = 0; i < tierIds.length; i++) {
+      const tierId = tierIds[i];
+
+      try {
+        // Verify ownership and archive
+        const tier = await SubscriptionTier.findOneAndUpdate(
+          { _id: tierId, creatorId },
+          {
+            isActive: false,
+            isVisible: false,
+            visibility: 'archived',
+            updatedAt: new Date()
+          },
+          { new: true }
+        );
+
+        if (!tier) {
+          failedArchives.push({
+            index: i,
+            tierId,
+            error: 'Tier not found or access denied'
+          });
+          continue;
+        }
+
+        archivedTiers.push(tier);
+        logger.logTierArchived(tierId);
+      } catch (error) {
+        failedArchives.push({
+          index: i,
+          tierId,
+          error: error.message
+        });
+      }
+    }
+
+    return {
+      success: true,
+      archivedTiers,
+      failedArchives,
+      totalAttempted: tierIds.length,
+      totalArchived: archivedTiers.length,
+      totalFailed: failedArchives.length
+    };
+  } catch (error) {
+    logger.logError('archiveBulkTiers', creatorId, error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Unarchive multiple subscription tiers
+ * @param {Array} tierIds - Array of tier IDs to unarchive
+ * @param {string} creatorId - Creator ID
+ * @returns {Object} Bulk unarchive result
+ */
+const unarchiveBulkTiers = async (tierIds, creatorId) => {
+  try {
+    if (!Array.isArray(tierIds) || tierIds.length === 0) {
+      logger.logValidationFailure('unarchiveBulkTiers', 'Invalid tier IDs array');
+      return { success: false, error: 'Tier IDs array is required and must not be empty' };
+    }
+
+    if (!creatorId) {
+      logger.logValidationFailure('unarchiveBulkTiers', 'Missing creator ID');
+      return { success: false, error: 'Creator ID is required' };
+    }
+
+    const unarchivedTiers = [];
+    const failedUnarchives = [];
+
+    for (let i = 0; i < tierIds.length; i++) {
+      const tierId = tierIds[i];
+
+      try {
+        // Verify ownership and unarchive
+        const tier = await SubscriptionTier.findOneAndUpdate(
+          { _id: tierId, creatorId },
+          {
+            isActive: true,
+            isVisible: true,
+            visibility: 'public',
+            updatedAt: new Date()
+          },
+          { new: true }
+        );
+
+        if (!tier) {
+          failedUnarchives.push({
+            index: i,
+            tierId,
+            error: 'Tier not found or access denied'
+          });
+          continue;
+        }
+
+        unarchivedTiers.push(tier);
+        logger.logTierUnarchived(tierId);
+      } catch (error) {
+        failedUnarchives.push({
+          index: i,
+          tierId,
+          error: error.message
+        });
+      }
+    }
+
+    return {
+      success: true,
+      unarchivedTiers,
+      failedUnarchives,
+      totalAttempted: tierIds.length,
+      totalUnarchived: unarchivedTiers.length,
+      totalFailed: failedUnarchives.length
+    };
+  } catch (error) {
+    logger.logError('unarchiveBulkTiers', creatorId, error);
+    return { success: false, error: error.message };
+  }
+};
+
 module.exports = {
   createSubscriptionTier,
   getCreatorTiers,
@@ -544,5 +1018,11 @@ module.exports = {
   recordTierPurchase,
   recordTierCancellation,
   reorderTiers,
-  getTierStatistics
+  getTierStatistics,
+  createBulkTiers,
+  updateBulkTiers,
+  deleteBulkTiers,
+  duplicateBulkTiers,
+  archiveBulkTiers,
+  unarchiveBulkTiers
 };

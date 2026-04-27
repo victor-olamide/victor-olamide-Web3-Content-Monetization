@@ -311,9 +311,279 @@ const validateCreatorId = (req, res, next) => {
   next();
 };
 
+const validateBulkTierCreation = (req, res, next) => {
+  const { tiers } = req.body;
+
+  if (!tiers || !Array.isArray(tiers)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Tiers array is required'
+    });
+  }
+
+  if (tiers.length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Tiers array must not be empty'
+    });
+  }
+
+  if (tiers.length > 50) {
+    return res.status(400).json({
+      success: false,
+      message: 'Cannot create more than 50 tiers at once'
+    });
+  }
+
+  // Validate each tier
+  for (let i = 0; i < tiers.length; i++) {
+    const tier = tiers[i];
+
+    if (!tier.name || typeof tier.name !== 'string' || tier.name.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Tier ${i + 1}: name is required and must be a non-empty string`
+      });
+    }
+
+    if (tier.name.length > 100) {
+      return res.status(400).json({
+        success: false,
+        message: `Tier ${i + 1}: name must not exceed 100 characters`
+      });
+    }
+
+    if (!tier.description || typeof tier.description !== 'string' || tier.description.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Tier ${i + 1}: description is required and must be a non-empty string`
+      });
+    }
+
+    if (tier.description.length > 500) {
+      return res.status(400).json({
+        success: false,
+        message: `Tier ${i + 1}: description must not exceed 500 characters`
+      });
+    }
+
+    if (tier.price === undefined || tier.price === null) {
+      return res.status(400).json({
+        success: false,
+        message: `Tier ${i + 1}: price is required`
+      });
+    }
+
+    if (typeof tier.price !== 'number' || tier.price < 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Tier ${i + 1}: price must be a non-negative number`
+      });
+    }
+
+    if (tier.price > 9999999) {
+      return res.status(400).json({
+        success: false,
+        message: `Tier ${i + 1}: price exceeds maximum allowed value`
+      });
+    }
+
+    // Validate optional fields
+    if (tier.trialDays !== undefined) {
+      if (typeof tier.trialDays !== 'number' || tier.trialDays < 0 || tier.trialDays > 365) {
+        return res.status(400).json({
+          success: false,
+          message: `Tier ${i + 1}: trial days must be a number between 0 and 365`
+        });
+      }
+    }
+
+    if (tier.visibility !== undefined) {
+      if (!['public', 'private', 'hidden'].includes(tier.visibility)) {
+        return res.status(400).json({
+          success: false,
+          message: `Tier ${i + 1}: visibility must be one of: public, private, hidden`
+        });
+      }
+    }
+
+    if (tier.currency !== undefined) {
+      if (!['USD', 'EUR', 'GBP', 'CAD', 'AUD'].includes(tier.currency)) {
+        return res.status(400).json({
+          success: false,
+          message: `Tier ${i + 1}: currency must be one of: USD, EUR, GBP, CAD, AUD`
+        });
+      }
+    }
+
+    if (tier.billingCycle !== undefined) {
+      if (!['monthly', 'quarterly', 'annual'].includes(tier.billingCycle)) {
+        return res.status(400).json({
+          success: false,
+          message: `Tier ${i + 1}: billing cycle must be one of: monthly, quarterly, annual`
+        });
+      }
+    }
+
+    if (tier.maxSubscribers !== undefined) {
+      if (tier.maxSubscribers !== null && (typeof tier.maxSubscribers !== 'number' || tier.maxSubscribers < 1)) {
+        return res.status(400).json({
+          success: false,
+          message: `Tier ${i + 1}: max subscribers must be null or a positive number`
+        });
+      }
+    }
+
+    if (tier.upgradeDiscount !== undefined) {
+      if (typeof tier.upgradeDiscount !== 'number' || tier.upgradeDiscount < 0 || tier.upgradeDiscount > 100) {
+        return res.status(400).json({
+          success: false,
+          message: `Tier ${i + 1}: upgrade discount must be a number between 0 and 100`
+        });
+      }
+    }
+
+    // Validate benefits if provided
+    if (tier.benefits !== undefined) {
+      if (!Array.isArray(tier.benefits)) {
+        return res.status(400).json({
+          success: false,
+          message: `Tier ${i + 1}: benefits must be an array`
+        });
+      }
+
+      for (const benefit of tier.benefits) {
+        if (!benefit.feature || typeof benefit.feature !== 'string') {
+          return res.status(400).json({
+            success: false,
+            message: `Tier ${i + 1}: each benefit must have a feature name (string)`
+          });
+        }
+
+        if (benefit.feature.length > 200) {
+          return res.status(400).json({
+            success: false,
+            message: `Tier ${i + 1}: benefit feature name must not exceed 200 characters`
+          });
+        }
+      }
+    }
+  }
+
+  next();
+};
+
+const validateBulkTierUpdate = (req, res, next) => {
+  const { updates } = req.body;
+
+  if (!updates || !Array.isArray(updates)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Updates array is required'
+    });
+  }
+
+  if (updates.length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Updates array must not be empty'
+    });
+  }
+
+  if (updates.length > 50) {
+    return res.status(400).json({
+      success: false,
+      message: 'Cannot update more than 50 tiers at once'
+    });
+  }
+
+  // Validate each update
+  for (let i = 0; i < updates.length; i++) {
+    const update = updates[i];
+
+    if (!update.tierId) {
+      return res.status(400).json({
+        success: false,
+        message: `Update ${i + 1}: tierId is required`
+      });
+    }
+
+    if (!/^[0-9a-fA-F]{24}$/.test(update.tierId)) {
+      return res.status(400).json({
+        success: false,
+        message: `Update ${i + 1}: invalid tier ID format`
+      });
+    }
+
+    if (!update.updateData || typeof update.updateData !== 'object') {
+      return res.status(400).json({
+        success: false,
+        message: `Update ${i + 1}: updateData object is required`
+      });
+    }
+
+    const updateData = update.updateData;
+
+    // Validate updateData fields (similar to validateTierUpdate)
+    if (updateData.name !== undefined) {
+      if (typeof updateData.name !== 'string' || updateData.name.trim().length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: `Update ${i + 1}: name must be a non-empty string`
+        });
+      }
+
+      if (updateData.name.length > 100) {
+        return res.status(400).json({
+          success: false,
+          message: `Update ${i + 1}: name must not exceed 100 characters`
+        });
+      }
+    }
+
+    if (updateData.description !== undefined) {
+      if (typeof updateData.description !== 'string' || updateData.description.trim().length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: `Update ${i + 1}: description must be a non-empty string`
+        });
+      }
+
+      if (updateData.description.length > 500) {
+        return res.status(400).json({
+          success: false,
+          message: `Update ${i + 1}: description must not exceed 500 characters`
+        });
+      }
+    }
+
+    if (updateData.price !== undefined) {
+      if (typeof updateData.price !== 'number' || updateData.price < 0) {
+        return res.status(400).json({
+          success: false,
+          message: `Update ${i + 1}: price must be a non-negative number`
+        });
+      }
+
+      if (updateData.price > 9999999) {
+        return res.status(400).json({
+          success: false,
+          message: `Update ${i + 1}: price exceeds maximum allowed value`
+        });
+      }
+    }
+
+    // Add other validations as needed...
+  }
+
+  next();
+};
+
 module.exports = {
   validateTierCreation,
   validateTierUpdate,
   validateTierId,
-  validateCreatorId
+  validateCreatorId,
+  validateBulkTierCreation,
+  validateBulkTierUpdate
 };
