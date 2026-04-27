@@ -206,6 +206,59 @@ class SubscriptionTierLogger {
       timestamp: new Date().toISOString()
     });
   }
+
+  /**
+   * Log purchase recorded
+   */
+  logPurchaseRecorded(tierId, amount) {
+    logger.info(`[${this.serviceName}] Purchase recorded for tier: ${tierId}`, {
+      tierId,
+      amount,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  /**
+   * Log cancellation recorded
+   */
+  logCancellationRecorded(tierId) {
+    logger.info(`[${this.serviceName}] Cancellation recorded for tier: ${tierId}`, {
+      tierId,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  /**
+   * Log creator tiers fetched
+   */
+  logCreatorTiersFetched(creatorId, tierCount, options = {}) {
+    logger.debug(`[${this.serviceName}] Creator tiers fetched: ${creatorId}`, {
+      creatorId,
+      tierCount,
+      options,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  /**
+   * Log tier archived
+   */
+  logTierArchived(tierId) {
+    logger.info(`[${this.serviceName}] Tier archived: ${tierId}`, {
+      tierId,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  /**
+   * Log tier unarchived
+   */
+  logTierUnarchived(tierId) {
+    logger.info(`[${this.serviceName}] Tier unarchived: ${tierId}`, {
+      tierId,
+      timestamp: new Date().toISOString()
+    });
+  }
 }
 
 module.exports = SubscriptionTierLogger;
