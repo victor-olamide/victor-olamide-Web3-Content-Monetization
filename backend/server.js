@@ -43,6 +43,7 @@ const batchOperationRoutes = require('./routes/batchOperationRoutes');
 const cdnRoutes = require('./routes/cdnRoutes');
 const backupRoutes = require('./routes/backupRoutes');
 const subscriptionTierRoutes = require('./routes/subscriptionTierRoutes');
+const tierBenefitsRoutes = require('./routes/tierBenefitsRoutes');
 const rateLimitRoutes = require('./routes/rateLimitRoutes');
 const webhookAdminRoutes = require('./routes/webhookAdminRoutes');
 const blockchainVerificationRoutes = require('./routes/blockchainVerificationRoutes');
