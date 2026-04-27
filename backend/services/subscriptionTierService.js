@@ -4,8 +4,10 @@
 const SubscriptionTier = require('../models/SubscriptionTier');
 const Subscription = require('../models/Subscription');
 const TierLogger = require('../utils/subscriptionTierLogger');
+const TierCache = require('./tierCachingService');
 
 const logger = new TierLogger('SubscriptionTierService');
+const tierCache = new TierCache();
 
 /**
  * Create a new subscription tier for a creator
@@ -49,6 +51,10 @@ const createSubscriptionTier = async (creatorId, tierData) => {
     });
 
     await tier.save();
+
+    // Invalidate creator cache
+    tierCache.invalidateCreatorCache(creatorId);
+
     logger.logTierCreated(tier._id, creatorId, tierData);
     return { success: true, tier };
   } catch (error) {
@@ -74,8 +80,22 @@ const getCreatorTiers = async (creatorId, options = {}) => {
       includeInactive = false,
       onlyVisible = true,
       sortBy = 'position',
-      ascending = true
+      ascending = true,
+      useCache = true
     } = options;
+
+    // Check cache first if enabled
+    if (useCache) {
+      const cachedTiers = tierCache.getCachedCreatorTiers(creatorId);
+      if (cachedTiers) {
+        return {
+          success: true,
+          count: cachedTiers.length,
+          tiers: cachedTiers,
+          cached: true
+        };
+      }
+    }
 
     let query = { creatorId };
 
@@ -92,11 +112,17 @@ const getCreatorTiers = async (creatorId, options = {}) => {
 
     const tiers = await SubscriptionTier.find(query).sort(sortOption).lean();
 
+    // Cache the result
+    if (useCache) {
+      tierCache.cacheCreatorTiers(creatorId, tiers);
+    }
+
     logger.logCreatorTiersFetched(creatorId, tiers.length, options);
     return {
       success: true,
       count: tiers.length,
-      tiers
+      tiers,
+      cached: false
     };
   } catch (error) {
     logger.logError('getCreatorTiers', creatorId, error);
@@ -154,6 +180,10 @@ const updateSubscriptionTier = async (tierId, updateData) => {
       logger.logError('updateSubscriptionTier', tierId, new Error('Tier not found'));
       return { success: false, error: 'Tier not found' };
     }
+
+    // Invalidate caches
+    tierCache.invalidateTierCache(tierId);
+    tierCache.invalidateCreatorCache(tier.creatorId);
 
     logger.logTierUpdated(tierId, updateData);
     return { success: true, tier };
