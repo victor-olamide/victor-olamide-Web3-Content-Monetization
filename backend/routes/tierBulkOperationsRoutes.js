@@ -6,13 +6,14 @@ const router = express.Router();
 const subscriptionTierService = require('../services/subscriptionTierService');
 const { validateBulkTierCreation, validateBulkTierUpdate } = require('../middleware/subscriptionTierValidation');
 const { verifyToken, isCreator } = require('../middleware/subscriptionTierAuth');
+const { tierAsyncHandler, tierRateLimiter, tierTimeoutHandler } = require('../middleware/tierErrorHandling');
 
 /**
  * POST /tiers/bulk/create
  * Create multiple subscription tiers in bulk
  * @body {Array} tiers - Array of tier objects to create
  */
-router.post('/bulk/create', verifyToken, isCreator, validateBulkTierCreation, async (req, res) => {
+router.post('/bulk/create', tierRateLimiter, tierTimeoutHandler(), verifyToken, isCreator, validateBulkTierCreation, tierAsyncHandler(async (req, res) => {
   try {
     const { tiers } = req.body;
     const creatorId = req.user.id;
@@ -40,7 +41,7 @@ router.post('/bulk/create', verifyToken, isCreator, validateBulkTierCreation, as
       error: error.message
     });
   }
-});
+}));
 
 /**
  * PUT /tiers/bulk/update
@@ -82,7 +83,7 @@ router.put('/bulk/update', verifyToken, isCreator, validateBulkTierUpdate, async
  * Delete multiple subscription tiers in bulk
  * @body {Array} tierIds - Array of tier IDs to delete
  */
-router.delete('/bulk/delete', verifyToken, isCreator, async (req, res) => {
+router.delete('/bulk/delete', tierRateLimiter, tierTimeoutHandler(), verifyToken, isCreator, tierAsyncHandler(async (req, res) => {
   try {
     const { tierIds } = req.body;
     const creatorId = req.user.id;
@@ -117,7 +118,7 @@ router.delete('/bulk/delete', verifyToken, isCreator, async (req, res) => {
       error: error.message
     });
   }
-});
+}));
 
 /**
  * POST /tiers/bulk/duplicate
