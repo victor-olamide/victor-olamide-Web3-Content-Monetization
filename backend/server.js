@@ -46,6 +46,7 @@ const subscriptionTierRoutes = require('./routes/subscriptionTierRoutes');
 const tierBenefitsRoutes = require('./routes/tierBenefitsRoutes');
 const tierMetricsRoutes = require('./routes/tierMetricsRoutes');
 const tierBulkOperationsRoutes = require('./routes/tierBulkOperationsRoutes');
+const tierUpgradeRoutes = require('./routes/tierUpgradeRoutes');
 const webhookAdminRoutes = require('./routes/webhookAdminRoutes');
 const blockchainVerificationRoutes = require('./routes/blockchainVerificationRoutes');
 
@@ -159,6 +160,7 @@ app.use('/api/subscription-tiers', subscriptionTierRoutes);
 app.use('/api/tier-benefits', tierBenefitsRoutes);
 app.use('/api/tier-metrics', tierMetricsRoutes);
 app.use('/api/tier-bulk', tierBulkOperationsRoutes);
+app.use('/api/tier-upgrades', tierUpgradeRoutes);
 app.use('/api/webhook-admin', webhookAdminRoutes);
 app.use('/api/blockchain', blockchainVerificationRoutes);
 
