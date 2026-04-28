@@ -3,6 +3,7 @@ const router = express.Router();
 const Subscription = require('../models/Subscription');
 const SubscriptionRenewal = require('../models/SubscriptionRenewal');
 const { txConfirmationGate } = require('../middleware/txConfirmationGate');
+const { validateSubscriptionPurchase } = require('../middleware/subscriptionPurchaseValidation');
 const {
   initiateRenewal,
   completeRenewal,
@@ -13,11 +14,63 @@ const {
   calculateRenewalStatus,
   applyGracePeriod
 } = require('../services/renewalService');
+const {
+  purchaseSubscription,
+  getActiveSubscriptionsForUser
+} = require('../services/subscriptionManagementService');
 
-// Get all subscriptions for a user
+// Create a new subscription purchase
+router.post('/', validateSubscriptionPurchase, async (req, res) => {
+  try {
+    const {
+      user,
+      creator,
+      tierId,
+      subscriptionTierId,
+      tierName,
+      tierPrice,
+      tierBenefits,
+      amount,
+      expiry,
+      transactionId,
+      autoRenewal,
+      gracePeriodDays,
+      currency,
+      email
+    } = req.body;
+
+    const subscription = await purchaseSubscription({
+      user,
+      creator,
+      tierId,
+      subscriptionTierId,
+      tierName,
+      tierPrice,
+      tierBenefits,
+      amount,
+      expiry,
+      transactionId,
+      autoRenewal,
+      gracePeriodDays,
+      currency,
+      email
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Subscription purchased successfully',
+      subscription
+    });
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+});
+
+// Get active subscriptions for a user
 router.get('/:user', async (req, res) => {
   try {
-    const subscriptions = await Subscription.find({ user: req.params.user });
+    const includeInactive = req.query.includeInactive === 'true';
+    const subscriptions = await getActiveSubscriptionsForUser(req.params.user, includeInactive);
     res.json(subscriptions);
   } catch (err) {
     res.status(500).json({ message: err.message });
