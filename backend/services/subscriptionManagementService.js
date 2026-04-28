@@ -1,19 +1,11 @@
 const Subscription = require('../models/Subscription');
 const SubscriptionTier = require('../models/SubscriptionTier');
 const { calculateRenewalStatus } = require('./renewalService');
-
-/**
- * Build an expiry date from provided expiry or duration (default 30 days)
- */
-const resolveExpiryDate = (expiry, durationDays = 30) => {
-  if (expiry) {
-    return new Date(expiry);
-  }
-
-  const result = new Date();
-  result.setDate(result.getDate() + durationDays);
-  return result;
-};
+const {
+  calculateExpiryDate,
+  buildSubscriptionDocument,
+  buildActiveSubscriptionQuery
+} = require('../utils/subscriptionPurchaseHelpers');
 
 /**
  * Create a new subscription purchase record.
@@ -32,7 +24,6 @@ const purchaseSubscription = async (payload) => {
     transactionId,
     autoRenewal = true,
     gracePeriodDays = 7,
-    renewalStatus = 'active',
     currency = 'USD',
     email = null
   } = payload;
@@ -41,29 +32,29 @@ const purchaseSubscription = async (payload) => {
     throw new Error('Missing required subscription purchase fields: user, creator, tierId, amount, transactionId');
   }
 
-  const resolvedExpiry = resolveExpiryDate(expiry);
+  const resolvedExpiry = calculateExpiryDate(expiry);
   const nextRenewalDate = new Date(resolvedExpiry);
 
-  const subscriptionData = {
-    user,
-    creator,
-    tierId,
-    subscriptionTierId,
-    tierName,
-    tierPrice,
-    tierBenefits,
-    amount,
-    expiry: resolvedExpiry,
-    transactionId,
-    renewalStatus,
-    autoRenewal,
-    gracePeriodDays,
-    graceExpiresAt: null,
-    nextRenewalDate,
-    email,
-    timestamp: new Date(),
-    updatedAt: new Date()
-  };
+  const subscriptionData = buildSubscriptionDocument(
+    {
+      user,
+      creator,
+      tierId,
+      subscriptionTierId,
+      tierName,
+      tierPrice,
+      tierBenefits,
+      amount,
+      expiry: resolvedExpiry,
+      transactionId,
+      autoRenewal,
+      gracePeriodDays,
+      currency,
+      email
+    },
+    resolvedExpiry,
+    nextRenewalDate
+  );
 
   if (subscriptionTierId && !tierName) {
     const tier = await SubscriptionTier.findById(subscriptionTierId).lean();
@@ -89,17 +80,7 @@ const purchaseSubscription = async (payload) => {
  * Get active subscriptions for a user.
  */
 const getActiveSubscriptionsForUser = async (user, includeInactive = false) => {
-  const query = { user };
-
-  if (!includeInactive) {
-    const now = new Date();
-    query.cancelledAt = null;
-    query.$or = [
-      { expiry: { $gt: now } },
-      { graceExpiresAt: { $gt: now } }
-    ];
-  }
-
+  const query = buildActiveSubscriptionQuery(user, includeInactive);
   const subscriptions = await Subscription.find(query).sort({ expiry: 1 }).lean();
   return subscriptions.map((sub) => ({
     ...sub,
