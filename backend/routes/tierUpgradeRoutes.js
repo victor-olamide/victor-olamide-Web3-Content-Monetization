@@ -4,14 +4,14 @@
 const express = require('express');
 const router = express.Router();
 const tierUpgradeRulesService = require('../services/tierUpgradeRulesService');
-const { validateTierId, validateCreatorId } = require('../middleware/subscriptionTierValidation');
-const { verifyToken, isAuthenticated } = require('../middleware/subscriptionTierAuth');
+const { validateTierId } = require('../middleware/subscriptionTierValidation');
+const { verifyToken } = require('../middleware/subscriptionTierAuth');
 
 /**
  * GET /users/:userId/creators/:creatorId/upgrades
  * Get available upgrade/downgrade options for a user
  */
-router.get('/users/:userId/creators/:creatorId/upgrades', verifyToken, isAuthenticated, async (req, res) => {
+router.get('/users/:userId/creators/:creatorId/upgrades', verifyToken, async (req, res) => {
   try {
     const { userId, creatorId } = req.params;
 
@@ -49,7 +49,7 @@ router.get('/users/:userId/creators/:creatorId/upgrades', verifyToken, isAuthent
  * POST /users/:userId/upgrade
  * Process a tier upgrade for a user
  */
-router.post('/users/:userId/upgrade', verifyToken, isAuthenticated, async (req, res) => {
+router.post('/users/:userId/upgrade', verifyToken, async (req, res) => {
   try {
     const { userId } = req.params;
     const { currentTierId, targetTierId, paymentDetails } = req.body;
@@ -101,7 +101,7 @@ router.post('/users/:userId/upgrade', verifyToken, isAuthenticated, async (req, 
  * POST /upgrade/validate
  * Validate if a tier upgrade is allowed
  */
-router.post('/upgrade/validate', verifyToken, isAuthenticated, async (req, res) => {
+router.post('/upgrade/validate', verifyToken, async (req, res) => {
   try {
     const { currentTierId, targetTierId, userId } = req.body;
 
@@ -146,7 +146,7 @@ router.post('/upgrade/validate', verifyToken, isAuthenticated, async (req, res) 
  * GET /users/:userId/upgrade-history
  * Get upgrade history for a user
  */
-router.get('/users/:userId/upgrade-history', verifyToken, isAuthenticated, async (req, res) => {
+router.get('/users/:userId/upgrade-history', verifyToken, async (req, res) => {
   try {
     const { userId } = req.params;
     const { creatorId } = req.query;

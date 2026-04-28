@@ -14,5 +14,19 @@ module.exports = {
     '/tests/performance/',
     '/tests/security/',
     '/tests/smoke/'
+  ],
+  projects: [
+    {
+      displayName: 'unit',
+      testMatch: ['**/tests/unit/**/*.test.js'],
+      testPathIgnorePatterns: []
+    },
+    {
+      displayName: 'integration',
+      testMatch: ['**/tests/integration/**/*.test.js'],
+      testPathIgnorePatterns: [],
+      testEnvironment: 'node',
+      setupFilesAfterEnv: ['<rootDir>/tests/setup/integration-setup.js']
+    }
   ]
 };
