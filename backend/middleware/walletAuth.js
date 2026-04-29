@@ -1,5 +1,6 @@
 const { verifySession } = require('../services/walletService');
 const WalletSession = require('../models/WalletSession');
+const WalletConnection = require('../models/WalletConnection');
 const logger = require('../utils/logger');
 
 /**
@@ -33,6 +34,16 @@ async function verifyWalletAuth(req, res, next) {
     req.walletAddress = verification.address;
     req.walletType = verification.walletType;
     req.expiresAt = verification.expiresAt;
+
+    // Get userId from wallet connection
+    const connection = await WalletConnection.findOne({
+      address: verification.address.toLowerCase(),
+      walletType: verification.walletType,
+      isConnected: true
+    });
+    if (connection) {
+      req.userId = connection.userId;
+    }
 
     next();
   } catch (error) {
@@ -134,10 +145,10 @@ function validateWalletType(req, res, next) {
     });
   }
 
-  if (!['hiro', 'xverse'].includes(walletType.toLowerCase())) {
+  if (!['hiro', 'xverse', 'metamask', 'walletconnect', 'coinbase', 'trust'].includes(walletType.toLowerCase())) {
     return res.status(400).json({
       message: 'Invalid wallet type',
-      error: `Wallet type must be 'hiro' or 'xverse', got '${walletType}'`
+      error: `Wallet type must be one of: hiro, xverse, metamask, walletconnect, coinbase, trust`
     });
   }
 

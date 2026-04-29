@@ -450,6 +450,11 @@ async function decryptFileForAuthorizedUser(ContentEncryption, contentId, master
     throw error;
   }
 }
+
+/**
+ * Revoke a user's access to encrypted content
+ */
+async function revokeContentAccess(ContentEncryption, contentId, userId) {
   try {
     const result = await ContentEncryption.updateOne(
       { contentId, userId },

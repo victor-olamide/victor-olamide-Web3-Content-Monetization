@@ -158,7 +158,7 @@ const subscriptionTierSchema = new mongoose.Schema({
   introductoryPrice: {
     price: { type: Number, default: null, min: 0 },
     duration: { type: Number, default: null, min: 1 }, // in months
-    description: 'First N months at reduced price'
+    description: { type: String, default: 'First N months at reduced price' }
   },
   
   // Status & Visibility

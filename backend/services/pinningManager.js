@@ -16,9 +16,6 @@ class PinningManager {
     this.autoRepinEnabled = process.env.IPFS_AUTO_REPIN !== 'false';
     this.monitoringIntervalId = null;
     this.initialHealthCheckTimeout = null;
-
-    // Start monitoring
-    this.startMonitoring();
   }
 
   /**
@@ -444,9 +441,8 @@ const pinningManager = new PinningManager();
  */
 async function initializePinningService() {
   try {
-    // The PinningManager constructor already initializes the service
-    // This function ensures the service is ready
-    logger.info('[PinningManager] Service initialized and ready');
+    pinningManager.startMonitoring();
+    logger.info('[PinningManager] Service initialized and monitoring started');
   } catch (error) {
     logger.error('[PinningManager] Initialization failed', { err: error });
     throw error;
