@@ -383,7 +383,7 @@ router.get('/:contentId/analytics', verifyCreatorOwnership, validateContentId, a
 router.post('/analytics/batch', verifyCreatorOwnership, validateBatchContentIds, async (req, res) => {
   try {
     const { contentIds } = req.body;
-    // Validation already done by middleware
+    if (!contentIds || !Array.isArray(contentIds)) {
       return res.status(400).json({ success: false, error: 'contentIds must be an array' });
     }
 
