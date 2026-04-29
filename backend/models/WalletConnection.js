@@ -2,20 +2,36 @@ const mongoose = require('mongoose');
 
 const WalletConnectionSchema = new mongoose.Schema(
   {
+    // Reference to the user account
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true
+    },
+
     // User/creator wallet address
     address: {
       type: String,
       required: true,
-      unique: true,
       lowercase: true,
       index: true
     },
 
-    // Wallet type: 'hiro' or 'xverse'
+    // Wallet type: 'hiro', 'xverse', 'metamask', 'walletconnect', etc.
     walletType: {
       type: String,
-      enum: ['hiro', 'xverse'],
+      enum: ['hiro', 'xverse', 'metamask', 'walletconnect', 'coinbase', 'trust'],
       required: true,
+      index: true
+    },
+
+    // Blockchain type: 'stacks' or 'evm'
+    blockchain: {
+      type: String,
+      enum: ['stacks', 'evm'],
+      required: true,
+      default: 'stacks',
       index: true
     },
 
@@ -100,8 +116,11 @@ const WalletConnectionSchema = new mongoose.Schema(
   }
 );
 
+// Index for efficient querying by user and address
+WalletConnectionSchema.index({ userId: 1, address: 1 }, { unique: true });
+
 // Index for efficient querying by address and wallet type
-WalletConnectionSchema.index({ address: 1, walletType: 1 }, { unique: true });
+WalletConnectionSchema.index({ address: 1, walletType: 1 });
 
 // Index for finding connected wallets
 WalletConnectionSchema.index({ isConnected: 1, connectedAt: -1 });

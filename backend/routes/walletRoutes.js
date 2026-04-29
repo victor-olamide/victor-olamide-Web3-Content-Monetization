@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+const { ethers } = require('ethers');
+const { protect } = require('../middleware/auth');
 const {
   createConnectionRequest,
   connectWallet,
@@ -46,8 +48,8 @@ router.post('/connection-request', (req, res) => {
 });
 
 // POST /api/wallet/connect
-// Connect wallet with signature
-router.post('/connect', validateWalletType, async (req, res) => {
+// Connect wallet with signature and link to user account
+router.post('/connect', protect, validateWalletType, async (req, res) => {
   try {
     const { address, walletType, publicKey, signature, nonce } = req.body;
 
@@ -58,16 +60,29 @@ router.post('/connect', validateWalletType, async (req, res) => {
       });
     }
 
-    if (!isValidStxAddress(address)) {
+    // Determine blockchain from wallet type
+    const blockchain = ['hiro', 'xverse'].includes(walletType.toLowerCase()) ? 'stacks' : 'evm';
+
+    // Validate address format based on blockchain
+    if (blockchain === 'stacks' && !isValidStxAddress(address)) {
       return res.status(400).json({
         success: false,
         error: 'address must be a valid Stacks wallet address (SP… or ST…)',
       });
     }
 
+    if (blockchain === 'evm' && !ethers.utils.isAddress(address)) {
+      return res.status(400).json({
+        success: false,
+        error: 'address must be a valid Ethereum address',
+      });
+    }
+
     const result = await connectWallet(
+      req.user._id,
       address,
       walletType.toLowerCase(),
+      blockchain,
       publicKey,
       signature,
       nonce,
@@ -78,7 +93,7 @@ router.post('/connect', validateWalletType, async (req, res) => {
     res.status(201).json({
       success: true,
       data: result,
-      message: 'Wallet connected successfully'
+      message: 'Wallet connected successfully to user account'
     });
   } catch (error) {
     res.status(400).json({
@@ -213,7 +228,7 @@ router.get(
   verifyWalletAuth,
   async (req, res) => {
     try {
-      const wallets = await getConnectedWallets(req.walletAddress);
+      const wallets = await getConnectedWallets(req.userId);
 
       res.json({
         success: true,
@@ -235,7 +250,7 @@ router.get(
 
 // POST /api/wallet/disconnect
 // Disconnect a wallet
-router.post('/disconnect', validateWalletType, async (req, res) => {
+router.post('/disconnect', protect, validateWalletType, async (req, res) => {
   try {
     const { address, walletType, reason } = req.body;
 
@@ -247,6 +262,7 @@ router.post('/disconnect', validateWalletType, async (req, res) => {
     }
 
     const result = await disconnectWallet(
+      req.user._id,
       address,
       walletType.toLowerCase(),
       reason

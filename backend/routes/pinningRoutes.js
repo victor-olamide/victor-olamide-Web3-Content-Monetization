@@ -10,10 +10,10 @@ const { pinningService } = require('../services/pinningService');
 const { pinningManager } = require('../services/pinningManager');
 const Content = require('../models/Content');
 const ContentPreview = require('../models/ContentPreview');
-const auth = require('../middleware/adminAuth');
+const { adminAuthMiddleware } = require('../middleware/adminAuth');
 
 // Apply admin authentication to all routes
-router.use(auth);
+router.use(adminAuthMiddleware);
 
 /**
  * GET /api/pinning/status
