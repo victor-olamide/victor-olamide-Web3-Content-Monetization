@@ -43,7 +43,10 @@ const batchOperationRoutes = require('./routes/batchOperationRoutes');
 const cdnRoutes = require('./routes/cdnRoutes');
 const backupRoutes = require('./routes/backupRoutes');
 const subscriptionTierRoutes = require('./routes/subscriptionTierRoutes');
-const rateLimitRoutes = require('./routes/rateLimitRoutes');
+const tierBenefitsRoutes = require('./routes/tierBenefitsRoutes');
+const tierMetricsRoutes = require('./routes/tierMetricsRoutes');
+const tierBulkOperationsRoutes = require('./routes/tierBulkOperationsRoutes');
+const tierUpgradeRoutes = require('./routes/tierUpgradeRoutes');
 const webhookAdminRoutes = require('./routes/webhookAdminRoutes');
 const blockchainVerificationRoutes = require('./routes/blockchainVerificationRoutes');
 
@@ -154,7 +157,10 @@ app.use('/api/batch', batchOperationRoutes);
 app.use('/api/cdn', cdnRoutes);
 app.use('/api/backup', backupRoutes);
 app.use('/api/subscription-tiers', subscriptionTierRoutes);
-app.use('/api/rate-limit', rateLimitRoutes);
+app.use('/api/tier-benefits', tierBenefitsRoutes);
+app.use('/api/tier-metrics', tierMetricsRoutes);
+app.use('/api/tier-bulk', tierBulkOperationsRoutes);
+app.use('/api/tier-upgrades', tierUpgradeRoutes);
 app.use('/api/webhook-admin', webhookAdminRoutes);
 app.use('/api/blockchain', blockchainVerificationRoutes);
 

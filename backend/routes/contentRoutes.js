@@ -12,6 +12,8 @@ const { uploadToIPFS } = require('../services/storageService');
 const { uploadFileToIPFS, uploadMetadataToIPFS, getGatewayUrl } = require('../services/ipfsService');
 const { pinningManager } = require('../services/pinningManager');
 const { addContentToContract, removeContentFromContract } = require('../services/contractService');
+const { protect } = require('../middleware/auth');
+const { requireCreator } = require('../middleware/accessControl');
 const { verifyCreatorOwnership, checkContentNotRemoved } = require('../middleware/creatorAuth');
 const { initiateRefund, getPendingRefundsForCreator } = require('../services/refundService');
 const searchService = require('../services/searchService');
@@ -173,7 +175,7 @@ router.post('/upload-ipfs', (req, res) => {
 });
 
 // Upload and register to Clarity contract
-router.post('/upload-and-register', (req, res) => {
+router.post('/upload-and-register', protect, requireCreator, (req, res) => {
   upload.single('file')(req, res, async (err) => {
     if (err) return res.status(400).json({ message: 'Upload error', error: err.message });
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
@@ -296,7 +298,7 @@ router.get('/', async (req, res) => {
 });
 
 // Create new content metadata
-router.post('/', validateContentBody, async (req, res) => {
+router.post('/', protect, requireCreator, validateContentBody, async (req, res) => {
   const { contentId, title, description, contentType, price, creator, url, tokenGating } = req.validatedBody;
   const content = new Content({
     contentId,
@@ -317,8 +319,7 @@ router.post('/', validateContentBody, async (req, res) => {
   }
 });
 
-// Remove content and initiate refunds
-router.post('/:contentId/remove', verifyCreatorOwnership, async (req, res) => {
+async function removeContentById(req, res) {
   try {
     const { contentId } = req.params;
     const { reason = 'Creator requested removal' } = req.body;
@@ -337,9 +338,9 @@ router.post('/:contentId/remove', verifyCreatorOwnership, async (req, res) => {
       txId = txResult.txid;
     } catch (contractErr) {
       logger.error('Contract removal error:', contractErr);
-      return res.status(500).json({ 
-        message: 'Failed to remove content from blockchain', 
-        error: contractErr.message 
+      return res.status(500).json({
+        message: 'Failed to remove content from blockchain',
+        error: contractErr.message
       });
     }
 
@@ -356,13 +357,12 @@ router.post('/:contentId/remove', verifyCreatorOwnership, async (req, res) => {
       console.log(`[Content Removal] Successfully unpinned content ${contentId}`);
     } catch (unpinningError) {
       console.error(`[Content Removal] Failed to unpin content ${contentId}:`, unpinningError.message);
-      // Don't fail the entire operation if unpinning fails, but log it
     }
 
     // 4. Find all purchases for this content
     const purchases = await Purchase.find({ contentId: parseInt(contentId) });
 
-    // 4. Initiate refunds for eligible purchases
+    // 5. Initiate refunds for eligible purchases
     const refundResults = [];
     for (const purchase of purchases) {
       const refundResult = await initiateRefund(purchase._id, 'content-removed');
@@ -393,10 +393,69 @@ router.post('/:contentId/remove', verifyCreatorOwnership, async (req, res) => {
     logger.error('Content removal error', { err });
     res.status(500).json({ message: 'Failed to remove content', error: err.message });
   }
+}
+
+// Remove content and initiate refunds
+router.post('/:contentId/remove', protect, requireCreator, verifyCreatorOwnership, removeContentById);
+
+// Delete content using the same creator ownership and removal flow
+router.delete('/:contentId', protect, requireCreator, verifyCreatorOwnership, removeContentById);
+
+// Update content metadata and price (creators only)
+router.put('/:contentId', protect, requireCreator, verifyCreatorOwnership, validateContentBody, async (req, res) => {
+  try {
+    const { contentId } = req.params;
+    const content = req.content; // set by verifyCreatorOwnership
+    const { title, description, contentType, price, url, tokenGating, refundable, refundWindowDays } = req.validatedBody;
+
+    const updatedFields = {
+      title,
+      description,
+      contentType,
+      price,
+      url,
+      tokenGating: tokenGating || { enabled: false },
+      refundable,
+      refundWindowDays
+    };
+
+    // Validate required fields are present for PUT semantics
+    if (!title || !contentType || typeof price === 'undefined' || !url) {
+      return res.status(400).json({ message: 'PUT requests must include title, contentType, price, and url' });
+    }
+
+    // If price changes, also update on-chain price for content
+    let txResult = null;
+    if (price !== content.price) {
+      const creatorKey = process.env.CREATOR_PRIVATE_KEY;
+      if (!creatorKey) {
+        return res.status(500).json({ message: 'Creator private key not configured for on-chain update' });
+      }
+      try {
+        const { updateContentPrice } = require('../services/contractService');
+        txResult = await updateContentPrice(parseInt(contentId), parseInt(price), creatorKey);
+      } catch (err) {
+        logger.error('Failed to update price on-chain', { err });
+        return res.status(500).json({ message: 'Failed to update price on-chain', error: err.message });
+      }
+    }
+
+    Object.assign(content, updatedFields);
+    await content.save();
+
+    res.json({
+      message: 'Content replaced successfully',
+      content,
+      transactionId: txResult ? txResult.txid : null
+    });
+  } catch (err) {
+    logger.error('Content replacement error', { err });
+    res.status(500).json({ message: 'Failed to replace content', error: err.message });
+  }
 });
 
 // Update content metadata and price (creators only)
-router.patch('/:contentId', verifyCreatorOwnership, async (req, res) => {
+router.patch('/:contentId', protect, requireCreator, verifyCreatorOwnership, async (req, res) => {
   try {
     const { contentId } = req.params;
     const content = req.content; // set by verifyCreatorOwnership

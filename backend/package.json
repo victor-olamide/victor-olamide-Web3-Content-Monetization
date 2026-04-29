@@ -51,6 +51,8 @@
     "mongodb-memory-server": "^11.0.1",
     "nodemon": "^3.0.1",
     "supertest": "^6.3.3"
+    "eslint-plugin-promise": "^6.1.1",
+    "mongodb-memory-server": "^8.15.0"
   },
   "keywords": [
     "web3",
