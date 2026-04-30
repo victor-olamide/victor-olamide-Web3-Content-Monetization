@@ -168,6 +168,10 @@ async function hasAccessByUserId(content, userId) {
  * Verify access with caching by userId
  */
 async function verifyAccessByUserId(contentId, userId) {
+  const cacheKey = `access:${contentId}:user:${userId}`;
+  const cachedResult = accessCache.get(cacheKey);
+  if (cachedResult) return cachedResult;
+
   const Content = require('../models/Content');
   const content = await Content.findOne({ contentId });
   
@@ -175,7 +179,11 @@ async function verifyAccessByUserId(contentId, userId) {
     return { allowed: false, reason: 'content-not-found' };
   }
   
-  return await hasAccessByUserId(content, userId);
+  const result = await hasAccessByUserId(content, userId);
+  if (result.allowed) {
+    accessCache.set(cacheKey, result);
+  }
+  return result;
 }
 
 module.exports = {
