@@ -19,7 +19,6 @@ const {
 } = require('../middleware/ppvVerificationMiddleware');
 const {
   checkContentAccess,
-  verifyPurchase,
 } = require('../services/payPerViewService');
 
 // Get platform fee information
