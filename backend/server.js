@@ -59,6 +59,7 @@ const {
 } = require('./services/pinningManager');
 const { startCacheEvictionJob } = require('./services/verificationCacheEvictionJob');
 const { startIndexer, stopIndexer } = require('./services/ppvTransactionIndexer');
+const contentGateIndexer = require('./services/contentGateTransactionIndexer');
 const ppvContentRoutes = require('./routes/ppvContentRoutes');
 
 const app = express();
@@ -187,6 +188,16 @@ async function initializeServices() {
   const ppvIndexerIntervalMs = parseInt(process.env.PPV_INDEXER_INTERVAL_MS, 10) || 30000;
   startIndexer(ppvIndexerIntervalMs);
 
+  // Start content-gate transaction indexer
+  try {
+    const cgIndexerIntervalMs = parseInt(process.env.CG_INDEXER_INTERVAL_MS, 10) || 30000;
+    contentGateIndexer.pollInterval = cgIndexerIntervalMs;
+    await contentGateIndexer.startIndexer();
+    logger.info('Content-gate indexer started', { interval: cgIndexerIntervalMs });
+  } catch (error) {
+    logger.error('Failed to start content-gate indexer', { err: error });
+  }
+
   const renewalIntervalMs = parseInt(process.env.RENEWAL_SCHEDULER_INTERVAL_MS, 10) || 86400000;
   // Initialize automatic subscription renewal scheduler to run daily
   initializeRenewalScheduler(renewalIntervalMs);
@@ -215,6 +226,7 @@ process.on('SIGTERM', async () => {
   await disconnectDB();
   stopRenewalScheduler();
   stopIndexer();
+  contentGateIndexer.stopIndexer();
   pinningManager.stopMonitoring();
   logger.info('Renewal scheduler stopped');
   await mongoose.connection.close();
@@ -226,6 +238,7 @@ process.on('SIGINT', async () => {
   await disconnectDB();
   stopRenewalScheduler();
   stopIndexer();
+  contentGateIndexer.stopIndexer();
   pinningManager.stopMonitoring();
   logger.info('SIGINT received, shutting down gracefully');
   await mongoose.connection.close();
