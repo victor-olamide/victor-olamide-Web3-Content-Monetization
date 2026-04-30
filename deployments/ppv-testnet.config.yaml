@@ -1,0 +1,134 @@
+---
+# Pay-Per-View Contract Deployment Configuration
+# This configuration defines the deployment of the pay-per-view contract to Stacks testnet
+#
+# The pay-per-view contract enables:
+# - Creator-controlled content monetization
+# - One-time STX payments for content access
+# - Platform fee distribution
+# - Refund management with time windows
+# - Emergency pause functionality
+
+deployment:
+  name: "Pay-Per-View Contract - Testnet"
+  version: "1.0.0"
+  network: testnet
+  timestamp: "2026-04-30"
+
+contract:
+  name: "pay-per-view"
+  path: "contracts/pay-per-view.clar"
+  description: "Pay-Per-View monetization contract for one-time content access"
+  
+deployment_plan:
+  chain: stacks-testnet
+  api_url: "https://stacks-node-api.testnet.stacks.co"
+  
+  # Deployment account - must have sufficient STX for gas fees
+  deployer:
+    address: "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM"
+    min_balance_stx: 0.1
+    
+  # Gas configuration
+  gas:
+    limit: 200000
+    price_microSTX: 1
+    estimated_cost_STX: 0.15
+    
+  # Deployment sequence
+  steps:
+    - id: 1
+      name: "Deploy SIP traits (prerequisites)"
+      description: "Deploy SIP-009 and SIP-010 trait contracts"
+      contracts:
+        - "sip-009-trait"
+        - "sip-010-trait"
+      priority: 1
+      
+    - id: 2
+      name: "Deploy mock contracts"
+      description: "Deploy mock NFT and token for testing"
+      contracts:
+        - "mock-nft"
+        - "mock-token"
+      priority: 2
+      depends_on: [1]
+      
+    - id: 3
+      name: "Deploy pay-per-view contract"
+      description: "Deploy the pay-per-view smart contract"
+      contracts:
+        - "pay-per-view"
+      priority: 3
+      depends_on: [1]
+      validation:
+        - verify_contract_deployed
+        - check_contract_state
+        
+    - id: 4
+      name: "Initialize contract state"
+      description: "Set initial platform fee and wallet configuration"
+      operations:
+        - function: "set-platform-fee"
+          params:
+            fee: 250  # 2.5% in basis points
+        - function: "set-platform-wallet"
+          params:
+            wallet: "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM"
+      depends_on: [3]
+
+# Environment variables required for deployment
+environment_variables:
+  STACKS_NETWORK: "testnet"
+  STACKS_API_URL: "https://stacks-node-api.testnet.stacks.co"
+  STACKS_PRIVATE_KEY: "required - set from secure key management"
+  PAY_PER_VIEW_ADDRESS: "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM"
+  PLATFORM_FEE_BASIS_POINTS: "250"
+  PLATFORM_WALLET: "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM"
+
+# Contract initial state
+initial_state:
+  platform_fee: 250  # 2.5% in basis points
+  refund_window: 144  # blocks (~24 hours)
+  platform_wallet: "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM"
+  paused: false
+
+# Deployment validation checks
+validation:
+  pre_deployment:
+    - check_deployer_balance
+    - validate_contract_syntax
+    - verify_contract_size
+    - check_dependency_contracts
+    
+  post_deployment:
+    - verify_contract_deployed
+    - check_read_only_functions
+    - validate_contract_state
+    - test_basic_operations
+
+# Rollback configuration
+rollback:
+  enabled: false
+  strategy: "manual"
+  backup_location: "deployments/rollback/ppv-testnet"
+
+# Monitoring configuration
+monitoring:
+  enabled: true
+  metrics:
+    - contract_deployment_time
+    - contract_size
+    - gas_usage
+    - transaction_confirmations
+  alerts:
+    - deployment_timeout
+    - gas_price_spike
+    - contract_verification_failure
+
+# Documentation
+documentation:
+  readme: "docs/DEPLOYMENT.md"
+  contract_docs: "contracts/pay-per-view.clar"
+  api_integration: "backend/services/payPerViewService.js"
+  test_guide: "integration-tests/e2e/pay-per-view.test.js"
