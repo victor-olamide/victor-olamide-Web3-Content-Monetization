@@ -1,4 +1,4 @@
-const { verifyAccess } = require('../services/accessService');
+const { verifyAccess, verifyAccessByUserId } = require('../services/accessService');
 const { logAccess } = require('../services/accessLogger');
 const logger = require('../utils/logger');
 
@@ -139,24 +139,37 @@ function requireSubscriber(req, res, next) {
 
 /**
  * Middleware to verify access before serving content
+ * Supports both wallet-based (legacy) and user-based authentication
  */
 async function verifyContentAccess(req, res, next) {
   try {
     const { contentId } = req.params;
-    const userAddress = req.headers['x-stacks-address'] || req.query.user;
+    
+    let result;
+    let userIdentifier;
 
-    if (!userAddress) {
-      return res.status(401).json({ 
-        message: 'Authentication required',
-        error: 'No Stacks address provided' 
-      });
+    if (req.user && req.user._id) {
+      // User-based authentication (preferred)
+      result = await verifyAccessByUserId(parseInt(contentId), req.user._id);
+      userIdentifier = req.user._id;
+    } else {
+      // Legacy wallet-based authentication
+      const userAddress = req.headers['x-stacks-address'] || req.query.user;
+      
+      if (!userAddress) {
+        return res.status(401).json({ 
+          message: 'Authentication required',
+          error: 'No user authentication or Stacks address provided' 
+        });
+      }
+      
+      result = await verifyAccess(parseInt(contentId), userAddress);
+      userIdentifier = userAddress;
     }
-
-    const result = await verifyAccess(parseInt(contentId), userAddress);
 
     // Log access attempt
     await logAccess({
-      userAddress,
+      userIdentifier,
       contentId: parseInt(contentId),
       accessMethod: result.method || 'unknown',
       accessGranted: result.allowed,
@@ -174,7 +187,7 @@ async function verifyContentAccess(req, res, next) {
     }
 
     req.accessInfo = result;
-    req.userAddress = userAddress;
+    req.userIdentifier = userIdentifier;
     next();
   } catch (err) {
     logger.error('Access verification middleware error', { err });
