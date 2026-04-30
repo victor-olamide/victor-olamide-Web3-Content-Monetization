@@ -134,15 +134,21 @@ async function hasAccessByUserId(content, userId) {
   }
 
   // 4. Check Token-Gating from database
-  const gatingRule = await GatingRule.findOne({ contentId: content.contentId });
+  const gatingRule = await GatingRule.findOne({ contentId: content.contentId, isActive: true });
   if (gatingRule) {
-    const { tokenContract, threshold } = gatingRule;
+    const { tokenContract, threshold, tokenType } = gatingRule;
     
-    // Assume FT for now, can extend for NFT
     for (const address of userAddresses) {
-      const hasTokens = await verifyFTBalance(address, tokenContract, threshold);
-      if (hasTokens) {
-        return { allowed: true, reason: 'token-gating', method: 'sip-010' };
+      if (tokenType === 'FT') {
+        const hasTokens = await verifyFTBalance(address, tokenContract, threshold);
+        if (hasTokens) {
+          return { allowed: true, reason: 'token-gating', method: 'sip-010' };
+        }
+      } else if (tokenType === 'NFT') {
+        const ownsNFT = await verifyNFTOwnership(address, tokenContract, threshold);
+        if (ownsNFT) {
+          return { allowed: true, reason: 'token-gating', method: 'sip-009' };
+        }
       }
     }
   }
