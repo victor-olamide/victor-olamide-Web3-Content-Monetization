@@ -190,6 +190,25 @@
     )
 )
 
+(define-read-only (has-access (content-id uint) (user principal))
+    (is-some (map-get? content-access { content-id: content-id, user: user }))
+)
+
+(define-read-only (get-content-pricing (content-id uint))
+    (match (map-get? content-pricing content-id)
+        content content
+        false
+    )
+)
+
+(define-read-only (get-platform-fee)
+    (var-get platform-fee)
+)
+
+(define-read-only (get-platform-wallet)
+    (var-get platform-wallet)
+)
+
 (define-read-only (calculate-platform-fee (amount uint))
     (/ (* amount (var-get platform-fee)) u10000)
 )
