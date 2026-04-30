@@ -4,6 +4,7 @@ const WalletConnection = require('../models/WalletConnection');
 const GatingRule = require('../models/GatingRule');
 const { verifyFTBalance, verifyNFTOwnership } = require('./tokenService');
 const { verifyPurchase, verifySubscription } = require('./blockchainVerification');
+const contentGateService = require('./contentGateService');
 const NodeCache = require('node-cache');
 
 // Cache access results for 5 minutes
@@ -48,7 +49,32 @@ async function hasAccess(content, userAddress) {
     }
   }
 
-  // 4. Check Token-Gating from database
+  // 4. Check Token-Gating from on-chain content-gate contract
+  const onChainRule = await contentGateService.getGatingRule(content.contentId);
+  if (onChainRule) {
+    if (onChainRule.gating_type === 0) {
+      // FT verification
+      const ftAccess = await contentGateService.verifyFTAccess(
+        content.contentId,
+        userAddress,
+        onChainRule.token_contract
+      );
+      if (ftAccess.verified) {
+        return { allowed: true, reason: 'token-gating', method: 'sip-010' };
+      }
+    } else if (onChainRule.gating_type === 1) {
+      // NFT verification
+      const nftAccess = await contentGateService.verifyNFTAccess(
+        content.contentId,
+        userAddress
+      );
+      if (nftAccess.verified) {
+        return { allowed: true, reason: 'token-gating', method: 'sip-009' };
+      }
+    }
+  }
+
+  // 5. Check Token-Gating from database (fallback)
   const gatingRule = await GatingRule.findOne({ contentId: content.contentId, isActive: true });
   if (gatingRule) {
     const { tokenContract, threshold, tokenType } = gatingRule;
@@ -141,7 +167,34 @@ async function hasAccessByUserId(content, userId) {
     }
   }
 
-  // 4. Check Token-Gating from database
+  // 4. Check Token-Gating from on-chain content-gate contract
+  const onChainRule = await contentGateService.getGatingRule(content.contentId);
+  if (onChainRule) {
+    for (const address of userAddresses) {
+      if (onChainRule.gating_type === 0) {
+        // FT verification
+        const ftAccess = await contentGateService.verifyFTAccess(
+          content.contentId,
+          address,
+          onChainRule.token_contract
+        );
+        if (ftAccess.verified) {
+          return { allowed: true, reason: 'token-gating', method: 'sip-010' };
+        }
+      } else if (onChainRule.gating_type === 1) {
+        // NFT verification
+        const nftAccess = await contentGateService.verifyNFTAccess(
+          content.contentId,
+          address
+        );
+        if (nftAccess.verified) {
+          return { allowed: true, reason: 'token-gating', method: 'sip-009' };
+        }
+      }
+    }
+  }
+
+  // 5. Check Token-Gating from database (fallback)
   const gatingRule = await GatingRule.findOne({ contentId: content.contentId, isActive: true });
   if (gatingRule) {
     const { tokenContract, threshold, tokenType } = gatingRule;
