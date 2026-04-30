@@ -1,12 +1,25 @@
 const { verifyAccess } = require('../services/accessService');
 const { verifyPurchase, verifySubscription } = require('../services/blockchainVerification');
+const GatingRule = require('../models/GatingRule');
 
 jest.mock('../services/blockchainVerification');
 jest.mock('../models/Content');
+jest.mock('../models/GatingRule');
+jest.mock('node-cache');
 
 describe('Access Control Service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    GatingRule.findOne = jest.fn().mockResolvedValue(null);
+    
+    // Mock NodeCache to prevent cache persistence between tests
+    const NodeCache = require('node-cache');
+    NodeCache.mockImplementation(() => ({
+      get: jest.fn().mockReturnValue(null),
+      set: jest.fn(),
+      del: jest.fn(),
+      flushAll: jest.fn()
+    }));
   });
 
   test('should grant access to creator', async () => {
