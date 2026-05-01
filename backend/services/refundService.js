@@ -2,6 +2,9 @@ const logger = require('../utils/logger');
 const Purchase = require('../models/Purchase');
 const Refund = require('../models/Refund');
 const Content = require('../models/Content');
+const Subscription = require('../models/Subscription');
+const ProRataRefund = require('../models/ProRataRefund');
+const { calculateProRataRefund, checkRefundEligibility: checkSubscriptionRefundEligibility } = require('./proRataRefundService');
 
 /**
  * Validate refund eligibility parameters
@@ -139,6 +142,100 @@ async function initiateRefund(purchaseId, reason = 'content-removed') {
       success: true,
       refund: savedRefund,
       message: 'Refund initiated successfully'
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: error.message
+    };
+  }
+}
+
+/**
+ * Create a pro-rata refund record for a cancelled subscription.
+ * @param {string} subscriptionId - MongoDB ObjectId of subscription
+ * @param {Object} options - Cancellation and refund options
+ * @returns {Promise<Object>}
+ */
+async function initiateSubscriptionRefund(subscriptionId, options = {}) {
+  try {
+    const {
+      reason = 'User requested cancellation',
+      cancellationDate = new Date(),
+      refundMethod = 'blockchain',
+      initiatedBy = 'user'
+    } = options;
+
+    if (!subscriptionId) {
+      throw new Error('Subscription ID is required');
+    }
+
+    const subscription = await Subscription.findById(subscriptionId);
+    if (!subscription) {
+      return {
+        success: false,
+        message: 'Subscription not found'
+      };
+    }
+
+    if (subscription.cancelledAt) {
+      return {
+        success: false,
+        message: 'Subscription is already cancelled'
+      };
+    }
+
+    const cancellation = new Date(cancellationDate);
+    const eligibility = checkSubscriptionRefundEligibility(subscription, cancellation);
+
+    let refund = null;
+    if (eligibility.isEligible) {
+      const refundDetails = calculateProRataRefund(subscription, cancellation);
+      refund = await ProRataRefund.create({
+        subscriptionId: subscription._id,
+        userId: subscription.user,
+        creatorId: subscription.creator,
+        originalAmount: refundDetails.originalAmount,
+        originalStartDate: refundDetails.startDate,
+        originalExpiryDate: refundDetails.expiryDate,
+        actualCancellationDate: cancellation,
+        totalDays: refundDetails.totalDays,
+        usedDays: refundDetails.usedDays,
+        unusedDays: refundDetails.unusedDays,
+        usagePercentage: refundDetails.usagePercentage,
+        refundAmount: refundDetails.refundAmount,
+        refundReason: reason,
+        refundMethod,
+        refundStatus: 'pending'
+      });
+      subscription.proRataRefundId = refund._id;
+      subscription.isRefundApplied = true;
+    }
+
+    subscription.cancelledAt = cancellation;
+    subscription.cancelReason = reason;
+    subscription.renewalStatus = 'expired';
+    subscription.autoRenewal = false;
+    subscription.refundEligible = eligibility.refundEnabled;
+    subscription.cancellationDetails = {
+      reason,
+      initiatedBy,
+      requestedAt: new Date(),
+      effectiveDate: cancellation
+    };
+    subscription.updatedAt = new Date();
+
+    await subscription.save();
+
+    return {
+      success: true,
+      message: 'Subscription cancellation processed successfully',
+      subscription,
+      refund: refund ? refund : {
+        eligible: false,
+        reason: eligibility.reason,
+        refundAmount: 0
+      }
     };
   } catch (error) {
     return {
@@ -389,6 +486,7 @@ module.exports = {
   calculateRefundEligibility,
   validateRefundEligibility,
   initiateRefund,
+  initiateSubscriptionRefund,
   approveRefund,
   completeRefund,
   rejectRefund,

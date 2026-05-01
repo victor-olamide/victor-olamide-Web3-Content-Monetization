@@ -4,6 +4,8 @@ const contentRoutes = require('../routes/contentRoutes');
 const Content = require('../models/Content');
 const Purchase = require('../models/Purchase');
 const Refund = require('../models/Refund');
+const Subscription = require('../models/Subscription');
+const ProRataRefund = require('../models/ProRataRefund');
 
 describe('Content Removal and Refund Integration Tests', () => {
   let app;
@@ -103,7 +105,7 @@ describe('Refund Routes Integration Tests', () => {
 
   describe('GET /api/refunds/user/:address', () => {
     test('should return empty array for user with no refunds', async () => {
-      Refund.find = jest.fn().mockResolvedValue([]);
+      Refund.find = jest.fn().mockReturnValue({ sort: jest.fn().mockResolvedValue([]) });
 
       const response = await request(app)
         .get('/api/refunds/user/SP1...user');
@@ -125,7 +127,7 @@ describe('Refund Routes Integration Tests', () => {
         }
       ];
 
-      Refund.find = jest.fn().mockResolvedValue(mockRefunds);
+      Refund.find = jest.fn().mockReturnValue({ sort: jest.fn().mockResolvedValue(mockRefunds) });
 
       const response = await request(app)
         .get('/api/refunds/user/SP1...user');
@@ -155,7 +157,7 @@ describe('Refund Routes Integration Tests', () => {
         }
       ];
 
-      Refund.find = jest.fn().mockResolvedValue(mockRefunds);
+      Refund.find = jest.fn().mockReturnValue({ sort: jest.fn().mockResolvedValue(mockRefunds) });
 
       const response = await request(app)
         .get('/api/refunds/creator/SP1...creator');
@@ -165,6 +167,51 @@ describe('Refund Routes Integration Tests', () => {
       expect(response.body.total).toBe(2);
       expect(response.body.byStatus.pending).toBe(1);
       expect(response.body.byStatus.completed).toBe(1);
+    });
+  });
+
+  describe('POST /api/refunds', () => {
+    test('should initiate a subscription refund and cancel the subscription', async () => {
+      const mockSubscription = {
+        _id: 'sub-123',
+        user: 'SP1...user',
+        creator: 'SP1...creator',
+        amount: 100,
+        timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+        expiry: new Date(Date.now() + 25 * 24 * 60 * 60 * 1000),
+        refundEligible: true,
+        refundWindowDays: 30,
+        cancelledAt: null,
+        save: jest.fn().mockResolvedValue(true)
+      };
+
+      const mockRefund = {
+        _id: 'refund-123',
+        refundAmount: 80,
+        refundStatus: 'pending'
+      };
+
+      Subscription.findById = jest.fn().mockResolvedValue(mockSubscription);
+      ProRataRefund.create = jest.fn().mockResolvedValue(mockRefund);
+
+      const response = await request(app)
+        .post('/api/refunds')
+        .send({ subscriptionId: 'sub-123', reason: 'Cancelled by user' });
+
+      expect(response.status).toBe(201);
+      expect(response.body.success).toBe(true);
+      expect(response.body.subscription._id).toBe('sub-123');
+      expect(response.body.refund.refundAmount).toBe(80);
+      expect(mockSubscription.save).toHaveBeenCalled();
+    });
+
+    test('should return 400 when subscriptionId is missing', async () => {
+      const response = await request(app)
+        .post('/api/refunds')
+        .send({});
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toContain('subscriptionId is required');
     });
   });
 

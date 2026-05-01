@@ -7,7 +7,8 @@ const {
   completeRefund, 
   rejectRefund, 
   getRefundHistory,
-  autoProcessRefundsForRemovedContent 
+  autoProcessRefundsForRemovedContent,
+  initiateSubscriptionRefund
 } = require('../services/refundService');
 
 /**
@@ -101,6 +102,41 @@ router.get('/:id', async (req, res) => {
     res.json(refund);
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch refund', error: err.message });
+  }
+});
+
+/**
+ * POST /api/refunds
+ * Cancel subscription and initiate pro-rata refund processing
+ */
+router.post('/', async (req, res) => {
+  try {
+    const {
+      subscriptionId,
+      reason = 'User requested cancellation',
+      cancellationDate,
+      refundMethod = 'blockchain',
+      initiatedBy = 'user'
+    } = req.body;
+
+    if (!subscriptionId) {
+      return res.status(400).json({ message: 'subscriptionId is required' });
+    }
+
+    const result = await initiateSubscriptionRefund(subscriptionId, {
+      reason,
+      cancellationDate: cancellationDate ? new Date(cancellationDate) : new Date(),
+      refundMethod,
+      initiatedBy
+    });
+
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to initiate subscription refund', error: err.message });
   }
 });
 
