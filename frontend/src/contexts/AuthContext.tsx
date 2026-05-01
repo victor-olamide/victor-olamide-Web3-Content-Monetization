@@ -57,7 +57,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       },
       redirectTo: '/',
       onFinish: () => {
-        setUserData(userSession.loadUserData());
+        const data = userSession.loadUserData();
+        setUserData(data);
+        console.log('Authentication successful for:', data.profile?.stxAddress?.mainnet || data.profile?.stxAddress?.testnet);
       },
       onCancel: () => {
         console.log('User cancelled authentication');
