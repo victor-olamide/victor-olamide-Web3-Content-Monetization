@@ -19,9 +19,21 @@ export const useContentAccess = (contentId: string) => {
       const data = await response.json();
       setContent(data);
       
-      // Simulate access check logic
-      const isCreator = userData?.profile?.stxAddress?.mainnet === data.creator;
-      setHasAccess(isCreator);
+      // Check access: creator or purchased
+      const userAddress = userData?.profile?.stxAddress?.mainnet || userData?.profile?.stxAddress?.testnet;
+      const isCreator = userAddress === data.creator;
+      
+      if (isCreator) {
+        setHasAccess(true);
+      } else if (userAddress) {
+        // Check purchase status from backend
+        const checkResp = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/purchases/check/${userAddress}/${contentId}`);
+        const checkData = await checkResp.json();
+        setHasAccess(checkData.hasAccess);
+      } else {
+        setHasAccess(false);
+      }
+      
       setLoading(false);
     } catch (err: any) {
       console.error(err);
