@@ -13,16 +13,18 @@ export default function ContentView({ params }: { params: { id: string } }) {
   const { content, hasAccess, loading, error, refreshAccess } = useContentAccess(params.id);
   const { purchaseContent } = usePayPerView();
   const [purchasing, setPurchasing] = useState(false);
+  const [purchaseError, setPurchaseError] = useState<string | null>(null);
   const [txId, setTxId] = useState<string | null>(null);
 
   const handlePurchase = async () => {
     if (!content || !stxAddress) return;
     
+    setPurchaseError(null);
     // Simple balance check (mock)
     // In a real app, you would fetch the balance from the API/Contract
     const mockBalance = 1000; 
     if (mockBalance < content.price) {
-      alert("Insufficient STX balance");
+      setPurchaseError("Insufficient STX balance");
       return;
     }
     
@@ -36,9 +38,9 @@ export default function ContentView({ params }: { params: { id: string } }) {
       setTxId(result as string);
       // Wait for some time and refresh access
       setTimeout(refreshAccess, 10000);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert("Purchase failed");
+      setPurchaseError(err.message || "Purchase failed");
     } finally {
       setPurchasing(false);
     }
@@ -124,6 +126,12 @@ export default function ContentView({ params }: { params: { id: string } }) {
                     Subscribe to Creator
                   </button>
                 </div>
+
+                {purchaseError && (
+                  <div className="mt-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm text-center">
+                    {purchaseError}
+                  </div>
+                )}
 
                 {txId && (
                   <div className="mt-4 p-4 bg-blue-50 text-blue-700 rounded-lg flex flex-col items-center gap-2">
