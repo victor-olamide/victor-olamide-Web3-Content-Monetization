@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 
 const ContentList: React.FC = () => {
   const contentItems = [
@@ -30,6 +31,7 @@ const ContentList: React.FC = () => {
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.price} STX</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.purchases}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-3">
+                  <Link href={`/content/${item.id}`} className="text-blue-600 hover:text-blue-900">View</Link>
                   <button className="text-orange-600 hover:text-orange-900">Edit</button>
                   <button className="text-red-600 hover:text-red-900">Delete</button>
                 </td>
