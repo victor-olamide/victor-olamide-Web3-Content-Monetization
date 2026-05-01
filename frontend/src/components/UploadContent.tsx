@@ -1,18 +1,44 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Upload } from 'lucide-react';
+import { Upload, FileText, CheckCircle } from 'lucide-react';
+import { useStorage } from '@/hooks/useStorage';
 
 const UploadContent: React.FC = () => {
   const [title, setTitle] = useState('');
   const [contentId, setContentId] = useState('');
   const [price, setPrice] = useState('');
   const [contentType, setContentType] = useState('video');
+  const [file, setFile] = useState<File | null>(null);
+  const [storageType, setStorageType] = useState('gaia');
+  const { uploadToGaia, uploadToIPFS, uploading, lastUploadedUrl } = useStorage();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log({ title, contentId, price, contentType });
-    // Handle upload logic
+    if (!file) {
+      alert("Please select a file first");
+      return;
+    }
+
+    try {
+      let url = '';
+      if (storageType === 'gaia') {
+        url = await uploadToGaia(file);
+      } else {
+        url = await uploadToIPFS(file);
+      }
+      
+      console.log("Uploaded successfully:", url);
+      // Proceed to register content on contract/backend
+    } catch (err) {
+      alert("Upload failed");
+    }
   };
 
   return (
