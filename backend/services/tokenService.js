@@ -22,13 +22,33 @@ async function getBalances(address) {
     }
   }
 
-  const response = await axios.get(`${STACKS_API_URL}/extended/v1/address/${address}/balances`);
-  balanceCache.set(cacheKey, {
-    data: response.data,
-    timestamp: now
-  });
-  
-  return response.data;
+  try {
+    const response = await axios.get(`${STACKS_API_URL}/extended/v1/address/${address}/balances`, {
+      timeout: 5000 // 5 seconds timeout
+    });
+    
+    balanceCache.set(cacheKey, {
+      data: response.data,
+      timestamp: now
+    });
+    
+    return response.data;
+  } catch (error) {
+    if (error.response) {
+      // API responded with an error (e.g. 404, 429)
+      console.error(`Hiro API error (${error.response.status}):`, error.response.data);
+      if (error.response.status === 404) {
+        // Address might not exist yet on chain, return empty balances
+        return { stx: { balance: '0' }, fungible_tokens: {}, non_fungible_tokens: {} };
+      }
+    } else if (error.request) {
+      // Request was made but no response was received
+      console.error('Hiro API no response:', error.message);
+    } else {
+      console.error('Error setting up Hiro API request:', error.message);
+    }
+    throw error; // Propagate error so caller can handle it
+  }
 }
 
 /**
