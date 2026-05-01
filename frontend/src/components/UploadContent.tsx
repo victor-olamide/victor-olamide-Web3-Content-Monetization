@@ -20,6 +20,7 @@ const UploadContent: React.FC = () => {
   const { addContent } = usePayPerView();
   const { stxAddress } = useAuth();
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [contractPending, setContractPending] = useState(false);
 
   const uploading = storageUploading || contractPending;
@@ -45,10 +46,11 @@ const UploadContent: React.FC = () => {
 
     try {
       setSuccess(false);
+      setError(null);
       
       // Preliminary check
-      if (!title || !contentId) {
-        alert("Please fill in basic fields");
+      if (!title || !contentId || !price) {
+        setError("Please fill in all required fields");
         return;
       }
 
@@ -86,10 +88,10 @@ const UploadContent: React.FC = () => {
       setPrice('');
       setTags('');
       setFile(null);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
       setContractPending(false);
-      alert("Upload failed");
+      setError(err.message || "Upload failed. Please try again.");
     }
   };
 
@@ -203,6 +205,12 @@ const UploadContent: React.FC = () => {
           <div className="flex items-center gap-2 text-green-600 font-medium justify-center mt-2">
             <CheckCircle size={20} />
             <span>Content published successfully!</span>
+          </div>
+        )}
+
+        {error && (
+          <div className="flex items-center gap-2 text-red-600 font-medium justify-center mt-2">
+            <span className="bg-red-50 p-2 rounded-md w-full text-center">{error}</span>
           </div>
         )}
       </form>
