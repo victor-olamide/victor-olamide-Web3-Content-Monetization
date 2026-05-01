@@ -83,7 +83,10 @@ router.get('/:collaboratorAddress/summary', async (req, res) => {
 // Get specific distribution details
 router.get('/distribution/:distributionId', async (req, res) => {
   try {
-    const distribution = await RoyaltyDistribution.findById(req.params.distributionId).populate('purchaseId');
+    const distribution = await RoyaltyDistribution.findById(req.params.distributionId)
+      .populate('purchaseId')
+      .populate('subscriptionId')
+      .populate('subscriptionRenewalId');
 
     if (!distribution) {
       return res.status(404).json({ message: 'Distribution not found' });
