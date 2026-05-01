@@ -73,6 +73,15 @@
     ))
 )
 
+;; Admin functions
+(define-public (set-platform-fee (new-fee uint))
+    (begin
+        (asserts! (is-eq tx-sender contract-owner) ERR-NOT-AUTHORIZED)
+        (asserts! (<= new-fee u1000) ERR-INVALID-FEE)
+        (ok (var-set platform-fee new-fee))
+    )
+)
+
 ;; Read-only functions
 (define-read-only (has-access (content-id uint) (user principal))
     (default-to false (map-get? content-access { content-id: content-id, user: user }))
