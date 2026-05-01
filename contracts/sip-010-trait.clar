@@ -1,3 +1,5 @@
+;; SIP-010 Fungible Token Trait Implementation
+;; Version: 1.0.0
 (define-trait sip-010-trait
   (
     (transfer (uint principal principal (optional (buff 34))) (response bool uint))
