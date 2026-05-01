@@ -77,6 +77,7 @@ export default function ContentView({ params }: { params: { id: string } }) {
       pollTransaction(result as string);
     } catch (err: any) {
       console.error(err);
+      setTxId(null);
       setPurchaseError(err.message || "Purchase failed");
     } finally {
       setPurchasing(false);
