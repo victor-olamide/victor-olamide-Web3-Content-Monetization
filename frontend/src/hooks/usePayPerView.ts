@@ -18,23 +18,27 @@ export const usePayPerView = () => {
     // Convert STX to micro-STX
     const priceMicroStx = priceStx * 1000000;
 
-    await openContractCall({
-      network,
-      contractAddress: CONTRACT_ADDRESS,
-      contractName: CONTRACT_NAME,
-      functionName: 'add-content',
-      functionArgs: [
-        uintCV(contentId),
-        uintCV(priceMicroStx),
-        stringAsciiCV(uri)
-      ],
-      postConditionMode: PostConditionMode.Deny,
-      onFinish: (data) => {
-        console.log('Transaction sent:', data.txId);
-      },
-      onCancel: () => {
-        console.log('Transaction cancelled');
-      },
+    return new Promise((resolve, reject) => {
+      openContractCall({
+        network,
+        contractAddress: CONTRACT_ADDRESS,
+        contractName: CONTRACT_NAME,
+        functionName: 'add-content',
+        functionArgs: [
+          uintCV(contentId),
+          uintCV(priceMicroStx),
+          stringAsciiCV(uri)
+        ],
+        postConditionMode: PostConditionMode.Deny,
+        onFinish: (data) => {
+          console.log('Transaction sent:', data.txId);
+          resolve(data.txId);
+        },
+        onCancel: () => {
+          console.log('Transaction cancelled');
+          reject(new Error('Transaction cancelled by user'));
+        },
+      });
     });
   };
 
