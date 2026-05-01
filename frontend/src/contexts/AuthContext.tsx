@@ -46,6 +46,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       onFinish: () => {
         setUserData(userSession.loadUserData());
       },
+      onCancel: () => {
+        console.log('User cancelled authentication');
+      },
       userSession,
     });
   };
