@@ -10,6 +10,10 @@
 (define-constant ERR-NOT-FOUND (err u404))
 (define-constant ERR-INSUFFICIENT-FUNDS (err u402))
 (define-constant ERR-ALREADY-PURCHASED (err u403))
+(define-constant ERR-INVALID-FEE (err u405))
+
+;; Data vars
+(define-data-var platform-fee uint u250) ;; 2.5% in basis points
 
 ;; Data maps
 ;; Mapping of content ID to its price and creator
