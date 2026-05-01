@@ -28,6 +28,8 @@ const subscriptionSchema = new mongoose.Schema({
   }],
   
   amount: { type: Number, required: true, default: 0 },
+  platformFee: { type: Number, default: 0 },
+  creatorAmount: { type: Number, default: 0 },
   expiry: { type: Date, required: true },
   transactionId: { type: String, required: true, unique: true },
   renewalStatus: { type: String, enum: ['active', 'expiring-soon', 'expired', 'renewal-pending', 'renewal-failed'], default: 'active' },

@@ -1,14 +1,67 @@
 const Collaborator = require('../models/Collaborator');
 const RoyaltyDistribution = require('../models/RoyaltyDistribution');
 const Purchase = require('../models/Purchase');
+const { calculatePlatformFee: calculatePlatformFeeOnChain } = require('./contractService');
+const logger = require('../utils/logger');
 
-/**
- * Get all collaborators for a content
- * @param {number} contentId - Content ID
- * @returns {Promise<Array>} Array of collaborators
- */
+const DEFAULT_PLATFORM_FEE_PERCENTAGE = 0.025;
+
+const parsePlatformFeePercentage = () => {
+  const rawValue = process.env.PLATFORM_FEE_PERCENTAGE;
+  if (!rawValue) {
+    return DEFAULT_PLATFORM_FEE_PERCENTAGE;
+  }
+
+  const parsed = parseFloat(rawValue);
+  if (Number.isNaN(parsed) || parsed < 0) {
+    return DEFAULT_PLATFORM_FEE_PERCENTAGE;
+  }
+
+  return parsed > 1 ? parsed / 100 : parsed;
+};
+
+const getPlatformFeePercentage = () => parsePlatformFeePercentage();
+
+const calculatePlatformFee = async (amount) => {
+  if (typeof amount !== 'number' || amount < 0) {
+    throw new Error('Amount must be a non-negative number when calculating platform fee');
+  }
+
+  const envValue = process.env.PLATFORM_FEE_PERCENTAGE;
+  if (envValue !== undefined) {
+    const percentage = getPlatformFeePercentage();
+    return Math.floor(amount * percentage);
+  }
+
+  try {
+    const fee = await calculatePlatformFeeOnChain(amount);
+    if (typeof fee === 'number' && Number.isFinite(fee)) {
+      return fee;
+    }
+  } catch (error) {
+    logger.warn('Contract platform fee lookup failed, falling back to configured fee percentage', {
+      error: error.message,
+      feePercentage: getPlatformFeePercentage()
+    });
+  }
+
+  return Math.floor(amount * getPlatformFeePercentage());
+};
+
+const calculateCreatorAmount = (amount, platformFee) => {
+  if (typeof amount !== 'number' || typeof platformFee !== 'number') {
+    throw new Error('Amount and platform fee must be numbers to calculate creator amount');
+  }
+
+  return Math.max(0, amount - platformFee);
+};
+
 const getCollaborators = async (contentId) => {
   try {
+    if (contentId === undefined || contentId === null) {
+      return [];
+    }
+
     const collaborators = await Collaborator.find({ contentId, isActive: true });
     return collaborators;
   } catch (error) {
@@ -16,166 +69,212 @@ const getCollaborators = async (contentId) => {
   }
 };
 
-/**
- * Add a collaborator to content
- * @param {number} contentId - Content ID
- * @param {string} address - Collaborator address
- * @param {number} royaltyPercentage - Royalty percentage (0-100)
- * @param {string} name - Collaborator name
- * @param {string} role - Collaborator role
- * @returns {Promise<Object>} Created collaborator
- */
-const addCollaborator = async (contentId, address, royaltyPercentage, name, role) => {
+const addCollaborator = async (contentId, address, royaltyPercentage, name = null, role = 'contributor') => {
+  if (!contentId || !address || typeof royaltyPercentage !== 'number') {
+    throw new Error('Content ID, collaborator address, and royalty percentage are required');
+  }
+
+  const collaborator = new Collaborator({
+    contentId,
+    address,
+    royaltyPercentage,
+    name,
+    role,
+    isActive: true
+  });
+
   try {
-    // Validate royalty percentage
-    if (royaltyPercentage < 0 || royaltyPercentage > 100) {
-      throw new Error('Royalty percentage must be between 0 and 100');
-    }
-
-    // Check total royalty allocation
-    const existingCollaborators = await Collaborator.find({ contentId, isActive: true });
-    const totalRoyalty = existingCollaborators.reduce((sum, c) => sum + c.royaltyPercentage, 0);
-    
-    if (totalRoyalty + royaltyPercentage > 100) {
-      throw new Error(`Total royalty allocation would exceed 100% (current: ${totalRoyalty}%, adding: ${royaltyPercentage}%)`);
-    }
-
-    const collaborator = new Collaborator({
-      contentId,
-      address,
-      royaltyPercentage,
-      name: name || null,
-      role: role || 'contributor'
-    });
-
-    const saved = await collaborator.save();
-    return saved;
+    return await collaborator.save();
   } catch (error) {
     throw new Error(`Failed to add collaborator: ${error.message}`);
   }
 };
 
-/**
- * Update a collaborator's royalty percentage
- * @param {string} collaboratorId - Collaborator MongoDB ID
- * @param {number} newRoyaltyPercentage - New royalty percentage
- * @returns {Promise<Object>} Updated collaborator
- */
-const updateCollaboratorRoyalty = async (collaboratorId, newRoyaltyPercentage) => {
-  try {
-    if (newRoyaltyPercentage < 0 || newRoyaltyPercentage > 100) {
-      throw new Error('Royalty percentage must be between 0 and 100');
-    }
-
-    const collaborator = await Collaborator.findById(collaboratorId);
-    if (!collaborator) {
-      throw new Error('Collaborator not found');
-    }
-
-    // Check total royalty allocation
-    const existingCollaborators = await Collaborator.find({ 
-      contentId: collaborator.contentId, 
-      isActive: true,
-      _id: { $ne: collaboratorId }
-    });
-    const totalRoyalty = existingCollaborators.reduce((sum, c) => sum + c.royaltyPercentage, 0);
-    
-    if (totalRoyalty + newRoyaltyPercentage > 100) {
-      throw new Error(`Total royalty allocation would exceed 100%`);
-    }
-
-    collaborator.royaltyPercentage = newRoyaltyPercentage;
-    const updated = await collaborator.save();
-    return updated;
-  } catch (error) {
-    throw new Error(`Failed to update collaborator: ${error.message}`);
+const updateCollaboratorRoyalty = async (collaboratorId, royaltyPercentage) => {
+  if (!collaboratorId || typeof royaltyPercentage !== 'number') {
+    throw new Error('Collaborator ID and royalty percentage are required');
   }
+
+  const collaborator = await Collaborator.findById(collaboratorId);
+  if (!collaborator) {
+    throw new Error('Collaborator not found');
+  }
+
+  collaborator.royaltyPercentage = royaltyPercentage;
+  return collaborator.save();
 };
 
-/**
- * Remove a collaborator from content
- * @param {string} collaboratorId - Collaborator MongoDB ID
- * @returns {Promise<void>}
- */
 const removeCollaborator = async (collaboratorId) => {
-  try {
-    const collaborator = await Collaborator.findById(collaboratorId);
-    if (!collaborator) {
-      throw new Error('Collaborator not found');
-    }
-    
-    collaborator.isActive = false;
-    await collaborator.save();
-  } catch (error) {
-    throw new Error(`Failed to remove collaborator: ${error.message}`);
+  if (!collaboratorId) {
+    throw new Error('Collaborator ID is required');
   }
+
+  const collaborator = await Collaborator.findById(collaboratorId);
+  if (!collaborator) {
+    throw new Error('Collaborator not found');
+  }
+
+  collaborator.isActive = false;
+  return collaborator.save();
 };
 
-/**
- * Distribute royalties from a purchase to collaborators
- * @param {Object} purchase - Purchase record
- * @returns {Promise<Array>} Array of distribution records
- */
+const buildRoyaltyDistributions = async ({
+  contentId = null,
+  creatorAddress,
+  collaborators = [],
+  totalAmount,
+  sourceType = 'purchase',
+  purchaseId = null,
+  subscriptionId = null,
+  subscriptionRenewalId = null
+}) => {
+  if (!creatorAddress || typeof totalAmount !== 'number') {
+    throw new Error('Creator address and total amount are required to build royalty distributions');
+  }
+
+  const records = [];
+  let remainingAmount = totalAmount;
+  const activeCollaborators = collaborators.filter(c => c.isActive !== false && c.royaltyPercentage > 0);
+
+  for (const collaborator of activeCollaborators) {
+    if (remainingAmount <= 0) {
+      break;
+    }
+
+    let royaltyAmount = Math.floor((totalAmount * collaborator.royaltyPercentage) / 100);
+    royaltyAmount = Math.min(royaltyAmount, remainingAmount);
+
+    if (royaltyAmount <= 0) {
+      continue;
+    }
+
+    remainingAmount -= royaltyAmount;
+    const distribution = new RoyaltyDistribution({
+      purchaseId,
+      subscriptionId,
+      subscriptionRenewalId,
+      sourceType,
+      contentId,
+      collaboratorAddress: collaborator.address,
+      royaltyPercentage: collaborator.royaltyPercentage,
+      totalAmount,
+      royaltyAmount,
+      status: 'pending'
+    });
+
+    records.push(distribution);
+  }
+
+  if (remainingAmount > 0) {
+    const ownerRoyaltyPercentage = activeCollaborators.length > 0
+      ? Math.max(0, 100 - activeCollaborators.reduce((total, c) => total + c.royaltyPercentage, 0))
+      : 100;
+
+    records.push(new RoyaltyDistribution({
+      purchaseId,
+      subscriptionId,
+      subscriptionRenewalId,
+      sourceType,
+      contentId,
+      collaboratorAddress: creatorAddress,
+      royaltyPercentage: ownerRoyaltyPercentage,
+      totalAmount,
+      royaltyAmount: remainingAmount,
+      status: 'pending'
+    }));
+  }
+
+  const savedRecords = [];
+  for (const record of records) {
+    savedRecords.push(await record.save());
+  }
+
+  return savedRecords;
+};
+
 const distributePurchaseRoyalties = async (purchase) => {
   try {
+    if (!purchase) {
+      throw new Error('Purchase object is required for royalty distribution');
+    }
+
+    const amount = purchase.amount || 0;
+    const platformFee = purchase.platformFee !== undefined && purchase.platformFee !== null
+      ? purchase.platformFee
+      : await calculatePlatformFee(amount);
+
+    const creatorAmount = purchase.creatorAmount !== undefined && purchase.creatorAmount !== null
+      ? purchase.creatorAmount
+      : calculateCreatorAmount(amount, platformFee);
+
     const collaborators = await getCollaborators(purchase.contentId);
-    
-    if (collaborators.length === 0) {
-      return []; // No collaborators, no distributions needed
-    }
-
-    const distributions = [];
-    const creatorAmount = purchase.creatorAmount;
-
-    for (const collaborator of collaborators) {
-      const royaltyAmount = Math.floor((creatorAmount * collaborator.royaltyPercentage) / 100);
-      
-      if (royaltyAmount > 0) {
-        const distribution = new RoyaltyDistribution({
-          purchaseId: purchase._id,
-          contentId: purchase.contentId,
-          collaboratorAddress: collaborator.address,
-          royaltyPercentage: collaborator.royaltyPercentage,
-          totalAmount: creatorAmount,
-          royaltyAmount,
-          status: 'pending'
-        });
-
-        const saved = await distribution.save();
-        distributions.push(saved);
-      }
-    }
+    const distributions = await buildRoyaltyDistributions({
+      contentId: purchase.contentId,
+      creatorAddress: purchase.creator,
+      collaborators,
+      totalAmount: creatorAmount,
+      sourceType: 'purchase',
+      purchaseId: purchase._id
+    });
 
     return distributions;
   } catch (error) {
-    throw new Error(`Failed to distribute royalties: ${error.message}`);
+    throw new Error(`Failed to distribute purchase royalties: ${error.message}`);
   }
 };
 
-/**
- * Get pending distributions for a collaborator
- * @param {string} collaboratorAddress - Collaborator address
- * @returns {Promise<Array>} Array of pending distributions
- */
+const distributeSubscriptionRoyalties = async (subscription) => {
+  try {
+    if (!subscription) {
+      throw new Error('Subscription object is required for royalty distribution');
+    }
+
+    const amount = subscription.renewalAmount !== undefined && subscription.renewalAmount !== null
+      ? subscription.renewalAmount
+      : subscription.amount || 0;
+
+    const platformFee = subscription.platformFee !== undefined && subscription.platformFee !== null
+      ? subscription.platformFee
+      : await calculatePlatformFee(amount);
+
+    const creatorAmount = subscription.creatorAmount !== undefined && subscription.creatorAmount !== null
+      ? subscription.creatorAmount
+      : calculateCreatorAmount(amount, platformFee);
+
+    const collaborators = await getCollaborators(subscription.contentId);
+    const distributions = await buildRoyaltyDistributions({
+      contentId: subscription.contentId || null,
+      creatorAddress: subscription.creator,
+      collaborators,
+      totalAmount: creatorAmount,
+      sourceType: subscription.subscriptionRenewalId ? 'subscription-renewal' : 'subscription',
+      subscriptionId: subscription._id,
+      subscriptionRenewalId: subscription.subscriptionRenewalId || null
+    });
+
+    return distributions;
+  } catch (error) {
+    throw new Error(`Failed to distribute subscription royalties: ${error.message}`);
+  }
+};
+
 const getPendingDistributions = async (collaboratorAddress) => {
   try {
     const distributions = await RoyaltyDistribution.find({
       collaboratorAddress,
       status: 'pending'
-    }).populate('purchaseId').sort({ createdAt: -1 });
-    
+    })
+      .populate('purchaseId')
+      .populate('subscriptionId')
+      .populate('subscriptionRenewalId')
+      .sort({ createdAt: -1 });
+
     return distributions;
   } catch (error) {
     throw new Error(`Failed to fetch pending distributions: ${error.message}`);
   }
 };
 
-/**
- * Get distribution history for a collaborator
- * @param {string} collaboratorAddress - Collaborator address
- * @param {Object} options - Query options (limit, skip, etc.)
- * @returns {Promise<Array>} Array of distributions
- */
 const getDistributionHistory = async (collaboratorAddress, options = {}) => {
   try {
     const limit = options.limit || 50;
@@ -185,6 +284,8 @@ const getDistributionHistory = async (collaboratorAddress, options = {}) => {
       collaboratorAddress
     })
       .populate('purchaseId')
+      .populate('subscriptionId')
+      .populate('subscriptionRenewalId')
       .sort({ createdAt: -1 })
       .limit(limit)
       .skip(skip);
@@ -197,11 +298,6 @@ const getDistributionHistory = async (collaboratorAddress, options = {}) => {
   }
 };
 
-/**
- * Get royalty summary for a content
- * @param {number} contentId - Content ID
- * @returns {Promise<Object>} Royalty summary with collaborator details and earnings
- */
 const getContentRoyaltySummary = async (contentId) => {
   try {
     const collaborators = await getCollaborators(contentId);
@@ -219,7 +315,6 @@ const getContentRoyaltySummary = async (contentId) => {
       }))
     };
 
-    // Calculate earnings per collaborator
     for (const distribution of distributions) {
       const collab = summary.collaborators.find(c => c.address === distribution.collaboratorAddress);
       if (collab && distribution.status === 'completed') {
@@ -233,12 +328,6 @@ const getContentRoyaltySummary = async (contentId) => {
   }
 };
 
-/**
- * Mark distribution as completed (called after successful payout)
- * @param {string} distributionId - Distribution MongoDB ID
- * @param {string} txId - Transaction ID from blockchain
- * @returns {Promise<Object>} Updated distribution
- */
 const markDistributionCompleted = async (distributionId, txId) => {
   try {
     const distribution = await RoyaltyDistribution.findById(distributionId);
@@ -257,12 +346,6 @@ const markDistributionCompleted = async (distributionId, txId) => {
   }
 };
 
-/**
- * Mark distribution as failed
- * @param {string} distributionId - Distribution MongoDB ID
- * @param {string} reason - Failure reason
- * @returns {Promise<Object>} Updated distribution
- */
 const markDistributionFailed = async (distributionId, reason) => {
   try {
     const distribution = await RoyaltyDistribution.findById(distributionId);
@@ -281,11 +364,15 @@ const markDistributionFailed = async (distributionId, reason) => {
 };
 
 module.exports = {
+  getPlatformFeePercentage,
+  calculatePlatformFee,
+  calculateCreatorAmount,
   getCollaborators,
   addCollaborator,
   updateCollaboratorRoyalty,
   removeCollaborator,
   distributePurchaseRoyalties,
+  distributeSubscriptionRoyalties,
   getPendingDistributions,
   getDistributionHistory,
   getContentRoyaltySummary,
