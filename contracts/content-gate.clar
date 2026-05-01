@@ -52,6 +52,9 @@
 ;; The threshold is the minimum amount of tokens required to gain access
 (define-public (set-gating-rule (content-id uint) (token-contract principal) (threshold uint) (gating-type uint))
     (begin
+        ;; Check if content exists
+        (asserts! (is-some (contract-call? .pay-per-view get-content-info content-id)) ERR-CONTENT-NOT-FOUND)
+        
         ;; Check if tx-sender is the creator
         (asserts! (is-creator content-id tx-sender) ERR-NOT-AUTHORIZED)
         
