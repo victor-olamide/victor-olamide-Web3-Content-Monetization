@@ -25,6 +25,18 @@ const EarningsCard: React.FC = () => {
             </>
           )}
         </div>
+        {!loading && earnings && (
+          <div className="mt-4 grid grid-cols-2 gap-4">
+            <div className="bg-gray-50 p-3 rounded-lg">
+              <p className="text-xs text-gray-500 font-medium">PPV</p>
+              <p className="text-lg font-bold text-indigo-600">{earnings.ppvEarnings.toFixed(2)}</p>
+            </div>
+            <div className="bg-gray-50 p-3 rounded-lg">
+              <p className="text-xs text-gray-500 font-medium">Subs</p>
+              <p className="text-lg font-bold text-green-600">{earnings.subscriptionEarnings.toFixed(2)}</p>
+            </div>
+          </div>
+        )}
       </div>
       
       {userData && (
