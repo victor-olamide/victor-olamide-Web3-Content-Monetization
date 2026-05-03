@@ -97,6 +97,28 @@ clarinet integrate
 
 For detailed deployment instructions, see [DEPLOYMENT.md](DEPLOYMENT.md).
 
+## 🧪 Integration Testing
+
+### Run Integration Tests on Testnet
+
+```bash
+cd integration-tests
+npm install
+cp .env.example .env
+# Edit .env with your testnet keys
+npm test
+```
+
+### Test Suites
+
+- **Pay-Per-View**: Content purchase and access
+- **Subscriptions**: Tier creation and user subscriptions
+- **Token Gating**: FT/NFT access control
+- **Backend API**: Access verification and delivery
+- **End-to-End**: Complete user journey
+
+For detailed testing instructions, see [integration-tests/README.md](integration-tests/README.md).
+
 ## 📜 License
 
 Distributed under the MIT License. See `LICENSE` for more information.
