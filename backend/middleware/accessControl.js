@@ -1,4 +1,5 @@
 const { verifyAccess } = require('../services/accessService');
+const { logAccess } = require('../services/accessLogger');
 
 /**
  * Middleware to verify access before serving content
@@ -16,6 +17,17 @@ async function verifyContentAccess(req, res, next) {
     }
 
     const result = await verifyAccess(parseInt(contentId), userAddress);
+
+    // Log access attempt
+    await logAccess({
+      userAddress,
+      contentId: parseInt(contentId),
+      accessMethod: result.method || 'unknown',
+      accessGranted: result.allowed,
+      reason: result.reason,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent']
+    });
 
     if (!result.allowed) {
       return res.status(403).json({ 
