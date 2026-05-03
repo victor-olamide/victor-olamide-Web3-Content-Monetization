@@ -1,0 +1,16 @@
+# Clarinet
+.cache/
+cache/
+coverage.lcov
+*.profraw
+
+# Deployment artifacts
+deployments/*.json
+deployments/*.log
+
+# Settings with secrets
+settings/Testnet.toml
+settings/Mainnet.toml
+
+# Keep example files
+!settings/*.example.toml
