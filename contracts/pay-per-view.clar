@@ -114,3 +114,7 @@
 (define-read-only (is-owner (user principal))
     (is-eq user contract-owner)
 )
+
+(define-read-only (get-platform-fee)
+    (var-get platform-fee)
+)
