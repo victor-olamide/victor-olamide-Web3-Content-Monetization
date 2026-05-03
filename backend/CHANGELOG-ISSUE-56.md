@@ -66,3 +66,8 @@ Implemented comprehensive royalty distribution system enabling revenue sharing a
 - Test collaborator add/update/remove operations
 - Verify royalty percentage validation
 - Test distribution calculations
+
+## Future Enhancements
+- On-chain royalty payments via smart contract
+- Batch distribution processing
+- Automated payout scheduling
