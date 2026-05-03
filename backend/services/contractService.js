@@ -62,8 +62,28 @@ const addContentToContract = async (contentId, price, uri, privateKey) => {
   return broadcastResponse;
 };
 
+const removeContentFromContract = async (contentId, privateKey) => {
+  const txOptions = {
+    contractAddress: process.env.CONTRACT_ADDRESS,
+    contractName: 'pay-per-view',
+    functionName: 'remove-content',
+    functionArgs: [uintCV(contentId)],
+    senderKey: privateKey,
+    validateWithAbi: true,
+    network,
+    anchorMode: AnchorMode.Any,
+    postConditionMode: PostConditionMode.Allow,
+  };
+
+  const transaction = await makeContractCall(txOptions);
+  const broadcastResponse = await broadcastTransaction(transaction, network);
+  
+  return broadcastResponse;
+};
+
 module.exports = {
   addContentToContract,
+  removeContentFromContract,
   getPlatformFee,
   calculatePlatformFee,
 };

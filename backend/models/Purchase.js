@@ -8,6 +8,10 @@ const purchaseSchema = new mongoose.Schema({
   amount: { type: Number, required: true },
   platformFee: { type: Number, default: 0 },
   creatorAmount: { type: Number, required: true },
+  refundStatus: { type: String, enum: ['none', 'pending', 'processing', 'completed', 'failed'], default: 'none' },
+  refundAmount: { type: Number, default: null },
+  refundTxId: { type: String, default: null },
+  refundedAt: { type: Date, default: null },
   timestamp: { type: Date, default: Date.now }
 });
 
