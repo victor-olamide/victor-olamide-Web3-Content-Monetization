@@ -13,8 +13,20 @@ const {
 describe('Pay-Per-View Integration Test', () => {
   jest.setTimeout(config.timeout);
 
-  const { creator, user1 } = config.testAccounts;
+  const { creator, user1, deployer } = config.testAccounts;
   const { contentId, price, uri } = config.testContent;
+
+  test('Platform fee is configured correctly', async () => {
+    const platformFee = await readContract(
+      'pay-per-view',
+      'get-platform-fee',
+      [],
+      deployer.address
+    );
+
+    expect(platformFee.value).toBeDefined();
+    expect(parseInt(platformFee.value)).toBeGreaterThanOrEqual(0);
+  });
 
   test('Creator adds content to contract', async () => {
     const txId = await callContract(
