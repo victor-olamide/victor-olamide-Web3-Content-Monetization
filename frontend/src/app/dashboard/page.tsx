@@ -7,6 +7,7 @@ import RevenueChart from "@/components/RevenueChart";
 import StatsOverview from "@/components/StatsOverview";
 import EarningsBreakdown from "@/components/EarningsBreakdown";
 import TransactionList from "@/components/TransactionList";
+import TopContent from "@/components/TopContent";
 import UploadContent from "@/components/UploadContent";
 import TokenGating from "@/components/TokenGating";
 import PurchaseHistory from "@/components/PurchaseHistory";
@@ -42,9 +43,10 @@ export default function Dashboard() {
           <RevenueChart />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <EarningsBreakdown />
           <TransactionList />
+          <TopContent />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
