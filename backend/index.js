@@ -27,6 +27,7 @@ const gatingRoutes = require('./routes/gatingRoutes');
 const accessRoutes = require('./routes/accessRoutes');
 const creatorRoutes = require('./routes/creatorRoutes');
 const deliveryRoutes = require('./routes/deliveryRoutes');
+const analyticsRoutes = require('./routes/analyticsRoutes');
 
 app.use('/api/content', contentRoutes);
 app.use('/api/purchases', purchaseRoutes);
@@ -35,6 +36,7 @@ app.use('/api/gating', gatingRoutes);
 app.use('/api/access', accessRoutes);
 app.use('/api/creator', creatorRoutes);
 app.use('/api/delivery', deliveryRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // Start Indexer
 const indexer = require('./services/indexer');
