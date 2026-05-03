@@ -24,6 +24,9 @@
 ;; Mapping of content ID and user principal to access status
 (define-map content-access { content-id: uint, user: principal } bool)
 
+;; Mapping of content ID and user principal to purchase block height
+(define-map purchase-blocks { content-id: uint, user: principal } uint)
+
 ;; Public functions
 
 ;; Register new content with a specific price and URI
