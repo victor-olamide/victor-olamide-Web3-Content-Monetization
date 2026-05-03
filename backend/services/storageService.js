@@ -26,6 +26,23 @@ const getGatewayUrl = (ipfsUrl) => {
   return `https://gateway.pinata.cloud/ipfs/${hash}`;
 };
 
+const getContentFromStorage = async (url, storageType) => {
+  try {
+    if (storageType === 'ipfs') {
+      const gatewayUrl = getGatewayUrl(url);
+      const response = await axios.get(gatewayUrl, { responseType: 'arraybuffer' });
+      return response.data;
+    } else if (storageType === 'gaia') {
+      const response = await axios.get(url, { responseType: 'arraybuffer' });
+      return response.data;
+    }
+    throw new Error('Unsupported storage type');
+  } catch (err) {
+    console.error('Storage retrieval error:', err);
+    throw err;
+  }
+};
+
 const checkStorageHealth = async () => {
   try {
     const url = `https://api.pinata.cloud/data/testAuthentication`;
@@ -52,5 +69,6 @@ module.exports = {
   uploadToIPFS,
   uploadToGaia,
   getGatewayUrl,
+  getContentFromStorage,
   checkStorageHealth,
 };
