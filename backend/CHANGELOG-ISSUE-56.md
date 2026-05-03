@@ -71,3 +71,8 @@ Implemented comprehensive royalty distribution system enabling revenue sharing a
 - On-chain royalty payments via smart contract
 - Batch distribution processing
 - Automated payout scheduling
+
+## Notes
+- Royalty distribution triggered on purchase creation
+- Failed distributions do not block purchases
+- Can be retried via scheduled tasks
