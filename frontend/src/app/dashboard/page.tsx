@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import EarningsCard from "@/components/EarningsCard";
 import UploadContent from "@/components/UploadContent";
 import TokenGating from "@/components/TokenGating";
+import PurchaseHistory from "@/components/PurchaseHistory";
 import ContentList from "@/components/ContentList";
 import DashboardShell from "@/components/DashboardShell";
 import { useEffect } from "react";
@@ -28,6 +29,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
           <div className="space-y-8">
             <EarningsCard />
+            <PurchaseHistory />
             <TokenGating />
           </div>
           <div className="md:col-span-2">
