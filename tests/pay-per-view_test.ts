@@ -200,3 +200,14 @@ Clarinet.test({
         feeResult.result.expectUint(250);
     },
 });
+
+Clarinet.test({
+    name: "Can retrieve platform wallet",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get('deployer')!;
+
+        let walletResult = chain.callReadOnlyFn('pay-per-view', 'get-platform-wallet', [], deployer.address);
+        
+        walletResult.result.expectPrincipal(deployer.address);
+    },
+});
