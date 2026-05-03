@@ -204,6 +204,65 @@ router.post('/:contentId/remove', verifyCreatorOwnership, async (req, res) => {
   }
 });
 
+// Update content metadata and price (creators only)
+router.patch('/:contentId', verifyCreatorOwnership, async (req, res) => {
+  try {
+    const { contentId } = req.params;
+    const content = req.content; // set by verifyCreatorOwnership
+    const updates = {};
+
+    // Allowed updatable fields
+    const updatable = ['title', 'description', 'contentType', 'price', 'url', 'tokenGating', 'refundable', 'refundWindowDays'];
+
+    updatable.forEach(field => {
+      if (typeof req.body[field] !== 'undefined') updates[field] = req.body[field];
+    });
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ message: 'No valid fields to update' });
+    }
+
+    // If price is being updated, validate and update on-chain as well
+    let txResult = null;
+    if (typeof updates.price !== 'undefined') {
+      const newPrice = parseInt(updates.price);
+      if (isNaN(newPrice) || newPrice < 0) {
+        return res.status(400).json({ message: 'Invalid price value' });
+      }
+
+      // update on-chain using creator's private key
+      const creatorKey = process.env.CREATOR_PRIVATE_KEY;
+      if (!creatorKey) {
+        return res.status(500).json({ message: 'Creator private key not configured for on-chain update' });
+      }
+
+      try {
+        const { updateContentPrice } = require('../services/contractService');
+        txResult = await updateContentPrice(parseInt(contentId), newPrice, creatorKey);
+      } catch (err) {
+        console.error('Failed to update price on-chain:', err);
+        return res.status(500).json({ message: 'Failed to update price on-chain', error: err.message });
+      }
+    }
+
+    // Apply updates to DB
+    Object.keys(updates).forEach(k => {
+      content[k] = updates[k];
+    });
+
+    await content.save();
+
+    res.json({
+      message: 'Content updated successfully',
+      content,
+      transactionId: txResult ? txResult.txid : null
+    });
+  } catch (err) {
+    console.error('Content update error:', err);
+    res.status(500).json({ message: 'Failed to update content', error: err.message });
+  }
+});
+
 // Get refund status for a content
 router.get('/:contentId/refunds', verifyCreatorOwnership, async (req, res) => {
   try {
