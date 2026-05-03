@@ -172,3 +172,20 @@ Clarinet.test({
         assertEquals(creatorBalance, 100000000 + 975000);
     },
 });
+
+Clarinet.test({
+    name: "Only owner can set platform wallet",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get('deployer')!;
+        const user = accounts.get('wallet_1')!;
+        const newWallet = accounts.get('wallet_2')!;
+
+        let block = chain.mineBlock([
+            Tx.contractCall('pay-per-view', 'set-platform-wallet', [
+                types.principal(newWallet.address)
+            ], user.address)
+        ]);
+
+        block.receipts[0].result.expectErr().expectUint(401);
+    },
+});
