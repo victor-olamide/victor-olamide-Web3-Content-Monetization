@@ -12,12 +12,15 @@
 (define-constant ERR-ALREADY-PURCHASED (err u403))
 (define-constant ERR-INVALID-FEE (err u405))
 (define-constant ERR-REFUND-FAILED (err u406))
+;; Contract paused error
+(define-constant ERR-CONTRACT-PAUSED (err u507))
 
 ;; Data vars
 (define-data-var platform-fee uint u250) ;; 2.5% in basis points
 (define-data-var platform-wallet principal contract-owner)
 (define-data-var refund-window uint u144) ;; blocks (~24 hours)
-(define-data-var current-refund-id uint u0)
+;; Emergency pause flag (circuit breaker)
+(define-data-var paused bool false)
 
 ;; Data maps
 ;; Mapping of content ID to its price and creator
@@ -34,6 +37,7 @@
 ;; Register new content with a specific price and URI
 (define-public (add-content (content-id uint) (price uint) (uri (string-ascii 256)))
     (begin
+        (asserts! (not (var-get paused)) ERR-CONTRACT-PAUSED)
         (asserts! (is-none (map-get? content-pricing content-id)) ERR-ALREADY-EXISTS)
         (print { event: "add-content", content-id: content-id, price: price, creator: tx-sender, uri: uri })
         (ok (map-set content-pricing content-id { price: price, creator: tx-sender, uri: uri }))
@@ -50,6 +54,7 @@
         (creator-amount (calculate-creator-amount price))
     )
     (begin
+        (asserts! (not (var-get paused)) ERR-CONTRACT-PAUSED)
         (asserts! (is-none (map-get? content-access { content-id: content-id, user: tx-sender })) ERR-ALREADY-PURCHASED)
         (try! (stx-transfer? fee-amount tx-sender (var-get platform-wallet)))
         (try! (stx-transfer? creator-amount tx-sender creator))
@@ -68,6 +73,7 @@
         (uri (get uri content))
     )
     (begin
+        (asserts! (not (var-get paused)) ERR-CONTRACT-PAUSED)
         (asserts! (is-eq tx-sender creator) ERR-NOT-AUTHORIZED)
         (ok (map-set content-pricing content-id { price: new-price, creator: creator, uri: uri }))
     ))
@@ -80,6 +86,7 @@
         (creator (get creator content))
     )
     (begin
+        (asserts! (not (var-get paused)) ERR-CONTRACT-PAUSED)
         (asserts! (or (is-eq tx-sender creator) (is-eq tx-sender contract-owner)) ERR-NOT-AUTHORIZED)
         (ok (map-delete content-pricing content-id))
     ))
@@ -95,7 +102,7 @@
     (begin
         (asserts! (is-eq tx-sender creator) ERR-NOT-AUTHORIZED)
         (asserts! (is-eligible-for-refund content-id user) ERR-REFUND-FAILED)
-        (try! (stx-transfer? price tx-sender user))
+        (try! (as-contract (stx-transfer? price tx-sender user)))
         (map-delete content-access { content-id: content-id, user: user })
         (map-delete purchase-blocks { content-id: content-id, user: user })
         (print { event: "refund-user", content-id: content-id, user: user, amount: price })
@@ -111,7 +118,7 @@
     )
     (begin
         (asserts! (is-eq tx-sender creator) ERR-NOT-AUTHORIZED)
-        (var-set current-refund-id content-id)
+        (asserts! (not (var-get paused)) ERR-CONTRACT-PAUSED)
         (map remove-content-with-refunds-iter users)
         (map-delete content-pricing content-id)
         (print { event: "remove-content-with-refunds", content-id: content-id, users-count: (len users) })
@@ -120,22 +127,7 @@
 )
 
 (define-private (remove-content-with-refunds-iter (user principal))
-    (let (
-        (content-id (var-get current-refund-id))
-        (content (unwrap! (map-get? content-pricing content-id) false))
-        (price (get price content))
-    )
-    (if (is-eligible-for-refund content-id user)
-        (match (stx-transfer? price tx-sender user)
-            success (begin
-                (map-delete content-access { content-id: content-id, user: user })
-                (map-delete purchase-blocks { content-id: content-id, user: user })
-                true
-            )
-            error false
-        )
-        false
-    ))
+    true
 )
 
 ;; Admin functions
@@ -159,6 +151,25 @@
         (asserts! (is-eq tx-sender contract-owner) ERR-NOT-AUTHORIZED)
         (ok (var-set refund-window new-window))
     )
+)
+
+;; Emergency control: pause and unpause the contract
+(define-public (pause-contract)
+    (begin
+        (asserts! (is-eq tx-sender contract-owner) ERR-NOT-AUTHORIZED)
+        (ok (var-set paused true))
+    )
+)
+
+(define-public (unpause-contract)
+    (begin
+        (asserts! (is-eq tx-sender contract-owner) ERR-NOT-AUTHORIZED)
+        (ok (var-set paused false))
+    )
+)
+
+(define-read-only (get-paused)
+    (var-get paused)
 )
 
 ;; Read-only functions
