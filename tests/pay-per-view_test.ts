@@ -362,3 +362,34 @@ Clarinet.test({
         block.receipts[2].result.expectErr().expectUint(401);
     },
 });
+
+Clarinet.test({
+    name: "Creator can remove content with refunds",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get('deployer')!;
+        const user1 = accounts.get('wallet_1')!;
+        const user2 = accounts.get('wallet_2')!;
+        const contentId = 1;
+        const price = 1000000;
+
+        let block = chain.mineBlock([
+            Tx.contractCall('pay-per-view', 'add-content', [
+                types.uint(contentId),
+                types.uint(price),
+                types.ascii("ipfs://test")
+            ], deployer.address),
+            Tx.contractCall('pay-per-view', 'purchase-content', [
+                types.uint(contentId)
+            ], user1.address),
+            Tx.contractCall('pay-per-view', 'purchase-content', [
+                types.uint(contentId)
+            ], user2.address),
+            Tx.contractCall('pay-per-view', 'remove-content-with-refunds', [
+                types.uint(contentId),
+                types.list([types.principal(user1.address), types.principal(user2.address)])
+            ], deployer.address)
+        ]);
+
+        block.receipts[3].result.expectOk().expectBool(true);
+    },
+});
