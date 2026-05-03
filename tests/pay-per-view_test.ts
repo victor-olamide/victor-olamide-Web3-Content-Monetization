@@ -404,3 +404,19 @@ Clarinet.test({
         windowResult.result.expectUint(144);
     },
 });
+
+Clarinet.test({
+    name: "Only owner can set refund window",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get('deployer')!;
+        const user = accounts.get('wallet_1')!;
+
+        let block = chain.mineBlock([
+            Tx.contractCall('pay-per-view', 'set-refund-window', [
+                types.uint(288)
+            ], user.address)
+        ]);
+
+        block.receipts[0].result.expectErr().expectUint(401);
+    },
+});
