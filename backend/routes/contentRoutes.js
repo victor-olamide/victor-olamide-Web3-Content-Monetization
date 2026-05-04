@@ -4,6 +4,7 @@ const multer = require('multer');
 const Content = require('../models/Content');
 const Purchase = require('../models/Purchase');
 const { uploadToIPFS } = require('../services/storageService');
+const { uploadFileToIPFS, uploadMetadataToIPFS, getGatewayUrl } = require('../services/ipfsService');
 const { addContentToContract, removeContentFromContract } = require('../services/contractService');
 const { verifyCreatorOwnership, checkContentNotRemoved } = require('../middleware/creatorAuth');
 const { initiateRefund, getPendingRefundsForCreator } = require('../services/refundService');
@@ -41,6 +42,86 @@ router.post('/upload', (req, res) => {
       res.json({ url: ipfsUrl });
     } catch (err) {
       res.status(500).json({ message: 'Failed to upload to IPFS', error: err.message });
+    }
+  });
+});
+
+// Enhanced IPFS upload with progress tracking and retry logic
+router.post('/upload-ipfs', (req, res) => {
+  upload.single('file')(req, res, async (err) => {
+    if (err instanceof multer.MulterError) {
+      return res.status(400).json({ message: 'Multer error', error: err.message });
+    } else if (err) {
+      return res.status(400).json({ message: 'Upload error', error: err.message });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    try {
+      const { metadata, tags } = req.body;
+      const parsedMetadata = metadata ? JSON.parse(metadata) : {};
+      const parsedTags = tags ? tags.split(',').map(t => t.trim()) : [];
+
+      console.log(`[IPFS Upload] Starting upload for ${req.file.originalname}`);
+
+      // Upload file to IPFS with retry logic
+      let ipfsHash;
+      let attempts = 0;
+      const maxAttempts = 3;
+
+      while (attempts < maxAttempts) {
+        try {
+          // Mock progress reporting (in production, use streaming)
+          res.write(`data: {"status":"uploading","progress":${Math.min(attempts * 30, 90)}} \n\n`);
+          
+          ipfsHash = await uploadFileToIPFS(
+            req.file.buffer,
+            req.file.originalname,
+            {
+              metadata: parsedMetadata,
+              tags: parsedTags,
+              public: true
+            },
+            (percent) => {
+              // Progress callback - could be streamed to client in production
+              console.log(`[IPFS Upload] Progress: ${percent}%`);
+            }
+          );
+          break;
+        } catch (err) {
+          attempts++;
+          console.error(`[IPFS Upload] Attempt ${attempts} failed:`, err.message);
+          if (attempts >= maxAttempts) {
+            throw err;
+          }
+          // Exponential backoff
+          await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempts - 1)));
+        }
+      }
+
+      const ipfsUrl = `ipfs://${ipfsHash}`;
+      const gatewayUrl = getGatewayUrl(ipfsUrl);
+
+      console.log(`[IPFS Upload] Successfully uploaded: ${ipfsUrl}`);
+
+      res.json({
+        success: true,
+        ipfsHash,
+        ipfsUrl,
+        gatewayUrl,
+        fileName: req.file.originalname,
+        fileSize: req.file.size,
+        contentType: req.file.mimetype
+      });
+    } catch (err) {
+      console.error('[IPFS Upload] Error:', err);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to upload to IPFS',
+        error: err.message
+      });
     }
   });
 });
