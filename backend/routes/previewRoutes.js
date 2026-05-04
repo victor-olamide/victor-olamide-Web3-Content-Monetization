@@ -5,6 +5,14 @@ const ContentPreview = require('../models/ContentPreview');
 const Content = require('../models/Content');
 const { verifyCreatorOwnership } = require('../middleware/creatorAuth');
 const { uploadFileToIPFS } = require('../services/ipfsService');
+const {
+  validateContentId,
+  validatePreviewData,
+  validateBatchContentIds,
+  validateEventType,
+  validatePaginationParams,
+  validateContentType
+} = require('../middleware/previewValidation');
 const multer = require('multer');
 
 const upload = multer({
@@ -18,7 +26,7 @@ const upload = multer({
  * Get preview for specific content (public)
  * GET /api/preview/:contentId
  */
-router.get('/:contentId', async (req, res) => {
+router.get('/:contentId', validateContentId, async (req, res) => {
   try {
     const { contentId } = req.params;
     const preview = await previewService.getPreview(parseInt(contentId));
@@ -33,7 +41,7 @@ router.get('/:contentId', async (req, res) => {
  * Get previews for multiple content items
  * POST /api/preview/batch/get
  */
-router.post('/batch/get', async (req, res) => {
+router.post('/batch/get', validateBatchContentIds, async (req, res) => {
   try {
     const { contentIds } = req.body;
     if (!Array.isArray(contentIds)) {
@@ -52,7 +60,7 @@ router.post('/batch/get', async (req, res) => {
  * Get previews by content type
  * GET /api/preview/type/:contentType
  */
-router.get('/type/:contentType', async (req, res) => {
+router.get('/type/:contentType', validateContentType, validatePaginationParams, async (req, res) => {
   try {
     const { contentType } = req.params;
     const skip = parseInt(req.query.skip) || 0;
@@ -87,7 +95,7 @@ router.get('/trending', async (req, res) => {
  * Check user access status for content
  * GET /api/preview/:contentId/access/:userAddress
  */
-router.get('/:contentId/access/:userAddress', async (req, res) => {
+router.get('/:contentId/access/:userAddress', validateContentId, async (req, res) => {
   try {
     const { contentId, userAddress } = req.params;
     const accessStatus = await previewService.checkAccessStatus(
@@ -105,7 +113,7 @@ router.get('/:contentId/access/:userAddress', async (req, res) => {
  * Record preview download
  * POST /api/preview/:contentId/download
  */
-router.post('/:contentId/download', async (req, res) => {
+router.post('/:contentId/download', validateContentId, async (req, res) => {
   try {
     const { contentId } = req.params;
     const preview = await previewService.recordPreviewDownload(parseInt(contentId));
@@ -120,7 +128,7 @@ router.post('/:contentId/download', async (req, res) => {
  * Create or update content preview (creator only)
  * POST /api/preview/:contentId
  */
-router.post('/:contentId', verifyCreatorOwnership, async (req, res) => {
+router.post('/:contentId', verifyCreatorOwnership, validateContentId, validatePreviewData, async (req, res) => {
   try {
     const { contentId } = req.params;
     const previewData = req.body;
@@ -349,7 +357,7 @@ router.delete('/:contentId', verifyCreatorOwnership, async (req, res) => {
  * Get preview analytics
  * GET /api/preview/:contentId/analytics
  */
-router.get('/:contentId/analytics', verifyCreatorOwnership, async (req, res) => {
+router.get('/:contentId/analytics', verifyCreatorOwnership, validateContentId, async (req, res) => {
   try {
     const { contentId } = req.params;
     
@@ -371,10 +379,10 @@ router.get('/:contentId/analytics', verifyCreatorOwnership, async (req, res) => 
  * Get previews with analytics for multiple items
  * POST /api/preview/analytics/batch
  */
-router.post('/analytics/batch', verifyCreatorOwnership, async (req, res) => {
+router.post('/analytics/batch', verifyCreatorOwnership, validateBatchContentIds, async (req, res) => {
   try {
     const { contentIds } = req.body;
-    if (!Array.isArray(contentIds)) {
+    // Validation already done by middleware
       return res.status(400).json({ success: false, error: 'contentIds must be an array' });
     }
 
@@ -398,7 +406,7 @@ router.post('/analytics/batch', verifyCreatorOwnership, async (req, res) => {
  * Track preview engagement event
  * POST /api/preview/:contentId/track/:eventType
  */
-router.post('/:contentId/track/:eventType', async (req, res) => {
+router.post('/:contentId/track/:eventType', validateContentId, validateEventType, async (req, res) => {
   try {
     const { contentId, eventType } = req.params;
     
