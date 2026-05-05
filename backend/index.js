@@ -39,6 +39,7 @@ const walletRoutes = require('./routes/walletRoutes');
 const previewRoutes = require('./routes/previewRoutes');
 const webhookRoutes = require('./routes/webhookRoutes');
 const webhookAdminRoutes = require('./routes/webhookAdminRoutes');
+const recommendationRoutes = require('./routes/recommendationRoutes');
 
 app.use('/api/content', contentRoutes);
 app.use('/api/purchases', purchaseRoutes);
@@ -59,6 +60,7 @@ app.use('/api/wallet', walletRoutes);
 app.use('/api/preview', previewRoutes);
 app.use('/api/webhooks', webhookRoutes);
 app.use('/api/webhooks/admin', webhookAdminRoutes);
+app.use('/api/recommendations', recommendationRoutes);
 
 // Start Indexer
 const indexer = require('./services/indexer');
