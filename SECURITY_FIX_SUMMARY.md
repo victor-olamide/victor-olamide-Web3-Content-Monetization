@@ -9,7 +9,7 @@
 ## What Was Found
 **Leaked Secret:**
 ```
-mongodb+srv://user:pass@cluster.mongodb.net/database
+mongodb+srv://<username>:<password>@<cluster>.mongodb.net/<database>
 ```
 **Location:** [WALLET_CONNECTION_TROUBLESHOOTING.md](WALLET_CONNECTION_TROUBLESHOOTING.md) Line 451
 
@@ -121,7 +121,7 @@ git secrets --install
 const mongoUri = process.env.MONGODB_URI;  // ✅ CORRECT
 
 // Never do this:
-// const mongoUri = 'mongodb+srv://user:pass@...';  // ❌ WRONG
+// const mongoUri = 'mongodb+srv://<username>:<password>@<cluster>.mongodb.net/<database>';  // ❌ WRONG
 ```
 
 ---

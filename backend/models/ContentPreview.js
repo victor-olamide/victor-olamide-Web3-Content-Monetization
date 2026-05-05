@@ -1,29 +1,35 @@
 const mongoose = require('mongoose');
 
+const urlValidator = function (v) {
+  if (!v) return true; // allow empty
+  // Allow https://, http://, ipfs://, or raw IPFS hashes (Qm... or bafy...)
+  return /^(https?:\/\/|ipfs:\/\/|Qm[1-9A-HJ-NP-Za-km-z]{44}|bafy[0-9a-z]{50,})/.test(v);
+};
+
 const contentPreviewSchema = new mongoose.Schema({
   contentId: { type: Number, required: true, unique: true },
-  title: { type: String, required: true },
-  description: { type: String },
+  title: { type: String, required: true, trim: true, maxlength: 200 },
+  description: { type: String, trim: true, maxlength: 2000 },
   contentType: { type: String, enum: ['video', 'article', 'image', 'music'], required: true },
-  price: { type: Number, required: true },
-  creator: { type: String, required: true },
+  price: { type: Number, required: true, min: 0 },
+  creator: { type: String, required: true, trim: true, maxlength: 100 },
   
   // Preview-specific fields
-  thumbnailUrl: { type: String }, // IPFS or storage URL for thumbnail
+  thumbnailUrl: { type: String, validate: { validator: urlValidator, message: 'Invalid thumbnailUrl' } }, // IPFS or storage URL for thumbnail
   thumbnailStorageType: { type: String, enum: ['ipfs', 'gaia'], default: 'ipfs' },
   
-  trailerUrl: { type: String }, // IPFS or storage URL for trailer/preview video
+  trailerUrl: { type: String, validate: { validator: urlValidator, message: 'Invalid trailerUrl' } }, // IPFS or storage URL for trailer/preview video
   trailerStorageType: { type: String, enum: ['ipfs', 'gaia'], default: 'ipfs' },
-  trailerDuration: { type: Number }, // Duration in seconds
-  trailerSize: { type: Number }, // File size in bytes
+  trailerDuration: { type: Number, min: 0 }, // Duration in seconds
+  trailerSize: { type: Number, min: 0 }, // File size in bytes
   
-  previewText: { type: String }, // Short preview text for articles
-  previewImageUrl: { type: String }, // Preview image for articles
+  previewText: { type: String, trim: true, maxlength: 500 }, // Short preview text for articles
+  previewImageUrl: { type: String, validate: { validator: urlValidator, message: 'Invalid previewImageUrl' } }, // Preview image for articles
   
   // Preview metadata
   previewEnabled: { type: Boolean, default: true },
-  totalViews: { type: Number, default: 0 },
-  totalPreviewDownloads: { type: Number, default: 0 },
+  totalViews: { type: Number, default: 0, min: 0 },
+  totalPreviewDownloads: { type: Number, default: 0, min: 0 },
   
   // Preview quality information
   thumbnailQuality: { 
@@ -49,13 +55,19 @@ const contentPreviewSchema = new mongoose.Schema({
     dailyViews: { type: Map, of: Number, default: new Map() },
     dailyDownloads: { type: Map, of: Number, default: new Map() },
     lastAnalyticsUpdate: { type: Date },
-    conversionRate: { type: Number, default: 0 },
-    averageWatchTime: { type: Number, default: 0 } // in seconds for videos
+    conversionRate: { type: Number, default: 0, min: 0 },
+    averageWatchTime: { type: Number, default: 0, min: 0 } // in seconds for videos
   },
   
   // Timestamps
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
+});
+
+// Ensure updatedAt is kept current
+contentPreviewSchema.pre('save', function (next) {
+  this.updatedAt = Date.now();
+  next();
 });
 
 // Index for efficient queries
