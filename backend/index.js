@@ -40,6 +40,11 @@ const previewRoutes = require('./routes/previewRoutes');
 const webhookRoutes = require('./routes/webhookRoutes');
 const webhookAdminRoutes = require('./routes/webhookAdminRoutes');
 const recommendationRoutes = require('./routes/recommendationRoutes');
+const rateLimitRoutes = require('./routes/rateLimitRoutes');
+const { tieredRateLimiter } = require('./middleware/rateLimiter');
+
+// Apply tiered rate limiting globally
+app.use(tieredRateLimiter);
 
 app.use('/api/content', contentRoutes);
 app.use('/api/purchases', purchaseRoutes);
@@ -61,6 +66,7 @@ app.use('/api/preview', previewRoutes);
 app.use('/api/webhooks', webhookRoutes);
 app.use('/api/webhooks/admin', webhookAdminRoutes);
 app.use('/api/recommendations', recommendationRoutes);
+app.use('/api/rate-limit', rateLimitRoutes);
 
 // Start Indexer
 const indexer = require('./services/indexer');
@@ -69,6 +75,7 @@ const { initializeScheduler, getHealthStatus } = require('./services/refundSched
 const { initializeRenewalScheduler, getRenewalStats } = require('./services/renewalScheduler');
 const { initializeRefundScheduler, getRefundSchedulerStats } = require('./services/proRataRefundScheduler');
 const { initializeLicenseCleanup, getCleanupStats } = require('./services/licenseCleanupScheduler');
+const { getGlobalStats: getRateLimitStats } = require('./services/rateLimitService');
 
 indexer.start();
 
@@ -101,7 +108,8 @@ app.get('/api/status', async (req, res) => {
     refunds: refundHealth,
     renewals: renewalHealth,
     proRataRefunds: proRataRefundHealth,
-    licenseCleanup: licenseCleanupHealth
+    licenseCleanup: licenseCleanupHealth,
+    rateLimiting: await getRateLimitStats()
   });
 });
 
