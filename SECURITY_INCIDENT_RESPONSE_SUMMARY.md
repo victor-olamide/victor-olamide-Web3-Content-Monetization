@@ -11,7 +11,7 @@
 ## Executive Summary
 
 A MongoDB Atlas connection string with hardcoded credentials was detected in the repository documentation:
-- **Leaked Secret:** `mongodb+srv://user:pass@cluster.mongodb.net/database`
+-- **Leaked Secret (redacted):** `mongodb+srv://<username>:<password>@<cluster>.mongodb.net/<database>`
 - **Location:** [WALLET_CONNECTION_TROUBLESHOOTING.md](WALLET_CONNECTION_TROUBLESHOOTING.md) (Line 451)
 - **Risk:** Unauthorized database access, data breach potential
 - **Application Code Impact:** ✅ SAFE - No credentials in application code itself
@@ -91,7 +91,7 @@ These must be completed by the database administrator:
 
 ```
 ❌ WALLET_CONNECTION_TROUBLESHOOTING.md (Line 451)
-   - Contained: mongodb+srv://user:pass@cluster.mongodb.net/database
+   - Contained (redacted): mongodb+srv://<username>:<password>@<cluster>.mongodb.net/<database>
    - Status: FIXED ✅
    - Action: Removed hardcoded credentials, added best practices
 ```
@@ -192,7 +192,7 @@ if (!mongoUri) {
 mongoose.connect(mongoUri);
 
 // WRONG: Never hardcode
-// const mongoUri = 'mongodb+srv://user:pass@cluster.mongodb.net/db';
+// const mongoUri = 'mongodb+srv://<username>:<password>@<cluster>.mongodb.net/<database>'; // ❌ WRONG
 ```
 
 ---
