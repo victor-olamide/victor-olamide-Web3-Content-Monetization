@@ -135,6 +135,14 @@ const userProfileSchema = new mongoose.Schema(
       index: true
     },
 
+    // User subscription tier (for rate limiting and platform features)
+    tier: {
+      type: String,
+      enum: ['free', 'basic', 'premium', 'enterprise', 'admin'],
+      default: 'free',
+      index: true
+    },
+
     // Last profile update
     lastProfileUpdate: {
       type: Date,
