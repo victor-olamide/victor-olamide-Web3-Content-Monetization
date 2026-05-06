@@ -1,0 +1,333 @@
+{
+  "config": {
+    "target": "http://localhost:5000",
+    "phases": [
+      {
+        "duration": 60,
+        "arrivalRate": 5,
+        "name": "Warm up phase"
+      },
+      {
+        "duration": 120,
+        "arrivalRate": 20,
+        "name": "Load testing phase"
+      },
+      {
+        "duration": 60,
+        "arrivalRate": 50,
+        "name": "Stress testing phase"
+      }
+    ],
+    "defaults": {
+      "headers": {
+        "Content-Type": "application/json"
+      }
+    },
+    "plugins": {
+      "metrics-by-endpoint": {},
+      "ensure": {},
+      "apdex": {},
+      "expect": {}
+    },
+    "apdex": {
+      "tolerated": 1000,
+      "satisfied": 500
+    }
+  },
+  "scenarios": [
+    {
+      "name": "Public content browsing",
+      "weight": 40,
+      "flow": [
+        {
+          "get": {
+            "url": "/api/content",
+            "expect": [
+              {
+                "statusCode": 200
+              },
+              {
+                "hasProperty": "data"
+              }
+            ]
+          }
+        },
+        {
+          "get": {
+            "url": "/api/content?page=2&limit=10",
+            "expect": [
+              {
+                "statusCode": 200
+              }
+            ]
+          }
+        },
+        {
+          "get": {
+            "url": "/api/content?contentType=video",
+            "expect": [
+              {
+                "statusCode": 200
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "User authentication flow",
+      "weight": 20,
+      "flow": [
+        {
+          "post": {
+            "url": "/api/auth/register",
+            "json": {
+              "email": "perf-test-{{ $randomInt }}@example.com",
+              "password": "TestPassword123!",
+              "role": "consumer"
+            },
+            "expect": [
+              {
+                "statusCode": 201
+              }
+            ]
+          }
+        },
+        {
+          "post": {
+            "url": "/api/auth/login",
+            "json": {
+              "email": "perf-test-{{ $randomInt }}@example.com",
+              "password": "TestPassword123!"
+            },
+            "capture": [
+              {
+                "json": "$.data.token",
+                "as": "authToken"
+              }
+            ],
+            "expect": [
+              {
+                "statusCode": 200
+              }
+            ]
+          }
+        },
+        {
+          "get": {
+            "url": "/api/auth/me",
+            "headers": {
+              "Authorization": "Bearer {{ authToken }}"
+            },
+            "expect": [
+              {
+                "statusCode": 200
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Content creation and management",
+      "weight": 15,
+      "flow": [
+        {
+          "post": {
+            "url": "/api/auth/login",
+            "json": {
+              "email": "creator@example.com",
+              "password": "TestPassword123!"
+            },
+            "capture": [
+              {
+                "json": "$.data.token",
+                "as": "creatorToken"
+              }
+            ]
+          }
+        },
+        {
+          "post": {
+            "url": "/api/content",
+            "headers": {
+              "Authorization": "Bearer {{ creatorToken }}"
+            },
+            "json": {
+              "title": "Performance Test Content {{ $randomInt }}",
+              "description": "Test content for performance testing",
+              "contentType": "video",
+              "price": 10,
+              "accessType": "paid"
+            },
+            "expect": [
+              {
+                "statusCode": 201
+              }
+            ]
+          }
+        },
+        {
+          "get": {
+            "url": "/api/content/my-content",
+            "headers": {
+              "Authorization": "Bearer {{ creatorToken }}"
+            },
+            "expect": [
+              {
+                "statusCode": 200
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payment processing",
+      "weight": 10,
+      "flow": [
+        {
+          "post": {
+            "url": "/api/auth/login",
+            "json": {
+              "email": "consumer@example.com",
+              "password": "TestPassword123!"
+            },
+            "capture": [
+              {
+                "json": "$.data.token",
+                "as": "consumerToken"
+              }
+            ]
+          }
+        },
+        {
+          "post": {
+            "url": "/api/payments/purchase",
+            "headers": {
+              "Authorization": "Bearer {{ consumerToken }}"
+            },
+            "json": {
+              "contentId": "507f1f77bcf86cd799439011",
+              "paymentMethod": "stacks",
+              "amount": 10
+            },
+            "expect": [
+              {
+                "statusCode": 201
+              }
+            ]
+          }
+        },
+        {
+          "get": {
+            "url": "/api/payments/transactions",
+            "headers": {
+              "Authorization": "Bearer {{ consumerToken }}"
+            },
+            "expect": [
+              {
+                "statusCode": 200
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Search and filtering",
+      "weight": 10,
+      "flow": [
+        {
+          "get": {
+            "url": "/api/content/search?q=performance",
+            "expect": [
+              {
+                "statusCode": 200
+              }
+            ]
+          }
+        },
+        {
+          "get": {
+            "url": "/api/content?tags=video,music",
+            "expect": [
+              {
+                "statusCode": 200
+              }
+            ]
+          }
+        },
+        {
+          "get": {
+            "url": "/api/content?sort=popular&order=desc",
+            "expect": [
+              {
+                "statusCode": 200
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Error scenarios",
+      "weight": 5,
+      "flow": [
+        {
+          "get": {
+            "url": "/api/content/non-existent-id",
+            "expect": [
+              {
+                "statusCode": 404
+              }
+            ]
+          }
+        },
+        {
+          "post": {
+            "url": "/api/auth/login",
+            "json": {
+              "email": "invalid@example.com",
+              "password": "wrongpassword"
+            },
+            "expect": [
+              {
+                "statusCode": 401
+              }
+            ]
+          }
+        },
+        {
+          "post": {
+            "url": "/api/content",
+            "json": {},
+            "expect": [
+              {
+                "statusCode": 401
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "ensure": {
+    "thresholds": {
+      "http.response_time.p99": 2000,
+      "http.response_time.p95": 1000,
+      "http.request_rate": 30,
+      "apdex.score": 0.95
+    },
+    "conditions": [
+      {
+        "expression": "http.response_time.p99 < 2000",
+        "strict": false
+      },
+      {
+        "expression": "apdex.score > 0.95",
+        "strict": false
+      }
+    ]
+  }
+}

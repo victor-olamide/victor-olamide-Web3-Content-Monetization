@@ -1,220 +1,410 @@
-# Integration Testing Guide
+# Web3 Content Monetization Platform - Integration Tests
 
-## Overview
-Comprehensive end-to-end integration tests for the Stacks Content Monetization platform on Stacks Testnet.
+Comprehensive integration testing suite for the Web3 Content Monetization platform, covering API endpoints, end-to-end user flows, security vulnerabilities, and performance testing.
 
-## Test Coverage
-
-### 1. Pay-Per-View Tests
-- Creator adds content
-- User verifies no access before purchase
-- User purchases content
-- User gains access after purchase
-- Backend verifies access
-- Content streaming works
-- Duplicate purchase prevention
-
-### 2. Subscription Tests
-- Creator creates subscription tier
-- User subscribes to tier
-- Subscription verification
-- Tier updates
-- Backend subscription verification
-
-### 3. Token Gating Tests
-- FT gating rule creation
-- NFT gating rule creation
-- Access verification with tokens
-- Rule deletion
-
-### 4. Backend API Tests
-- Health check
-- Access verification endpoints
-- Batch verification
-- Content delivery
-- Analytics endpoints
-
-### 5. End-to-End Journey
-- Complete creator workflow
-- Complete user purchase workflow
-- Multiple user scenarios
-- Analytics tracking
-
-## Prerequisites
-
-1. **Node.js** v18+
-2. **Testnet STX** - Get from [Stacks Testnet Faucet](https://explorer.stacks.co/sandbox/faucet?chain=testnet)
-3. **Backend Service** running locally
-4. **MongoDB** instance
-
-## Setup
-
-### 1. Install Dependencies
-```bash
-cd integration-tests
-npm install
-```
-
-### 2. Configure Environment
-```bash
-cp .env.example .env
-```
-
-Edit `.env` with your testnet credentials:
-```env
-BACKEND_API=http://localhost:5000/api
-CONTRACT_ADDRESS=ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-DEPLOYER_KEY=your_key
-CREATOR_KEY=your_key
-USER1_KEY=your_key
-USER2_KEY=your_key
-```
-
-### 3. Start Backend
-```bash
-cd ../backend
-npm start
-```
-
-### 4. Run Setup Script
-```bash
-./setup.sh
-```
-
-## Running Tests
-
-### Run All Tests
-```bash
-npm test
-```
-
-### Run Specific Test Suite
-```bash
-./run-tests.sh ppv           # Pay-per-view tests
-./run-tests.sh subscription  # Subscription tests
-./run-tests.sh gating        # Token gating tests
-./run-tests.sh backend       # Backend API tests
-./run-tests.sh e2e           # End-to-end journey
-```
-
-### Run with Coverage
-```bash
-npm run test:coverage
-```
-
-### Watch Mode
-```bash
-npm run test:watch
-```
-
-## Test Structure
+## 🧪 Test Structure
 
 ```
 integration-tests/
-├── scenarios/              # Test scenarios
-│   ├── pay-per-view.test.js
-│   ├── subscription.test.js
-│   ├── token-gating.test.js
-│   ├── backend-api.test.js
-│   └── e2e-journey.test.js
-├── config.js              # Test configuration
-├── helpers.js             # Test utilities
-├── reporter.js            # Custom reporter
-├── setup.js               # Jest setup
-└── jest.config.js         # Jest configuration
+├── api/                    # API Integration Tests
+│   ├── auth.test.js       # Authentication & Authorization
+│   ├── content.test.js    # Content Management
+│   ├── payments.test.js   # Payment & Subscription
+│   └── security.test.js   # Security Validations
+├── e2e/                   # End-to-End Tests
+│   └── user-flows.test.js # Complete User Journeys
+├── smoke/                 # Smoke Tests
+│   └── smoke.test.js     # Critical Functionality
+├── security/              # Security Tests
+│   └── vulnerabilities.test.js # Vulnerability Testing
+├── performance/           # Performance Tests
+│   └── load-test.yml     # Artillery Load Tests
+├── utils/                 # Test Utilities
+│   └── test-setup.js     # Global Test Setup
+├── jest.*.config.js      # Jest Configurations
+├── package.json          # Test Dependencies & Scripts
+├── run-tests.sh          # Test Runner Script
+└── README.md            # This file
 ```
 
-## Test Accounts
+## 🚀 Quick Start
 
-The tests use 4 testnet accounts:
-- **Deployer**: Contract deployment
-- **Creator**: Content creator
-- **User1**: First test user
-- **User2**: Second test user
+### Prerequisites
 
-Each account needs testnet STX for transactions.
+- Node.js 18+
+- MongoDB running locally or Docker
+- Redis (optional, for session management)
+- Playwright browsers installed
 
-## CI/CD Integration
+### Installation
 
-Tests run automatically on:
-- Push to main/develop branches
-- Daily schedule (midnight UTC)
-- Manual workflow dispatch
-
-### GitHub Secrets Required
-- `TESTNET_CONTRACT_ADDRESS`
-- `TESTNET_DEPLOYER_KEY`
-- `TESTNET_CREATOR_KEY`
-- `TESTNET_USER1_KEY`
-- `TESTNET_USER2_KEY`
-
-## Test Reports
-
-After running tests, a report is generated:
-```
-integration-tests/test-report.md
-```
-
-Coverage reports are in:
-```
-integration-tests/coverage/
-```
-
-## Troubleshooting
-
-### Transaction Timeout
-- Increase `TEST_TIMEOUT` in config.js
-- Check Stacks testnet status
-
-### Backend Connection Failed
-- Ensure backend is running on port 5000
-- Check `BACKEND_API` in .env
-
-### Insufficient STX
-- Get more testnet STX from faucet
-- Wait for previous transactions to confirm
-
-### Contract Not Found
-- Verify `CONTRACT_ADDRESS` is correct
-- Ensure contracts are deployed to testnet
-
-## Best Practices
-
-1. **Run tests sequentially** - Use `maxWorkers: 1` in Jest config
-2. **Wait for confirmations** - Always wait for transaction confirmations
-3. **Clean state** - Each test should be independent
-4. **Handle failures gracefully** - Use try-catch for blockchain calls
-5. **Monitor testnet** - Check Stacks Explorer for transaction status
-
-## Monitoring
-
-### Check Transaction Status
 ```bash
-curl https://stacks-node-api.testnet.stacks.co/extended/v1/tx/TX_ID
+cd integration-tests
+npm install
+npm run install:browsers
 ```
 
-### View Contract
+### Environment Setup
+
+Create a `.env` file in the integration-tests directory:
+
+```env
+NODE_ENV=test
+JWT_SECRET=test-jwt-secret-key
+MONGODB_URI=mongodb://localhost:27017/web3-platform-test
+REDIS_URL=redis://localhost:6379
+FRONTEND_URL=http://localhost:3000
+BACKEND_URL=http://localhost:5000
+```
+
+### Running Tests
+
+#### Run All Tests
 ```bash
-curl https://stacks-node-api.testnet.stacks.co/v2/contracts/interface/ADDRESS/CONTRACT
+./run-tests.sh
+# or
+npm run test:all
 ```
 
-### Backend Health
+#### Run Specific Test Suites
 ```bash
-curl http://localhost:5000/api/status
+# API Tests
+./run-tests.sh --api
+npm run test:api
+
+# E2E Tests
+./run-tests.sh --e2e
+npm run test:e2e
+
+# Smoke Tests
+./run-tests.sh --smoke
+npm run test:smoke
+
+# Security Tests
+./run-tests.sh --security
+npm run test:security
+
+# Performance Tests
+./run-tests.sh --performance
+npm run test:performance
 ```
 
-## Contributing
+#### CI/CD Execution
+```bash
+npm run test:ci
+```
 
-When adding new tests:
-1. Create test file in `scenarios/`
-2. Use helpers from `helpers.js`
-3. Follow existing test patterns
-4. Update this documentation
+## 📋 Test Categories
 
-## Support
+### 🔐 API Integration Tests
 
-For issues:
-1. Check test logs
-2. Verify testnet connectivity
-3. Review transaction on Stacks Explorer
-4. Open GitHub issue with details
+**Authentication & Authorization**
+- User registration with validation
+- Login/logout flows
+- JWT token handling
+- Password reset functionality
+- Rate limiting on auth endpoints
+
+**Content Management**
+- Content creation and updates
+- Access control (creator permissions)
+- Content moderation workflow
+- Search and filtering
+- File upload validation
+
+**Payment & Subscription**
+- Content purchase flows
+- Subscription management
+- Royalty distribution
+- Transaction history
+- Payment security (double-spend prevention)
+
+**Security Validations**
+- Input sanitization
+- SQL injection prevention
+- XSS protection
+- CSRF protection
+- Authorization bypass attempts
+
+### 🌐 End-to-End Tests
+
+**User Registration Flow**
+- Complete signup process
+- Email verification
+- Profile setup
+- Error handling
+
+**Content Consumption Flow**
+- Browse public content
+- Purchase premium content
+- Subscription access
+- Download management
+
+**Admin Panel Flow**
+- Content moderation
+- User management
+- Analytics dashboard
+- System configuration
+
+**Error Scenarios**
+- Network failures
+- Session timeouts
+- Invalid data handling
+- Browser navigation
+
+### 🚨 Smoke Tests
+
+**Health Checks**
+- API endpoint availability
+- Database connectivity
+- External service status
+
+**Critical Functionality**
+- User authentication
+- Content creation
+- Payment processing
+- Basic search
+
+**Performance Validation**
+- Response time checks
+- Concurrent request handling
+
+### 🔒 Security Tests
+
+**Common Vulnerabilities**
+- SQL Injection attempts
+- Cross-Site Scripting (XSS)
+- Cross-Site Request Forgery (CSRF)
+- Insecure Direct Object Reference (IDOR)
+- Mass Assignment attacks
+- Directory Traversal
+- Command Injection
+- XML External Entity (XXE)
+- Server-Side Request Forgery (SSRF)
+
+**Authentication Security**
+- Brute force protection
+- JWT token tampering
+- Session management
+- Password policies
+
+**Data Protection**
+- Sensitive data exposure
+- Information disclosure
+- Error message sanitization
+
+### ⚡ Performance Tests
+
+**Load Testing Scenarios**
+- Public content browsing (40% load)
+- User authentication (20% load)
+- Content creation (15% load)
+- Payment processing (10% load)
+- Search functionality (10% load)
+- Error conditions (5% load)
+
+**Performance Metrics**
+- Response time percentiles (P95, P99)
+- Request rate
+- Apdex score
+- Error rates
+
+## 🛠️ Test Utilities
+
+### Test Setup (`utils/test-setup.js`)
+
+Global test utilities providing:
+- MongoDB Memory Server setup
+- Test user/content generation
+- Authentication helpers
+- API client utilities
+- Cleanup functions
+
+### Test Data Generation
+
+```javascript
+const TestUtils = require('../utils/test-setup');
+
+// Generate test user
+const user = TestUtils.generateUser({
+  role: 'creator',
+  email: 'test@example.com'
+});
+
+// Generate test content
+const content = TestUtils.generateContent({
+  creator: user._id,
+  price: 10,
+  accessType: 'paid'
+});
+
+// Generate JWT token
+const token = TestUtils.generateToken(user);
+```
+
+## 📊 Reporting
+
+### Test Reports
+
+```bash
+# Generate and view Allure reports
+npm run report
+
+# View Playwright HTML report
+npm run report:html
+
+# View coverage report
+npm run report:coverage
+```
+
+### Coverage Reports
+
+- HTML coverage reports in `coverage/`
+- LCOV format for CI/CD integration
+- Coverage thresholds enforcement
+
+### Performance Reports
+
+- Artillery HTML reports
+- Response time analysis
+- Error rate monitoring
+- Apdex score tracking
+
+## 🔧 Configuration
+
+### Jest Configurations
+
+- `jest.api.config.js` - API integration tests
+- `jest.smoke.config.js` - Smoke tests
+- `jest.security.config.js` - Security tests
+
+### Playwright Configuration
+
+- Multi-browser testing (Chrome, Firefox, Safari)
+- Screenshot/video capture on failures
+- Trace collection for debugging
+
+### Artillery Configuration
+
+- Multi-phase load testing
+- Custom metrics collection
+- Threshold-based assertions
+
+## 🚨 CI/CD Integration
+
+### GitHub Actions Example
+
+```yaml
+name: Integration Tests
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Setup MongoDB
+        uses: supercharge/mongodb-github-action@1.8.0
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Playwright browsers
+        run: npx playwright install
+      - name: Run tests
+        run: npm run test:ci
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test-results
+          path: integration-tests/test-results/
+```
+
+## 🐛 Debugging
+
+### Running Tests in Debug Mode
+
+```bash
+# Debug API tests
+npm run test:api -- --verbose --detectOpenHandles
+
+# Debug E2E tests
+npm run test:e2e -- --debug
+
+# Debug with inspector
+node --inspect-brk node_modules/.bin/jest --runInBand
+```
+
+### Common Issues
+
+**MongoDB Connection Issues**
+```bash
+# Start local MongoDB
+mongod --dbpath /tmp/mongodb
+
+# Or use Docker
+docker run -d -p 27017:27017 mongo:latest
+```
+
+**Browser Issues**
+```bash
+# Reinstall Playwright browsers
+npx playwright install --force
+```
+
+**Port Conflicts**
+```bash
+# Kill processes on specific ports
+lsof -ti:5000 | xargs kill -9
+lsof -ti:3000 | xargs kill -9
+```
+
+## 📈 Best Practices
+
+### Test Organization
+- One test file per feature/module
+- Clear test descriptions
+- Proper setup/teardown
+- Independent test cases
+
+### Test Data Management
+- Use factories for test data generation
+- Clean up after each test
+- Avoid test data dependencies
+- Use realistic test data
+
+### Performance Considerations
+- Use test parallelism when possible
+- Mock external services
+- Clean up resources properly
+- Monitor test execution time
+
+### Security Testing
+- Test both positive and negative scenarios
+- Use realistic attack payloads
+- Verify security headers
+- Test rate limiting effectiveness
+
+## 🤝 Contributing
+
+### Adding New Tests
+
+1. Create test file in appropriate directory
+2. Follow existing naming conventions
+3. Add proper setup/teardown
+4. Update this README if needed
+5. Run full test suite before submitting
+
+### Test Standards
+
+- Tests should be deterministic
+- Use descriptive test names
+- Include edge cases
+- Mock external dependencies
+- Clean up test data
+
+## 📄 License
+
+This project is part of the Web3 Content Monetization platform. See main project license for details.
