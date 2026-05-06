@@ -7,6 +7,7 @@ This directory contains comprehensive performance testing tools for content stre
 The performance testing suite provides:
 - **Load Testing**: Artillery-based load tests for content delivery endpoints
 - **Video Streaming Tests**: Specialized tests for video content delivery
+- **Locust Load Tests**: Python-based load testing with Locust for content streaming
 - **Real-time Monitoring**: Live performance dashboard and metrics
 - **Performance Analysis**: Automated analysis and reporting tools
 - **CI/CD Integration**: Automated performance regression testing
