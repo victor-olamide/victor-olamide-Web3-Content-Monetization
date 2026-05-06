@@ -341,3 +341,40 @@ This checklist covers:
 - [ ] Digital signatures verified
 - [ ] Hash functions secure (no MD5/SHA1)
 - [ ] Salt usage for password hashing
+
+## Logging & Monitoring
+
+### Security Event Logging
+- [ ] Authentication events logged
+- [ ] Authorization failures logged
+- [ ] Sensitive data access logged
+- [ ] Security configuration changes logged
+- [ ] Administrative actions logged
+
+### Log Security
+- [ ] Logs stored securely
+- [ ] Log integrity protected
+- [ ] Log retention policies defined
+- [ ] Log access controls implemented
+- [ ] Sensitive data not logged
+
+### Monitoring Systems
+- [ ] Real-time security monitoring
+- [ ] Intrusion detection systems (IDS)
+- [ ] File integrity monitoring
+- [ ] Network traffic monitoring
+- [ ] System performance monitoring
+
+### Alerting
+- [ ] Security incident alerting configured
+- [ ] Threshold-based alerts
+- [ ] Escalation procedures defined
+- [ ] Alert fatigue prevention
+- [ ] Automated response capabilities
+
+### Audit Trails
+- [ ] Complete audit trails maintained
+- [ ] Audit log integrity verified
+- [ ] Audit log review procedures
+- [ ] Regulatory compliance logging
+- [ ] Log correlation and analysis
