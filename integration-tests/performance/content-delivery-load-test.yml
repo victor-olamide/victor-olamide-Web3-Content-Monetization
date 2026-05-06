@@ -1,0 +1,284 @@
+{
+  "config": {
+    "target": "http://localhost:5000",
+    "phases": [
+      {
+        "duration": 30,
+        "arrivalRate": 2,
+        "name": "Warm up - Content Delivery"
+      },
+      {
+        "duration": 60,
+        "arrivalRate": 10,
+        "name": "Light Load - Content Streaming"
+      },
+      {
+        "duration": 120,
+        "arrivalRate": 25,
+        "name": "Medium Load - Content Delivery"
+      },
+      {
+        "duration": 180,
+        "arrivalRate": 50,
+        "name": "Heavy Load - Content Streaming"
+      },
+      {
+        "duration": 60,
+        "arrivalRate": 5,
+        "name": "Cooldown - Recovery Test"
+      }
+    ],
+    "defaults": {
+      "headers": {
+        "Content-Type": "application/json",
+        "User-Agent": "Artillery-Content-Delivery-Test/1.0"
+      }
+    },
+    "plugins": {
+      "metrics-by-endpoint": {},
+      "ensure": {},
+      "apdex": {},
+      "expect": {},
+      "publish-metrics": {
+        "cloudwatch": {
+          "region": "us-east-1",
+          "namespace": "Web3ContentDelivery"
+        }
+      }
+    },
+    "apdex": {
+      "tolerated": 2000,
+      "satisfied": 1000
+    },
+    "ensure": {
+      "thresholds": {
+        "http.response_time.p99": 3000,
+        "http.response_time.p95": 2000,
+        "http.response_time.p50": 800,
+        "http.error_rate": 1
+      }
+    }
+  },
+  "scenarios": [
+    {
+      "name": "Content Metadata Access",
+      "weight": 30,
+      "flow": [
+        {
+          "get": {
+            "url": "/api/delivery/{{ $randomInt(1, 100) }}/metadata",
+            "expect": [
+              {
+                "statusCode": 200
+              },
+              {
+                "hasProperty": "contentId"
+              },
+              {
+                "contentType": "json"
+              }
+            ]
+          }
+        },
+        {
+          "think": 1
+        },
+        {
+          "get": {
+            "url": "/api/delivery/{{ $randomInt(1, 100) }}/metadata",
+            "expect": [
+              {
+                "statusCode": 200
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Content Streaming with Access Control",
+      "weight": 25,
+      "flow": [
+        {
+          "post": {
+            "url": "/api/auth/login",
+            "json": {
+              "email": "consumer@example.com",
+              "password": "TestPassword123!"
+            },
+            "capture": [
+              {
+                "json": "$.data.token",
+                "as": "authToken"
+              }
+            ],
+            "expect": [
+              {
+                "statusCode": 200
+              }
+            ]
+          }
+        },
+        {
+          "think": 0.5
+        },
+        {
+          "get": {
+            "url": "/api/delivery/{{ $randomInt(1, 50) }}/stream",
+            "headers": {
+              "Authorization": "Bearer {{ authToken }}"
+            },
+            "expect": [
+              {
+                "statusCode": 200
+              },
+              {
+                "hasHeader": "Content-Type"
+              },
+              {
+                "hasHeader": "X-Access-Method"
+              }
+            ]
+          }
+        },
+        {
+          "think": 2
+        }
+      ]
+    },
+    {
+      "name": "Content Preview Access",
+      "weight": 20,
+      "flow": [
+        {
+          "get": {
+            "url": "/api/preview/{{ $randomInt(1, 100) }}",
+            "expect": [
+              {
+                "statusCode": 200
+              },
+              {
+                "hasProperty": "success"
+              },
+              {
+                "hasProperty": "data"
+              }
+            ]
+          }
+        },
+        {
+          "think": 0.8
+        },
+        {
+          "post": {
+            "url": "/api/preview/batch/get",
+            "json": {
+              "contentIds": [
+                "{{ $randomInt(1, 100) }}",
+                "{{ $randomInt(1, 100) }}",
+                "{{ $randomInt(1, 100) }}"
+              ]
+            },
+            "expect": [
+              {
+                "statusCode": 200
+              },
+              {
+                "hasProperty": "success"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "CDN Content Delivery",
+      "weight": 15,
+      "flow": [
+        {
+          "get": {
+            "url": "/api/cdn/status",
+            "headers": {
+              "X-API-Key": "test-admin-key"
+            },
+            "expect": [
+              {
+                "statusCode": 200
+              },
+              {
+                "hasProperty": "success"
+              },
+              {
+                "hasProperty": "data.health"
+              }
+            ]
+          }
+        },
+        {
+          "think": 1
+        },
+        {
+          "get": {
+            "url": "/api/cdn/cache/stats",
+            "headers": {
+              "X-API-Key": "test-admin-key"
+            },
+            "expect": [
+              {
+                "statusCode": 200
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Access Token Generation",
+      "weight": 10,
+      "flow": [
+        {
+          "post": {
+            "url": "/api/auth/login",
+            "json": {
+              "email": "premium-user@example.com",
+              "password": "TestPassword123!"
+            },
+            "capture": [
+              {
+                "json": "$.data.token",
+                "as": "premiumToken"
+              }
+            ],
+            "expect": [
+              {
+                "statusCode": 200
+              }
+            ]
+          }
+        },
+        {
+          "post": {
+            "url": "/api/delivery/{{ $randomInt(1, 50) }}/access-token",
+            "headers": {
+              "Authorization": "Bearer {{ premiumToken }}"
+            },
+            "expect": [
+              {
+                "statusCode": 200
+              },
+              {
+                "hasProperty": "token"
+              },
+              {
+                "hasProperty": "expiresIn"
+              }
+            ]
+          }
+        },
+        {
+          "think": 0.5
+        }
+      ]
+    }
+  ]
+}
