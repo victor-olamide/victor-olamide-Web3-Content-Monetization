@@ -192,3 +192,40 @@ This checklist covers:
 - [ ] Schema change auditing
 - [ ] Performance monitoring for anomalies
 - [ ] Automated alerting for security events
+
+## API Security
+
+### Authentication & Authorization
+- [ ] API keys/tokens properly validated
+- [ ] OAuth/JWT implementation secure
+- [ ] Token expiration and refresh mechanisms
+- [ ] API rate limiting implemented
+- [ ] Brute force protection on auth endpoints
+
+### Request Validation
+- [ ] Input validation on all API endpoints
+- [ ] Request size limits enforced
+- [ ] Content-Type validation
+- [ ] Schema validation for request payloads
+- [ ] Parameter sanitization
+
+### Response Security
+- [ ] Sensitive data not exposed in responses
+- [ ] Error messages don't leak information
+- [ ] Response headers properly configured
+- [ ] CORS settings secure
+- [ ] Cache control headers appropriate
+
+### API Gateway Security
+- [ ] Request routing secure
+- [ ] SSL/TLS termination configured
+- [ ] API versioning handled securely
+- [ ] Request/response transformation secure
+- [ ] Monitoring and logging enabled
+
+### Third-Party API Integration
+- [ ] External API credentials secure
+- [ ] API call rate limits respected
+- [ ] Response validation from external APIs
+- [ ] Fallback mechanisms for API failures
+- [ ] Secure handling of external API data
