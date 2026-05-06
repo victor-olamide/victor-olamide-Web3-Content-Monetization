@@ -5,6 +5,9 @@
 
 const Notification = require('../models/Notification');
 const logger = require('../utils/logger');
+const UserProfile = require('../models/UserProfile');
+const { sendEmail } = require('./emailService');
+const { emailConfig } = require('../config/emailConfig');
 
 /**
  * Create a new notification
@@ -211,12 +214,59 @@ async function notifyPurchaseSuccess(userId, purchaseData) {
         transactionId: purchaseData.transactionId
       }
     });
-    return notification;
+      // Attempt to send an email notification if email is available and user prefers
+      try {
+        const profile = userId ? await UserProfile.findOne({ address: userId }) : null;
+        const allowEmail = profile ? (profile.preferences && profile.preferences.emailNotifications) : true;
+        const toEmail = purchaseData.email || purchaseData.userEmail || (profile && (profile.email || profile.contactEmail));
+
+        if (emailConfig.enabled && toEmail && allowEmail) {
+          const subject = emailConfig.templates.purchase.subject;
+          const text = emailConfig.templates.purchase.body({
+            userName: profile && (profile.displayName || profile.username) ? (profile.displayName || profile.username) : undefined,
+            itemName: purchaseData.contentTitle,
+            transactionId: purchaseData.transactionId
+          });
+          await sendEmail({ to: toEmail, subject, text });
+        }
+      } catch (emailErr) {
+        logger.error('Error sending purchase email notification:', emailErr);
+      }
+
+      return notification;
   } catch (error) {
     logger.error('Error creating purchase success notification:', error);
     throw error;
   }
 }
+
+  /**
+   * Send a subscription email notification (best-effort)
+   */
+  async function sendSubscriptionEmail(userId, subscriptionData) {
+    try {
+      const profile = userId ? await UserProfile.findOne({ address: userId }) : null;
+      const allowEmail = profile ? (profile.preferences && profile.preferences.emailNotifications) : true;
+      const toEmail = subscriptionData.email || subscriptionData.userEmail || (profile && (profile.email || profile.contactEmail));
+
+      if (!emailConfig.enabled) return { success: false, error: 'Email disabled' };
+      if (!toEmail) return { success: false, error: 'No recipient email available' };
+      if (!allowEmail) return { success: false, error: 'User opted out of email notifications' };
+
+      const subject = emailConfig.templates.subscription.subject;
+      const text = emailConfig.templates.subscription.body({
+        userName: profile && (profile.displayName || profile.username) ? (profile.displayName || profile.username) : undefined,
+        planName: subscriptionData.planName,
+        subscriptionId: subscriptionData.subscriptionId
+      });
+
+      const result = await sendEmail({ to: toEmail, subject, text });
+      return { success: true, result };
+    } catch (error) {
+      logger.error('Error sending subscription email:', error);
+      return { success: false, error: error.message };
+    }
+  }
 
 /**
  * Create purchase error notification
