@@ -267,3 +267,40 @@ This checklist covers:
 - [ ] File system access restrictions
 - [ ] Network access controls
 - [ ] Administrative interface protection
+
+## Input Validation
+
+### Client-Side Validation
+- [ ] Input validation implemented (defense in depth)
+- [ ] JavaScript validation not relied upon solely
+- [ ] Client-side validation matches server-side
+- [ ] Real-time validation feedback
+- [ ] Form submission validation
+
+### Server-Side Validation
+- [ ] All inputs validated on server
+- [ ] Input sanitization implemented
+- [ ] Type checking and conversion
+- [ ] Length and format validation
+- [ ] Business rule validation
+
+### File Upload Security
+- [ ] File type validation (not just extension)
+- [ ] File size limits enforced
+- [ ] Content scanning for malware
+- [ ] Secure file storage paths
+- [ ] Upload directory permissions
+
+### Data Sanitization
+- [ ] HTML sanitization for XSS prevention
+- [ ] SQL injection prevention
+- [ ] Command injection prevention
+- [ ] Path traversal protection
+- [ ] LDAP injection prevention
+
+### Validation Libraries
+- [ ] Secure validation libraries used
+- [ ] Library versions up to date
+- [ ] Custom validation functions audited
+- [ ] Validation error handling secure
+- [ ] Validation bypass prevention
