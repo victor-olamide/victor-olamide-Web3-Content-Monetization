@@ -415,3 +415,40 @@ This checklist covers:
 - [ ] Secure package repositories
 - [ ] Dependency injection security
 - [ ] Shared library security
+
+## Infrastructure Security
+
+### Network Security
+- [ ] Firewall rules configured
+- [ ] Network segmentation implemented
+- [ ] VPN access for administrative tasks
+- [ ] DDoS protection enabled
+- [ ] Network traffic encryption
+
+### Server Security
+- [ ] Operating system hardening
+- [ ] Unnecessary services disabled
+- [ ] Security patches applied regularly
+- [ ] File system permissions correct
+- [ ] Root/admin access restricted
+
+### Container Security
+- [ ] Container images scanned for vulnerabilities
+- [ ] Minimal base images used
+- [ ] Container runtime security configured
+- [ ] Secrets management in containers
+- [ ] Container orchestration security
+
+### Cloud Security
+- [ ] Cloud provider security configurations
+- [ ] Identity and Access Management (IAM) proper
+- [ ] Storage bucket permissions secure
+- [ ] API gateway security configured
+- [ ] Cloud logging and monitoring enabled
+
+### Physical Security
+- [ ] Data center physical access controls
+- [ ] Hardware security measures
+- [ ] Secure disposal procedures
+- [ ] Environmental controls
+- [ ] Backup power and redundancy
