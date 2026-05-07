@@ -61,6 +61,40 @@ Access the real-time monitoring dashboard at `http://localhost:3001` to view:
 - Response times and throughput
 - Error rates and alerts
 
+## Deployment Smoke Tests
+
+The platform includes automated smoke tests that run after each deployment to validate system health and functionality:
+
+### Quick Start
+```bash
+cd integration-tests
+npm run test:smoke:deployment  # Run deployment smoke tests
+npm run test:smoke:deployment:script  # Run via shell script
+```
+
+### Test Categories
+- **Critical Tests** 🔴: Block deployment if failed (health checks, authentication, database)
+- **Non-Critical Tests** 🟡: Allow deployment but log warnings (external services, performance)
+
+### CI/CD Integration
+Automated smoke tests run after deployments via GitHub Actions:
+- Environment-specific configurations (development/staging/production)
+- Docker containerized execution
+- Deployment status updates and notifications
+- Comprehensive reporting and artifact storage
+
+### Docker Execution
+```bash
+# Build and run smoke tests in container
+docker build -f integration-tests/smoke/Dockerfile -t smoke-tests .
+docker run --rm \
+  -e DEPLOYMENT_URL=https://api.example.com \
+  -e NODE_ENV=production \
+  smoke-tests
+```
+
+For detailed documentation, see [Deployment Smoke Tests](integration-tests/smoke/DEPLOYMENT_SMOKE_TESTS_README.md).
+
 ## Development
 
 ### Prerequisites
@@ -100,6 +134,7 @@ Automated load testing runs weekly and can be triggered manually:
 
 ## Documentation
 
+- [Deployment Smoke Tests](integration-tests/smoke/DEPLOYMENT_SMOKE_TESTS_README.md)
 - [Performance Testing](integration-tests/performance/README.md)
 - [Concurrent Load Testing](integration-tests/performance/CONCURRENT_LOAD_TESTING_IMPLEMENTATION.md)
 - [API Documentation](backend/docs/)
