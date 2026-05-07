@@ -1,0 +1,132 @@
+name: Load Testing
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: 'Type of load test to run'
+        required: true
+        default: 'concurrent'
+        type: choice
+        options:
+          - concurrent
+          - stress
+          - soak
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+  schedule:
+    - cron: '0 2 * * 1'  # Run weekly on Monday at 2 AM UTC
+
+jobs:
+  load-test:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'integration-tests/package-lock.json'
+
+      - name: Install dependencies
+        run: |
+          cd integration-tests
+          npm ci
+
+      - name: Install Artillery
+        run: npm install -g artillery
+
+      - name: Install Locust
+        run: pip install locust
+
+      - name: Setup test environment
+        run: |
+          cd integration-tests/performance
+          mkdir -p test-results
+
+      - name: Run concurrent load test
+        if: github.event.inputs.test_type == 'concurrent' || github.event_name == 'schedule'
+        run: |
+          cd integration-tests/performance
+          ./run-concurrent-load-tests.sh --ci
+        env:
+          LOAD_TEST_URL: ${{ secrets.LOAD_TEST_URL }}
+
+      - name: Run stress test
+        if: github.event.inputs.test_type == 'stress'
+        run: |
+          cd integration-tests/performance
+          ./run-concurrent-load-tests.sh --stress --skip-verify
+        env:
+          LOAD_TEST_URL: ${{ secrets.LOAD_TEST_URL }}
+
+      - name: Run soak test
+        if: github.event.inputs.test_type == 'soak'
+        run: |
+          cd integration-tests/performance
+          ./run-concurrent-load-tests.sh --soak --skip-verify
+        env:
+          LOAD_TEST_URL: ${{ secrets.LOAD_TEST_URL }}
+
+      - name: Analyze results
+        run: |
+          cd integration-tests/performance
+          npm run performance:analyze:concurrent
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: load-test-results-${{ github.run_number }}
+          path: integration-tests/performance/test-results/
+
+      - name: Generate performance report
+        run: |
+          cd integration-tests/performance
+          node load-test-reporter.js test-results/ --html > performance-report.html
+
+      - name: Upload performance report
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-report-${{ github.run_number }}
+          path: integration-tests/performance/performance-report.html
+
+      - name: Comment on PR (if triggered from PR)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const reportPath = 'integration-tests/performance/performance-report.html';
+            const report = fs.readFileSync(reportPath, 'utf8');
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## Load Test Results
+
+**Test Type:** ${{ github.event.inputs.test_type || 'concurrent' }}
+**Environment:** ${{ github.event.inputs.environment || 'staging' }}
+
+### Performance Summary
+${report.substring(0, 1000)}...
+
+[View Full Report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})`
+            })
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "Load test failed. Check the logs and artifacts for details."
+          # Add notification logic here (Slack, email, etc.)
