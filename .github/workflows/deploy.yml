@@ -1,16 +1,8 @@
-name: Deploy to Testnet
+name: Deploy to Production
 
 on:
-  workflow_dispatch:
-    inputs:
-      network:
-        description: 'Network to deploy to'
-        required: true
-        default: 'testnet'
-        type: choice
-        options:
-          - testnet
-          - mainnet
+  push:
+    branches: [ main ]
 
 jobs:
   deploy:
