@@ -68,7 +68,7 @@ export LOAD_TEST_URL=http://staging-api.example.com
 
 ```bash
 # Analyze latest results
-node performance/concurrent-load-test-analyzer.js ./test-results
+npm run performance:analyze:concurrent
 
 # Compare multiple test runs
 node performance/concurrent-load-comparator.js ./test-results
@@ -92,6 +92,8 @@ node performance/baseline-calculator.js --trend
 ```json
 {
   "scripts": {
+    "test:performance:concurrent": "artillery run performance/concurrent-users-artillery.yml --output test-results/concurrent-users-report.json",
+    "performance:analyze:concurrent": "node performance/concurrent-load-analyzer.js",
     "test:load": "performance/run-concurrent-load-tests.sh --standard",
     "test:load:stress": "performance/run-concurrent-load-tests.sh --stress",
     "test:load:soak": "performance/run-concurrent-load-tests.sh --soak",
