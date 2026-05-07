@@ -66,6 +66,17 @@ class PerformanceMonitor {
     this.app.get('/api/alerts', (req, res) => {
       res.json(this.metrics.alerts.slice(-10)); // Last 10 alerts
     });
+
+    // Concurrent user metrics
+    this.app.get('/api/concurrent/metrics', (req, res) => {
+      res.json({
+        activeUsers: this.metrics.current.activeUsers || 0,
+        totalRequests: this.metrics.current.totalRequests || 0,
+        errorRate: this.metrics.current.errorRate || 0,
+        avgResponseTime: this.metrics.current.avgResponseTime || 0,
+        scenarios: this.metrics.current.scenarios || {}
+      });
+    });
   }
 
   async runPerformanceTest(testName) {
@@ -106,6 +117,21 @@ class PerformanceMonitor {
           p99: overall.latency.p99
         }
       };
+
+      // Add concurrent user specific metrics
+      if (testName.includes('concurrent')) {
+        metrics.activeUsers = overall.requestsCompleted; // Approximation
+        metrics.totalRequests = overall.requestsCompleted;
+        metrics.avgResponseTime = overall.latency.mean;
+        if (report.aggregate.scenarios) {
+          metrics.scenarios = report.aggregate.scenarios.map(s => ({
+            name: s.name,
+            requests: s.requestsCompleted,
+            errors: s.errorsEncountered,
+            latency: s.latency.mean
+          }));
+        }
+      }
 
       this.metrics.current = metrics;
       this.metrics.history.push(metrics);
