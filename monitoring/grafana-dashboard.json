@@ -1,0 +1,37 @@
+{
+  "dashboard": {
+    "title": "Web3 Platform Monitoring",
+    "tags": ["web3", "platform"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "title": "Backend HTTP Request Duration",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "http_request_duration_seconds{job=\"backend\"}",
+            "legendFormat": "{{method}} {{route}}"
+          }
+        ]
+      },
+      {
+        "title": "Service Uptime",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "up{job=\"backend\"}",
+            "legendFormat": "Backend"
+          },
+          {
+            "expr": "up{job=\"frontend\"}",
+            "legendFormat": "Frontend"
+          },
+          {
+            "expr": "up{job=\"mongodb\"}",
+            "legendFormat": "MongoDB"
+          }
+        ]
+      }
+    ]
+  }
+}

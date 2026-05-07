@@ -1,0 +1,38 @@
+groups:
+  - name: example
+    rules:
+    - alert: BackendDown
+      expr: up{job="backend"} == 0
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Backend is down"
+        description: "Backend has been down for more than 1 minute."
+
+    - alert: FrontendDown
+      expr: up{job="frontend"} == 0
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Frontend is down"
+        description: "Frontend has been down for more than 1 minute."
+
+    - alert: MongoDBDown
+      expr: up{job="mongodb"} == 0
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        summary: "MongoDB is down"
+        description: "MongoDB has been down for more than 1 minute."
+
+    - alert: HighErrorRate
+      expr: rate(http_requests_total{status_code=~"5.."}[5m]) > 0.1
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "High error rate detected"
+        description: "Error rate is above 10% for the last 5 minutes."

@@ -48,15 +48,31 @@ npm run performance:analyze:concurrent  # Analyze results
 npm run performance:monitor  # Start monitoring dashboard
 ```
 
-## Deployment
+## Monitoring
 
-The platform uses automated CI/CD pipelines for deployment to production.
+The platform includes comprehensive monitoring and alerting capabilities.
 
-- **Contracts**: Deployed to mainnet on push to main branch.
-- **Backend**: Dockerized and deployed to production servers.
-- **Frontend**: Deployed to Vercel.
+### Components
 
-See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for details.
+- **Prometheus**: Metrics collection and storage
+- **Grafana**: Visualization dashboards
+- **Alertmanager**: Alert routing and notification
+- **Health Checks**: Automated service health monitoring
+
+### Starting Monitoring
+
+```bash
+cd monitoring
+./start-monitoring.sh
+```
+
+### Endpoints
+
+- Backend metrics: `http://localhost:3000/metrics`
+- Health check: `http://localhost:3000/health`
+- Prometheus: `http://localhost:9090`
+- Grafana: `http://localhost:3000`
+- Alertmanager: `http://localhost:9093`
 
 ### Test Scenarios
 - Content viewers browsing and streaming
