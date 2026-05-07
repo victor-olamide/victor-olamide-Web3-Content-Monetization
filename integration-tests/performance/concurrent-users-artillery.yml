@@ -206,7 +206,7 @@ scenarios:
               strict: false
 
   - name: "Mixed - Realistic User Behavior"
-    weight: 10
+    weight: 5
     flow:
       - think: 1
       - get:
@@ -224,3 +224,50 @@ scenarios:
       - think: 2
       - get:
           url: "/api/content/search?q={{ searchTerms.$random }}"
+
+  - name: "Admin - System Monitoring"
+    weight: 5
+    flow:
+      - think: 2
+      - post:
+          url: "/api/auth/login"
+          headers:
+            Content-Type: "application/json"
+          json:
+            email: "admin@test.com"
+            password: "adminpassword"
+          capture:
+            json: "$.token"
+            as: "adminToken"
+      - think: 1
+      - get:
+          url: "/api/admin/dashboard"
+          headers:
+            Authorization: "Bearer {{ adminToken }}"
+          expect:
+            - statusCode: 200
+              strict: false
+      - think: 2
+      - get:
+          url: "/api/admin/analytics"
+          headers:
+            Authorization: "Bearer {{ adminToken }}"
+          expect:
+            - statusCode: 200
+              strict: false
+      - think: 1
+      - get:
+          url: "/api/admin/users?limit=50"
+          headers:
+            Authorization: "Bearer {{ adminToken }}"
+          expect:
+            - statusCode: 200
+              strict: false
+      - think: 2
+      - get:
+          url: "/api/admin/content/moderation"
+          headers:
+            Authorization: "Bearer {{ adminToken }}"
+          expect:
+            - statusCode: 200
+              strict: false
