@@ -37,7 +37,8 @@
     "web3": "^4.1.1",
     "ethers": "^6.7.1",
     "ipfs-http-client": "^60.0.1",
-    "form-data": "^4.0.0"
+    "form-data": "^4.0.0",
+    "prom-client": "^14.2.0"
   },
   "devDependencies": {
     "jest": "^29.6.4",
