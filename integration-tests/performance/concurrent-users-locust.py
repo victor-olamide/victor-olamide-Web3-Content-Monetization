@@ -108,6 +108,25 @@ class ContentViewerUser(TaskSet):
                 response.failure(f"Search failed: {response.status_code}")
             else:
                 response.success()
+    
+    @task(1)
+    def comment_content(self):
+        """Simulate user commenting on content"""
+        content_id = random.choice(self.content_ids)
+        comment_data = {
+            "text": f"Great content! {random.choice(['Awesome!', 'Love it!', 'Amazing work!'])}",
+            "rating": random.randint(3, 5)
+        }
+        with self.client.post(
+            f"/api/content/{content_id}/comment",
+            json=comment_data,
+            headers={"Authorization": f"Bearer {self.auth_token}"},
+            catch_response=True
+        ) as response:
+            if response.status_code not in [200, 201]:
+                response.failure(f"Comment failed: {response.status_code}")
+            else:
+                response.success()
 
 
 class CreatorUser(TaskSet):
