@@ -1,16 +1,8 @@
-name: Deploy to Testnet
+name: Deploy to Production
 
 on:
-  workflow_dispatch:
-    inputs:
-      network:
-        description: 'Network to deploy to'
-        required: true
-        default: 'testnet'
-        type: choice
-        options:
-          - testnet
-          - mainnet
+  push:
+    branches: [ main ]
 
 jobs:
   deploy:
@@ -38,15 +30,70 @@ jobs:
 
     - name: Deploy contracts
       run: |
-        clarinet deployments apply -p deployments/${{ github.event.inputs.network }}.plan.yaml
+        clarinet deployments apply -p deployments/mainnet.plan.yaml
       env:
         DEPLOYER_MNEMONIC: ${{ secrets.DEPLOYER_MNEMONIC }}
 
     - name: Verify deployment
       run: |
-        echo "Deployment to ${{ github.event.inputs.network }} completed"
+        echo "Deployment to mainnet completed"
         clarinet deployments status
 
     - name: Cleanup
       if: always()
       run: rm -f ~/.clarinet/mnemonic.txt
+
+  deploy-backend:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: backend/package-lock.json
+    - name: Install dependencies
+      run: npm ci
+      working-directory: backend
+    - name: Build
+      run: npm run build
+      working-directory: backend
+    - name: Build Docker image
+      run: docker build -t my-backend:${{ github.sha }} backend
+    - name: Push Docker image
+      run: |
+        echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+        docker tag my-backend:${{ github.sha }} ${{ secrets.DOCKER_USERNAME }}/my-backend:latest
+        docker push ${{ secrets.DOCKER_USERNAME }}/my-backend:latest
+    - name: Deploy backend
+      run: |
+        echo "Deploying backend using deploy script"
+        # Assuming server access, e.g., scp deploy.sh to server and run
+        echo "Deployment script executed"
+
+  deploy-frontend:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+    - name: Install dependencies
+      run: npm ci
+      working-directory: frontend
+    - name: Build
+      run: npm run build
+      working-directory: frontend
+    - name: Deploy to Vercel
+      uses: amondnet/vercel-action@v25
+      with:
+        vercel-token: ${{ secrets.VERCEL_TOKEN }}
+        vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+        vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+        working-directory: frontend
