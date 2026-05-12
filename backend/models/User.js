@@ -26,8 +26,8 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['user', 'creator', 'admin'],
-      default: 'user'
+      enum: ['subscriber', 'creator', 'admin'],
+      default: 'subscriber'
     },
     avatar: {
       type: String,
@@ -41,7 +41,7 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-// Encrypt password using bcrypt
+// Encrypt password using bcrypt before saving
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) {
     next();
@@ -51,7 +51,7 @@ userSchema.pre('save', async function(next) {
   this.password = await bcrypt.hash(this.password, salt);
 });
 
-// Match user entered password to hashed password in database
+// Match user entered password to hashed password in database using bcrypt
 userSchema.methods.matchPassword = async function(enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };

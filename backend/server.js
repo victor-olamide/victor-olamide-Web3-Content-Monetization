@@ -12,6 +12,7 @@ const { connectDB, disconnectDB } = require('./config/database');
 const { initializeRenewalScheduler, stopRenewalScheduler } = require('./services/renewalScheduler');
 
 // Import routes
+const authRoutes = require('./routes/authRoutes');
 const contentRoutes = require('./routes/contentRoutes');
 const creatorRoutes = require('./routes/creatorRoutes');
 const subscriptionRoutes = require('./routes/subscriptionRoutes');
@@ -122,6 +123,7 @@ app.get('/metrics', async (req, res) => {
 // Note: duplicate /health route removed — single definition above is authoritative
 
 // API routes
+app.use('/api/auth', authRoutes);
 app.use('/api/content', contentRoutes);
 app.use('/api/creators', creatorRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);

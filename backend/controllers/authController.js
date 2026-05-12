@@ -8,13 +8,23 @@ const jwt = require('jsonwebtoken');
  */
 exports.register = async (req, res, next) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, role } = req.body;
 
-    // Create user
+    // Validate role if provided
+    const allowedRoles = ['subscriber', 'creator', 'admin'];
+    if (role && !allowedRoles.includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid role. Must be one of: subscriber, creator, admin'
+      });
+    }
+
+    // Create user with hashed password
     const user = await User.create({
       name,
       email,
-      password
+      password,
+      role: role || 'subscriber'
     });
 
     sendTokenResponse(user, 201, res);
@@ -43,7 +53,7 @@ exports.login = async (req, res, next) => {
       });
     }
 
-    // Check for user
+    // Check for user and include password for comparison
     const user = await User.findOne({ email }).select('+password');
 
     if (!user) {
@@ -53,7 +63,7 @@ exports.login = async (req, res, next) => {
       });
     }
 
-    // Check if password matches
+    // Check if password matches using bcrypt
     const isMatch = await user.matchPassword(password);
 
     if (!isMatch) {
@@ -63,6 +73,7 @@ exports.login = async (req, res, next) => {
       });
     }
 
+    // Send JWT token response
     sendTokenResponse(user, 200, res);
   } catch (err) {
     res.status(500).json({
@@ -114,7 +125,7 @@ exports.getMe = async (req, res, next) => {
  * Get token from model, create cookie and send response
  */
 const sendTokenResponse = (user, statusCode, res) => {
-  // Create token
+  // Create JWT token with user ID and role
   const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET || 'your-secret-key', {
     expiresIn: process.env.JWT_EXPIRE || '30d'
   });
@@ -130,6 +141,8 @@ const sendTokenResponse = (user, statusCode, res) => {
     options.secure = true;
   }
 
+  // Set JWT token as httpOnly cookie
+  // Send response with token and user data
   res
     .status(statusCode)
     .cookie('token', token, options)
