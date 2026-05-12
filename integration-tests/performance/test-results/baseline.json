@@ -1,0 +1,12 @@
+{
+  "created": "2026-04-24T03:01:49.748Z",
+  "metrics": {
+    "avgLatency": 0,
+    "p95Latency": 892.3,
+    "p99Latency": 1456.9,
+    "maxLatency": 2340.8,
+    "errorRate": 3.050847457627119,
+    "throughput": 18.95
+  },
+  "history": []
+}

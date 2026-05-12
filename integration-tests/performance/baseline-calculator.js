@@ -151,6 +151,60 @@ class BaselineCalculator {
   }
 
   /**
+   * Analyze performance comparison results
+   */
+  analyzePerformance(comparison) {
+    const analysis = {
+      overall: 'stable',
+      riskLevel: 'low',
+      recommendations: [],
+      keyInsights: []
+    };
+
+    const regressions = comparison.regressions || [];
+    const improvements = comparison.improvements || [];
+
+    // Determine overall performance status
+    if (regressions.length > 2) {
+      analysis.overall = 'degraded';
+      analysis.riskLevel = 'high';
+    } else if (regressions.length > 0) {
+      analysis.overall = 'concerning';
+      analysis.riskLevel = 'medium';
+    } else if (improvements.length > 1) {
+      analysis.overall = 'improving';
+      analysis.riskLevel = 'low';
+    }
+
+    // Generate recommendations
+    if (regressions.some(r => r.severity === 'high')) {
+      analysis.recommendations.push('Critical performance regression detected - immediate investigation required');
+    }
+
+    if (comparison.deltas.p95Latency && Math.abs(parseFloat(comparison.deltas.p95Latency.percentChange)) > 15) {
+      analysis.recommendations.push('P95 latency has changed significantly - review system capacity');
+    }
+
+    if (comparison.deltas.errorRate && parseFloat(comparison.deltas.errorRate.delta) > 1) {
+      analysis.recommendations.push('Error rate increased - check system stability and error handling');
+    }
+
+    if (improvements.length > 0) {
+      analysis.recommendations.push('Performance improvements detected - consider updating baseline');
+    }
+
+    // Key insights
+    const throughputChange = comparison.deltas.throughput ? parseFloat(comparison.deltas.throughput.percentChange) : 0;
+    if (throughputChange > 10) {
+      analysis.keyInsights.push('Throughput improved - system can handle more load');
+    } else if (throughputChange < -10) {
+      analysis.keyInsights.push('Throughput decreased - potential bottleneck identified');
+    }
+
+    return analysis;
+  }
+
+  /**
    * Save baseline to file
    */
   saveBaseline() {
