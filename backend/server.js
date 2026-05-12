@@ -211,6 +211,7 @@ process.on('SIGTERM', async () => {
   logger.info('SIGTERM received — shutting down gracefully');
   await disconnectDB();
   stopRenewalScheduler();
+  pinningManager.stopMonitoring();
   logger.info('Renewal scheduler stopped');
   await mongoose.connection.close();
   process.exit(0);
@@ -219,6 +220,8 @@ process.on('SIGTERM', async () => {
 process.on('SIGINT', async () => {
   logger.info('SIGINT received — shutting down gracefully');
   await disconnectDB();
+  stopRenewalScheduler();
+  pinningManager.stopMonitoring();
   logger.info('SIGINT received, shutting down gracefully');
   await mongoose.connection.close();
   process.exit(0);

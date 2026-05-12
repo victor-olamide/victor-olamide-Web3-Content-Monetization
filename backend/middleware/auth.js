@@ -59,6 +59,9 @@ exports.protect = async (req, res, next) => {
   }
 };
 
+exports.authMiddleware = exports.protect;
+exports.authenticateToken = exports.protect;
+
 // Grant access to specific roles
 // Returns 403 if user role is not in allowed roles
 exports.authorize = (...roles) => {
@@ -77,3 +80,5 @@ exports.authorize = (...roles) => {
     next();
   };
 };
+
+exports.requireAdmin = exports.authorize('admin');
