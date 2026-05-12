@@ -297,24 +297,6 @@ async function encryptFileForPremiumContent(ContentEncryption, data) {
     throw error;
   }
 }
-  try {
-    const {
-      contentId,
-      userId,
-      contentUrl,
-      masterKey,
-      contentType,
-      expiresIn = 86400 * 30 // 30 days default
-    } = data;
-
-    // Generate content-specific key
-    const contentKey = generateContentKey(userId, contentId, masterKey);
-
-    // Encrypt the content URL
-    const { encryptedData, iv, authTag } = encryptContentUrl(contentUrl, contentKey);
-
-    // Calculate expiration time
-    const expiresAt = new Date(Date.now() + expiresIn * 1000);
 
 /**
  * Create encrypted content record
@@ -361,7 +343,6 @@ async function encryptContent(ContentEncryption, data) {
     logger.error('Error encrypting content:', error);
     throw error;
   }
-}
 }
 
 /**

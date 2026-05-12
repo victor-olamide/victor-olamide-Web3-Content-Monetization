@@ -9,28 +9,6 @@
 const mongoose = require('mongoose');
 const logger = require('../utils/logger');
 
-// MongoDB connection options for replica set
-const mongoOptions = {
-  // Replica set configuration
-  replicaSet: process.env.MONGO_REPLICA_SET_NAME || 'rs0',
-
-  // Connection settings
-  maxPoolSize: parseInt(process.env.MONGO_MAX_POOL_SIZE) || 10,
-  minPoolSize: parseInt(process.env.MONGO_MIN_POOL_SIZE) || 5,
-  maxIdleTimeMS: parseInt(process.env.MONGO_MAX_IDLE_TIME_MS) || 30000,
-  serverSelectionTimeoutMS: parseInt(process.env.MONGO_SERVER_SELECTION_TIMEOUT_MS) || 5000,
-  socketTimeoutMS: parseInt(process.env.MONGO_SOCKET_TIMEOUT_MS) || 45000,
-  connectTimeoutMS: parseInt(process.env.MONGO_CONNECT_TIMEOUT_MS) || 10000,
-  bufferMaxEntries: 0, // Disable mongoose buffering
-  bufferCommands: false, // Disable mongoose buffering
-
-  // Retry configuration
-  retryWrites: true,
-  retryReads: true,
-
-const mongoose = require('mongoose');
-const logger = require('../utils/logger');
-
 // DB_URI is the canonical env var for this project (issue #148).
 // MONGODB_URI is kept as a fallback for backward compatibility with older deployments.
 const DB_URI = process.env.DB_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/stacks_monetization';
@@ -46,6 +24,131 @@ const MONGOOSE_OPTIONS = {
   connectTimeoutMS: parseInt(process.env.MONGO_CONNECT_TIMEOUT_MS, 10) || 10000,
   retryWrites: true,
   retryReads: true,
+};
+
+let _isConnected = false;
+
+function _registerEventHandlers() {
+  mongoose.connection.on('connected', () => {
+    _isConnected = true;
+    logger.info('MongoDB connected', { uri: _redactUri(DB_URI) });
+  });
+
+  mongoose.connection.on('error', (err) => {
+    logger.error('MongoDB connection error', { err });
+  });
+
+  mongoose.connection.on('disconnected', () => {
+    _isConnected = false;
+    logger.warn('MongoDB disconnected');
+  });
+
+  mongoose.connection.on('reconnected', () => {
+    _isConnected = true;
+    logger.info('MongoDB reconnected');
+  });
+}
+
+function _redactUri(uri) {
+  try {
+    const u = new URL(uri);
+    if (u.password) u.password = '***';
+    if (u.username) u.username = '***';
+    return u.toString();
+  } catch {
+    return '<invalid-uri>';
+  }
+}
+
+function _sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function connectDB() {
+  if (_isConnected) {
+    logger.debug('MongoDB already connected, reusing existing connection');
+    return;
+  }
+
+  _registerEventHandlers();
+  logger.info('Connecting to MongoDB', { uri: _redactUri(DB_URI) });
+
+  let lastError;
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      await mongoose.connect(DB_URI, MONGOOSE_OPTIONS);
+      _isConnected = true;
+      return;
+    } catch (err) {
+      lastError = err;
+      logger.warn(`MongoDB connection attempt ${attempt}/${MAX_RETRIES} failed`, { err });
+      if (attempt < MAX_RETRIES) {
+        await _sleep(RETRY_DELAY_MS);
+      }
+    }
+  }
+
+  logger.error('All MongoDB connection attempts failed', { err: lastError });
+  throw lastError;
+}
+
+async function disconnectDB() {
+  if (!_isConnected) {
+    return;
+  }
+
+  await mongoose.connection.close();
+  _isConnected = false;
+  logger.info('MongoDB connection closed gracefully');
+}
+
+function getConnectionStatus() {
+  const conn = mongoose.connection;
+  return {
+    isConnected: _isConnected,
+    readyState: conn.readyState,
+    host: conn.host || null,
+    port: conn.port || null,
+    name: conn.name || null,
+  };
+}
+
+async function healthCheck() {
+  try {
+    if (!_isConnected) {
+      return { status: 'unhealthy', message: 'Not connected to MongoDB' };
+    }
+
+    await mongoose.connection.db.admin().ping();
+    return { status: 'healthy', message: 'MongoDB is reachable' };
+  } catch (err) {
+    return { status: 'unhealthy', message: err.message };
+  }
+}
+
+process.on('SIGINT', async () => {
+  logger.info('SIGINT received — closing MongoDB connection');
+  await disconnectDB();
+  logger.info('MongoDB connection closed on SIGINT');
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  logger.info('SIGTERM received — closing MongoDB connection');
+  await disconnectDB();
+  logger.info('MongoDB connection closed on SIGTERM');
+  process.exit(0);
+});
+
+module.exports = {
+  connectDB,
+  disconnectDB,
+  getConnectionStatus,
+  healthCheck,
+  redactUri: _redactUri,
+  get isConnected() {
+    return _isConnected;
+  },
 };
 
 let _isConnected = false;
