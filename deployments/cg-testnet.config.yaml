@@ -1,0 +1,166 @@
+# Content-Gate Deployment Configuration
+# 
+# This YAML file defines the deployment strategy for the content-gate contract.
+# It uses a 4-step process to ensure reliable deployment and verification.
+
+version: 1.0
+environment: testnet
+timestamp: "2024"
+
+# Deployment sequence
+deployment_steps:
+  step_1:
+    name: "Pre-deployment Verification"
+    description: "Verify contract source and environment setup"
+    actions:
+      - Verify STACKS_PRIVATE_KEY is set
+      - Check contract file exists at contracts/content-gate.clar
+      - Validate contract syntax
+      - Ensure MongoDB is accessible
+      - Check blockchain API connectivity
+    tools:
+      - blockchain/scripts/verify-cg-deployment.js
+
+  step_2:
+    name: "Contract Deployment"
+    description: "Deploy content-gate contract to testnet"
+    actions:
+      - Create contract deploy transaction
+      - Broadcast to Stacks testnet
+      - Poll for confirmation (up to 60 attempts)
+      - Save deployment info to deployments/cg-testnet-deployment.json
+    tools:
+      - blockchain/scripts/deploy-cg-testnet.js
+    environment_vars:
+      - STACKS_PRIVATE_KEY: "deployment account private key"
+      - STACKS_NETWORK: "testnet"
+      - STACKS_API_URL: "https://stacks-node-api.testnet.stacks.co"
+
+  step_3:
+    name: "Backend Integration"
+    description: "Configure backend to use deployed contract"
+    actions:
+      - Set CONTENT_GATE_ADDRESS from deployment output
+      - Start content-gate transaction indexer
+      - Verify gatingRoutes.js integration
+      - Check accessService.js on-chain verification
+    configuration:
+      services:
+        - contentGateService.js
+        - contentGateTransactionIndexer.js
+        - contentGateVerificationMiddleware.js
+      routes:
+        - gatingRoutes.js (enhanced with on-chain verification)
+      middleware:
+        - contentGateVerificationMiddleware.js
+
+  step_4:
+    name: "Integration Testing"
+    description: "Test content-gate functionality end-to-end"
+    actions:
+      - Deploy mock NFT/FT tokens
+      - Set gating rules for test content
+      - Verify access control enforcement
+      - Test FT and NFT gating types
+      - Verify cache invalidation
+      - Check transaction indexer
+    tests:
+      - integration-tests/e2e/content-gate.test.js
+      - integration-tests/e2e/access-verification.test.js
+
+# Contract Details
+contract:
+  name: "content-gate"
+  language: "Clarity"
+  source: "contracts/content-gate.clar"
+  functions:
+    - set-gating-rule: "Set NFT/token gating rule for content"
+    - delete-gating-rule: "Remove gating rule from content"
+    - verify-access: "Check FT token balance for access"
+    - verify-nft-access: "Check NFT ownership for access"
+    - get-gating-rule: "Retrieve gating rule (read-only)"
+    - get-gating-type: "Get rule type - FT or NFT (read-only)"
+    - get-required-token: "Get required token contract (read-only)"
+  
+  constants:
+    - GATING-TYPE-FT: 0
+    - GATING-TYPE-NFT: 1
+  
+  traits:
+    - uses SIP-010 trait for FT verification
+    - uses SIP-009 trait for NFT verification
+    - calls pay-per-view contract for content verification
+
+# Verification Checklist
+verification:
+  pre_deployment:
+    - Contract file exists and is readable
+    - Private key is configured
+    - API endpoint is accessible
+    - Database is connected
+    - No syntax errors in contract
+  
+  post_deployment:
+    - Transaction is confirmed on testnet
+    - Contract ID is saved to deployment file
+    - Contract address is updated in backend config
+    - Content-gate service can read rules from contract
+    - On-chain rules are recognized by accessService
+  
+  functional_verification:
+    - Can set FT gating rules via contract
+    - Can set NFT gating rules via contract
+    - Users with tokens can access content
+    - Users with NFTs can access content
+    - Users without tokens/NFTs cannot access content
+    - Rules can be deleted from contract
+    - Cache invalidation works correctly
+    - Transaction indexer syncs on-chain events
+
+# Rollback Plan
+rollback:
+  if_deployment_fails:
+    - Revert backend configuration changes
+    - Remove any deployed contract references
+    - Restore previous gating rule database state
+    - Restart backend services
+  
+  if_verification_fails:
+    - Check contract syntax with verify-cg-deployment.js
+    - Review transaction details in explorer
+    - Check environment variables
+    - Review Stacks API connectivity
+    - Restart content-gate indexer
+
+# Monitoring
+monitoring:
+  metrics:
+    - Content-gate service: rules retrieved, cache hits/misses
+    - Verification middleware: access checks, cache stats
+    - Transaction indexer: blocks processed, rules synced
+    - Routes: API endpoint response times and error rates
+  
+  alerts:
+    - Indexer stops or encounters errors
+    - Contract function calls fail
+    - Access verification drops below 99% success
+    - High error rate in gating verification
+
+# Environment Variables Required
+environment_variables:
+  STACKS_NETWORK: "testnet"
+  STACKS_API_URL: "https://stacks-node-api.testnet.stacks.co"
+  STACKS_PRIVATE_KEY: "Required for deployment"
+  CONTENT_GATE_ADDRESS: "Set after deployment"
+  CONTENT_GATE_CONTRACT: "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.content-gate"
+  CG_INDEXER_INTERVAL_MS: "30000 (default)"
+  STACKS_API_TIMEOUT: "30000 (default)"
+  CACHE_TTL: "600000 (10 minutes default)"
+
+# Timeline
+timeline:
+  step_1_duration: "5-10 minutes (verification)"
+  step_2_duration: "10-30 minutes (deployment + confirmation)"
+  step_3_duration: "5 minutes (configuration)"
+  step_4_duration: "10-20 minutes (testing)"
+  total_duration: "30-65 minutes"
