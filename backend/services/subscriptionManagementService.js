@@ -1,5 +1,6 @@
 const Subscription = require('../models/Subscription');
 const SubscriptionTier = require('../models/SubscriptionTier');
+const royaltyService = require('./royaltyService');
 const { calculateRenewalStatus } = require('./renewalService');
 const {
   calculateExpiryDate,
@@ -35,6 +36,9 @@ const purchaseSubscription = async (payload) => {
   const resolvedExpiry = calculateExpiryDate(expiry);
   const nextRenewalDate = new Date(resolvedExpiry);
 
+  const platformFee = await royaltyService.calculatePlatformFee(amount);
+  const creatorAmount = royaltyService.calculateCreatorAmount(amount, platformFee);
+
   const subscriptionData = buildSubscriptionDocument(
     {
       user,
@@ -45,6 +49,8 @@ const purchaseSubscription = async (payload) => {
       tierPrice,
       tierBenefits,
       amount,
+      platformFee,
+      creatorAmount,
       expiry: resolvedExpiry,
       transactionId,
       autoRenewal,
@@ -72,6 +78,12 @@ const purchaseSubscription = async (payload) => {
 
   const subscription = new Subscription(subscriptionData);
   await subscription.save();
+
+  try {
+    await royaltyService.distributeSubscriptionRoyalties(subscription);
+  } catch (error) {
+    console.error('Failed to distribute royalties for subscription purchase:', error.message);
+  }
 
   return subscription;
 };

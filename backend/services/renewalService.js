@@ -11,6 +11,7 @@
 const Subscription = require('../models/Subscription');
 const SubscriptionRenewal = require('../models/SubscriptionRenewal');
 const Content = require('../models/Content');
+const royaltyService = require('./royaltyService');
 const { calculatePlatformFee, renewSubscription } = require('./contractService');
 const notificationService = require('./notificationService');
 const logger = require('../utils/logger');
@@ -224,6 +225,23 @@ async function completeRenewal(renewalId, txId) {
       subscription.renewalAttempts = 0;
       subscription.updatedAt = new Date();
       await subscription.save();
+    }
+
+    try {
+      await royaltyService.distributeSubscriptionRoyalties({
+        _id: renewal.subscriptionId,
+        creator: renewal.creator,
+        renewalAmount: renewal.renewalAmount,
+        platformFee: renewal.platformFee,
+        creatorAmount: renewal.creatorAmount,
+        subscriptionRenewalId: renewal._id,
+        contentId: subscription?.contentId || null
+      });
+    } catch (royaltyError) {
+      logger.warn('Failed to distribute royalties for subscription renewal', {
+        error: royaltyError.message,
+        renewalId: renewal._id
+      });
     }
 
     return {
