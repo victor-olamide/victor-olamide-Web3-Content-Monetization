@@ -97,6 +97,23 @@ Returns top performing content.
 ### GET /api/creator/export/:address?startDate&endDate
 Returns exportable transaction data.
 
+## Deployment
+
+The frontend is deployed on Vercel with the following configuration:
+
+- **Framework**: Next.js
+- **Environment Variables**:
+  - `NEXT_PUBLIC_API_URL`: Production API endpoint
+  - `NEXT_PUBLIC_STACKS_NETWORK`: Mainnet
+  - `NEXT_PUBLIC_ANALYTICS_ID`: Google Analytics measurement ID
+- **Custom Domain**: Configured via Vercel dashboard
+- **HTTPS**: Automatically enabled by Vercel
+
+To deploy:
+1. Ensure Vercel CLI is installed and logged in
+2. Run `npm run deploy` from the frontend directory
+3. Verify all pages load correctly post-deployment
+
 ## Components
 
 ### Core Components
