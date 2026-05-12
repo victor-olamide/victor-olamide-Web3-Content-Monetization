@@ -2,6 +2,7 @@
  * Encryption Service
  * Handles content URL encryption/decryption and key management
  * Uses AES-256-GCM for authenticated encryption
+ * Premium content is automatically encrypted before IPFS upload
  */
 
 const crypto = require('crypto');
@@ -107,6 +108,125 @@ function decryptContentUrl(encryptedData, iv, authTag, encryptionKey) {
 }
 
 /**
+ * Encrypt a raw file buffer with AES-256-GCM
+ */
+function encryptBuffer(buffer, encryptionKey) {
+  try {
+    if (!Buffer.isBuffer(buffer)) {
+      throw new Error('Buffer data is required for file encryption');
+    }
+
+    if (!encryptionKey || encryptionKey.length !== ENCRYPTION_CONFIG.keyLength) {
+      throw new Error('Invalid encryption key');
+    }
+
+    const iv = generateIv();
+    const cipher = crypto.createCipheriv(ENCRYPTION_CONFIG.algorithm, encryptionKey, iv);
+
+    const encrypted = Buffer.concat([cipher.update(buffer), cipher.final()]);
+    const authTag = cipher.getAuthTag();
+
+    return {
+      encryptedData: encrypted,
+      iv: iv.toString(ENCRYPTION_CONFIG.encoding),
+      authTag: authTag.toString(ENCRYPTION_CONFIG.encoding)
+    };
+  } catch (error) {
+    logger.error('Error encrypting buffer:', error);
+    throw error;
+  }
+}
+
+/**
+ * Decrypt a raw file buffer encrypted with AES-256-GCM
+ */
+function decryptBuffer(encryptedBuffer, iv, authTag, encryptionKey) {
+  try {
+    if (!Buffer.isBuffer(encryptedBuffer)) {
+      throw new Error('Encrypted buffer data is required for file decryption');
+    }
+
+    if (!encryptionKey || encryptionKey.length !== ENCRYPTION_CONFIG.keyLength) {
+      throw new Error('Invalid encryption key');
+    }
+
+    const decipher = crypto.createDecipheriv(
+      ENCRYPTION_CONFIG.algorithm,
+      encryptionKey,
+      Buffer.from(iv, ENCRYPTION_CONFIG.encoding)
+    );
+
+    decipher.setAuthTag(Buffer.from(authTag, ENCRYPTION_CONFIG.encoding));
+
+    return Buffer.concat([decipher.update(encryptedBuffer), decipher.final()]);
+  } catch (error) {
+    logger.error('Error decrypting buffer:', error);
+    throw new Error('Failed to decrypt content data. Unauthorized or corrupted data.');
+  }
+}
+
+/**
+ * Wrap a content encryption key with the master key so it can be stored safely
+ */
+function wrapContentKey(contentKey, masterKey) {
+  try {
+    if (!contentKey || contentKey.length !== ENCRYPTION_CONFIG.keyLength) {
+      throw new Error('Invalid content key');
+    }
+
+    if (!masterKey || masterKey.length !== ENCRYPTION_CONFIG.keyLength) {
+      throw new Error('Invalid master key');
+    }
+
+    const iv = generateIv();
+    const cipher = crypto.createCipheriv(ENCRYPTION_CONFIG.algorithm, masterKey, iv);
+
+    const encryptedKey = Buffer.concat([cipher.update(contentKey), cipher.final()]);
+    const authTag = cipher.getAuthTag();
+
+    return {
+      encryptedKey: encryptedKey.toString(ENCRYPTION_CONFIG.encoding),
+      iv: iv.toString(ENCRYPTION_CONFIG.encoding),
+      authTag: authTag.toString(ENCRYPTION_CONFIG.encoding)
+    };
+  } catch (error) {
+    logger.error('Error wrapping content key:', error);
+    throw error;
+  }
+}
+
+/**
+ * Unwrap a stored content encryption key using the master key
+ */
+function unwrapContentKey(encryptedKey, iv, authTag, masterKey) {
+  try {
+    if (!encryptedKey || !iv || !authTag) {
+      throw new Error('Missing wrapped content key metadata');
+    }
+
+    if (!masterKey || masterKey.length !== ENCRYPTION_CONFIG.keyLength) {
+      throw new Error('Invalid master key');
+    }
+
+    const decipher = crypto.createDecipheriv(
+      ENCRYPTION_CONFIG.algorithm,
+      masterKey,
+      Buffer.from(iv, ENCRYPTION_CONFIG.encoding)
+    );
+
+    decipher.setAuthTag(Buffer.from(authTag, ENCRYPTION_CONFIG.encoding));
+
+    return Buffer.concat([
+      decipher.update(Buffer.from(encryptedKey, ENCRYPTION_CONFIG.encoding)),
+      decipher.final()
+    ]);
+  } catch (error) {
+    logger.error('Error unwrapping content key:', error);
+    throw new Error('Failed to unwrap encryption key. Unauthorized or corrupted data.');
+  }
+}
+
+/**
  * Generate a content encryption key specific to user and content
  */
 function generateContentKey(userId, contentId, masterKey) {
@@ -119,6 +239,82 @@ function generateContentKey(userId, contentId, masterKey) {
     throw error;
   }
 }
+
+/**
+ * Encrypt file buffer for premium content upload
+ */
+async function encryptFileForPremiumContent(ContentEncryption, data) {
+  try {
+    const {
+      contentId,
+      buffer,
+      originalName,
+      contentType,
+      uploadedBy,
+      masterKey
+    } = data;
+
+    // Generate content-specific key
+    const contentKey = generateEncryptionKey();
+
+    // Encrypt the file buffer
+    const { encryptedData, iv, authTag } = encryptBuffer(buffer, contentKey);
+
+    // Wrap the content key
+    const wrappedKey = wrapContentKey(contentKey, masterKey);
+
+    // Create encrypted content record
+    const encryptedContent = new ContentEncryption({
+      contentId,
+      // userId not set for global record
+      contentType,
+      encryptedFileKey: wrappedKey.encryptedKey,
+      encryptionKeyIv: wrappedKey.iv,
+      encryptionKeyTag: wrappedKey.authTag,
+      fileEncryptionIv: iv,
+      fileEncryptionTag: authTag,
+      encryptedFileUrl: '', // To be set after IPFS upload
+      isEncryptedContent: true,
+      accessAttempts: 0,
+      lastAccessedAt: null,
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+      isActive: true,
+      metadata: {
+        uploadedBy: uploadedBy.toString(),
+        originalFileName: originalName
+      }
+    });
+
+    await encryptedContent.save();
+    logger.info(`File encrypted for premium content ${contentId}`);
+
+    return {
+      encryptedBuffer: encryptedData,
+      encryptionRecord: encryptedContent
+    };
+  } catch (error) {
+    logger.error('Error encrypting file for premium content:', error);
+    throw error;
+  }
+}
+  try {
+    const {
+      contentId,
+      userId,
+      contentUrl,
+      masterKey,
+      contentType,
+      expiresIn = 86400 * 30 // 30 days default
+    } = data;
+
+    // Generate content-specific key
+    const contentKey = generateContentKey(userId, contentId, masterKey);
+
+    // Encrypt the content URL
+    const { encryptedData, iv, authTag } = encryptContentUrl(contentUrl, contentKey);
+
+    // Calculate expiration time
+    const expiresAt = new Date(Date.now() + expiresIn * 1000);
 
 /**
  * Create encrypted content record
@@ -165,6 +361,7 @@ async function encryptContent(ContentEncryption, data) {
     logger.error('Error encrypting content:', error);
     throw error;
   }
+}
 }
 
 /**
@@ -220,9 +417,58 @@ async function verifyAndDecryptContent(ContentEncryption, contentId, userId, mas
 }
 
 /**
- * Revoke content access
+ * Decrypt file buffer for authorized user access
  */
-async function revokeContentAccess(ContentEncryption, contentId, userId) {
+async function decryptFileForAuthorizedUser(ContentEncryption, contentId, masterKey) {
+  try {
+    // Find the global encryption record for the content
+    const encryptionRecord = await ContentEncryption.findOne({
+      contentId,
+      isEncryptedContent: true,
+      isActive: true
+    });
+
+    if (!encryptionRecord) {
+      throw new Error('Encryption record not found');
+    }
+
+    // Unwrap the content key
+    const contentKey = unwrapContentKey(
+      encryptionRecord.encryptedFileKey,
+      encryptionRecord.encryptionKeyIv,
+      encryptionRecord.encryptionKeyTag,
+      masterKey
+    );
+
+    // Get the encrypted file from IPFS
+    const { getContentFromStorage } = require('../services/storageService');
+    const encryptedBuffer = await getContentFromStorage(encryptionRecord.encryptedFileUrl, 'ipfs');
+
+    if (!Buffer.isBuffer(encryptedBuffer)) {
+      throw new Error('Failed to retrieve encrypted content');
+    }
+
+    // Decrypt the buffer
+    const decryptedBuffer = decryptBuffer(
+      encryptedBuffer,
+      encryptionRecord.fileEncryptionIv,
+      encryptionRecord.fileEncryptionTag,
+      contentKey
+    );
+
+    // Update access tracking
+    encryptionRecord.accessAttempts = (encryptionRecord.accessAttempts || 0) + 1;
+    encryptionRecord.lastAccessedAt = new Date();
+    await encryptionRecord.save();
+
+    logger.info(`Content ${contentId} decrypted for authorized access (attempt ${encryptionRecord.accessAttempts})`);
+
+    return decryptedBuffer;
+  } catch (error) {
+    logger.error('Error decrypting file for authorized user:', error);
+    throw error;
+  }
+}
   try {
     const result = await ContentEncryption.updateOne(
       { contentId, userId },
@@ -382,10 +628,16 @@ module.exports = {
   // Encryption/Decryption
   encryptContentUrl,
   decryptContentUrl,
+  encryptBuffer,
+  decryptBuffer,
+  wrapContentKey,
+  unwrapContentKey,
 
   // Content management
   encryptContent,
+  encryptFileForPremiumContent,
   verifyAndDecryptContent,
+  decryptFileForAuthorizedUser,
   revokeContentAccess,
   extendContentAccess,
   getContentAccessStatus,
