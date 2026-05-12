@@ -286,6 +286,20 @@ router.get('/:contentId', async (req, res) => {
   }
 });
 
+// Check access to content
+router.get('/:contentId/access', require('../middleware/auth').protect, require('../middleware/accessControl').verifyContentAccess, async (req, res) => {
+  try {
+    res.json({
+      allowed: true,
+      reason: req.accessInfo.reason,
+      method: req.accessInfo.method,
+      userIdentifier: req.userIdentifier
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // Get all content metadata with pagination, filtering by category/creator, and keyword search
 router.get('/', async (req, res) => {
   try {
