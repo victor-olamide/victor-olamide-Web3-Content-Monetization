@@ -4,28 +4,31 @@
 const express = require('express');
 const router = express.Router();
 const subscriptionTierService = require('../services/subscriptionTierService');
+const {
+  validateTierCreation,
+  validateTierUpdate,
+  validateTierId,
+  validateCreatorId
+} = require('../middleware/subscriptionTierValidation');
+const {
+  verifyToken,
+  verifyTierOwnership,
+  isCreator,
+  optionalAuth
+} = require('../middleware/subscriptionTierAuth');
 
 /**
  * POST /tiers
  * Create a new subscription tier
+ * @body {string} creatorId - Creator ID
+ * @body {string} name - Tier name
+ * @body {string} description - Tier description
+ * @body {number} price - Subscription price
+ * @body {Array} benefits - Tier benefits
  */
-router.post('/tiers', async (req, res) => {
+router.post('/tiers', validateTierCreation, verifyToken, isCreator, async (req, res) => {
   try {
     const { creatorId, name, description, price, benefits, icon, position, isPopular, trialDays } = req.body;
-
-    if (!creatorId || !name || !description || price === undefined) {
-      return res.status(400).json({
-        success: false,
-        message: 'Creator ID, name, description, and price are required'
-      });
-    }
-
-    if (price < 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Price must be 0 or greater'
-      });
-    }
 
     const result = await subscriptionTierService.createSubscriptionTier(creatorId, {
       name,
@@ -55,22 +58,26 @@ router.post('/tiers', async (req, res) => {
     });
   }
 });
+    res.status(500).json({
+      success: false,
+      message: 'Error creating subscription tier',
+      error: error.message
+    });
+  }
+});
 
 /**
  * GET /creators/:creatorId/tiers
  * Get all subscription tiers for a creator
+ * @query {boolean} includeInactive - Include inactive tiers
+ * @query {boolean} onlyVisible - Only visible tiers
+ * @query {string} sortBy - Sort field
+ * @query {boolean} ascending - Sort direction
  */
-router.get('/creators/:creatorId/tiers', async (req, res) => {
+router.get('/creators/:creatorId/tiers', validateCreatorId, optionalAuth, async (req, res) => {
   try {
     const { creatorId } = req.params;
     const { includeInactive, onlyVisible, sortBy, ascending } = req.query;
-
-    if (!creatorId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Creator ID is required'
-      });
-    }
 
     const result = await subscriptionTierService.getCreatorTiers(creatorId, {
       includeInactive: includeInactive === 'true',
@@ -102,16 +109,9 @@ router.get('/creators/:creatorId/tiers', async (req, res) => {
  * GET /tiers/:tierId
  * Get a specific tier by ID
  */
-router.get('/tiers/:tierId', async (req, res) => {
+router.get('/tiers/:tierId', validateTierId, optionalAuth, async (req, res) => {
   try {
     const { tierId } = req.params;
-
-    if (!tierId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Tier ID is required'
-      });
-    }
 
     const result = await subscriptionTierService.getTierById(tierId);
 
@@ -136,25 +136,10 @@ router.get('/tiers/:tierId', async (req, res) => {
  * PUT /tiers/:tierId
  * Update a subscription tier
  */
-router.put('/tiers/:tierId', async (req, res) => {
+router.put('/tiers/:tierId', validateTierId, validateTierUpdate, verifyToken, verifyTierOwnership, async (req, res) => {
   try {
     const { tierId } = req.params;
     const updateData = req.body;
-
-    if (!tierId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Tier ID is required'
-      });
-    }
-
-    // Validate price if provided
-    if (updateData.price !== undefined && updateData.price < 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Price must be 0 or greater'
-      });
-    }
 
     const result = await subscriptionTierService.updateSubscriptionTier(tierId, updateData);
 
@@ -179,18 +164,12 @@ router.put('/tiers/:tierId', async (req, res) => {
 /**
  * DELETE /tiers/:tierId
  * Delete a subscription tier
+ * @query {boolean} hardDelete - Permanently delete (true) or soft delete (false)
  */
-router.delete('/tiers/:tierId', async (req, res) => {
+router.delete('/tiers/:tierId', validateTierId, verifyToken, verifyTierOwnership, async (req, res) => {
   try {
     const { tierId } = req.params;
     const { hardDelete } = req.query;
-
-    if (!tierId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Tier ID is required'
-      });
-    }
 
     const result = await subscriptionTierService.deleteSubscriptionTier(
       tierId,
@@ -218,16 +197,9 @@ router.delete('/tiers/:tierId', async (req, res) => {
  * GET /tiers/:tierId/hierarchy
  * Get tier hierarchy (breadth view of all tiers)
  */
-router.get('/creators/:creatorId/hierarchy', async (req, res) => {
+router.get('/creators/:creatorId/hierarchy', validateCreatorId, optionalAuth, async (req, res) => {
   try {
     const { creatorId } = req.params;
-
-    if (!creatorId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Creator ID is required'
-      });
-    }
 
     const result = await subscriptionTierService.getTierHierarchy(creatorId);
 
@@ -252,7 +224,7 @@ router.get('/creators/:creatorId/hierarchy', async (req, res) => {
  * GET /tiers/compare
  * Compare two tiers
  */
-router.get('/tiers/compare', async (req, res) => {
+router.get('/tiers/compare', optionalAuth, async (req, res) => {
   try {
     const { tierId1, tierId2 } = req.query;
 
@@ -286,18 +258,28 @@ router.get('/tiers/compare', async (req, res) => {
  * GET /creators/:creatorId/tiers/suggestions
  * Get tier optimization suggestions
  */
-router.get('/creators/:creatorId/suggestions', async (req, res) => {
+router.get('/creators/:creatorId/suggestions', validateCreatorId, verifyToken, isCreator, async (req, res) => {
   try {
     const { creatorId } = req.params;
 
-    if (!creatorId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Creator ID is required'
-      });
+    const result = await subscriptionTierService.getTierSuggestions(creatorId);
+
+    if (!result.success) {
+      return res.status(400).json({ success: false, message: result.error });
     }
 
-    const result = await subscriptionTierService.getTierSuggestions(creatorId);
+    res.json({
+      success: true,
+      suggestions: result.suggestions
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching suggestions',
+      error: error.message
+    });
+  }
+});
 
     if (!result.success) {
       return res.status(400).json({ success: false, message: result.error });
@@ -320,15 +302,15 @@ router.get('/creators/:creatorId/suggestions', async (req, res) => {
  * POST /tiers/reorder
  * Reorder tiers for a creator
  */
-router.post('/creators/:creatorId/reorder', async (req, res) => {
+router.post('/creators/:creatorId/reorder', validateCreatorId, verifyToken, isCreator, async (req, res) => {
   try {
     const { creatorId } = req.params;
     const { tierPositions } = req.body;
 
-    if (!creatorId || !Array.isArray(tierPositions)) {
+    if (!Array.isArray(tierPositions)) {
       return res.status(400).json({
         success: false,
-        message: 'Creator ID and tier positions array are required'
+        message: 'Tier positions array is required'
       });
     }
 
@@ -356,16 +338,9 @@ router.post('/creators/:creatorId/reorder', async (req, res) => {
  * GET /creators/:creatorId/statistics
  * Get tier statistics for a creator
  */
-router.get('/creators/:creatorId/statistics', async (req, res) => {
+router.get('/creators/:creatorId/statistics', validateCreatorId, verifyToken, isCreator, async (req, res) => {
   try {
     const { creatorId } = req.params;
-
-    if (!creatorId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Creator ID is required'
-      });
-    }
 
     const result = await subscriptionTierService.getTierStatistics(creatorId);
 
@@ -390,16 +365,9 @@ router.get('/creators/:creatorId/statistics', async (req, res) => {
  * POST /tiers/:tierId/activate
  * Activate a tier
  */
-router.post('/tiers/:tierId/activate', async (req, res) => {
+router.post('/tiers/:tierId/activate', validateTierId, verifyToken, verifyTierOwnership, async (req, res) => {
   try {
     const { tierId } = req.params;
-
-    if (!tierId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Tier ID is required'
-      });
-    }
 
     const result = await subscriptionTierService.updateSubscriptionTier(tierId, {
       isActive: true
@@ -427,16 +395,9 @@ router.post('/tiers/:tierId/activate', async (req, res) => {
  * POST /tiers/:tierId/deactivate
  * Deactivate a tier
  */
-router.post('/tiers/:tierId/deactivate', async (req, res) => {
+router.post('/tiers/:tierId/deactivate', validateTierId, verifyToken, verifyTierOwnership, async (req, res) => {
   try {
     const { tierId } = req.params;
-
-    if (!tierId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Tier ID is required'
-      });
-    }
 
     const result = await subscriptionTierService.updateSubscriptionTier(tierId, {
       isActive: false
@@ -464,16 +425,9 @@ router.post('/tiers/:tierId/deactivate', async (req, res) => {
  * POST /tiers/:tierId/toggle-popular
  * Toggle popular status of a tier
  */
-router.post('/tiers/:tierId/toggle-popular', async (req, res) => {
+router.post('/tiers/:tierId/toggle-popular', validateTierId, verifyToken, verifyTierOwnership, async (req, res) => {
   try {
     const { tierId } = req.params;
-
-    if (!tierId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Tier ID is required'
-      });
-    }
 
     // Get current tier to toggle
     const getTierResult = await subscriptionTierService.getTierById(tierId);
