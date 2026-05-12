@@ -56,8 +56,13 @@ const { errorHandler } = require('./middleware/errorHandler');
 const { databaseHealthCheck, databaseStatusCheck } = require('./middleware/databaseHealth');
 
 // Import services
-const { initializePinningService } = require('./services/pinningManager');
+const {
+  initializePinningService,
+  pinningManager,
+} = require('./services/pinningManager');
 const { startCacheEvictionJob } = require('./services/verificationCacheEvictionJob');
+const { startIndexer, stopIndexer } = require('./services/ppvTransactionIndexer');
+const ppvContentRoutes = require('./routes/ppvContentRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -163,6 +168,7 @@ app.use('/api/tier-bulk', tierBulkOperationsRoutes);
 app.use('/api/tier-upgrades', tierUpgradeRoutes);
 app.use('/api/webhook-admin', webhookAdminRoutes);
 app.use('/api/blockchain', blockchainVerificationRoutes);
+app.use('/api/ppv', ppvContentRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
@@ -183,6 +189,9 @@ async function initializeServices() {
     logger.error('Failed to initialize pinning service', { err: error });
   }
   startCacheEvictionJob();
+
+  const ppvIndexerIntervalMs = parseInt(process.env.PPV_INDEXER_INTERVAL_MS, 10) || 30000;
+  startIndexer(ppvIndexerIntervalMs);
 
   const renewalIntervalMs = parseInt(process.env.RENEWAL_SCHEDULER_INTERVAL_MS, 10) || 86400000;
   // Initialize automatic subscription renewal scheduler to run daily
@@ -211,6 +220,7 @@ process.on('SIGTERM', async () => {
   logger.info('SIGTERM received — shutting down gracefully');
   await disconnectDB();
   stopRenewalScheduler();
+  stopIndexer();
   pinningManager.stopMonitoring();
   logger.info('Renewal scheduler stopped');
   await mongoose.connection.close();
@@ -221,6 +231,7 @@ process.on('SIGINT', async () => {
   logger.info('SIGINT received — shutting down gracefully');
   await disconnectDB();
   stopRenewalScheduler();
+  stopIndexer();
   pinningManager.stopMonitoring();
   logger.info('SIGINT received, shutting down gracefully');
   await mongoose.connection.close();
