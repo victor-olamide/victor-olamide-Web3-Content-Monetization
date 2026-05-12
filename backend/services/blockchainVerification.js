@@ -233,7 +233,7 @@ async function verifyPurchase(userAddress, contentId) {
 
     return cvToJSON(result).value;
   } catch (err) {
-    console.error('Purchase verification error:', err);
+    logger.error('Purchase verification error:', err);
     return false;
   }
 }
@@ -304,7 +304,7 @@ async function verifySubscription(userAddress, creatorAddress, tierId) {
 
     return cvToJSON(result).value;
   } catch (err) {
-    console.error('Subscription verification error:', err);
+    logger.error('Subscription verification error:', err);
     return false;
   }
 }
@@ -328,7 +328,7 @@ async function getContentInfo(contentId) {
     const data = cvToJSON(result);
     return data.value ? data.value : null;
   } catch (err) {
-    console.error('Content info error:', err);
+    logger.error('Content info error:', err);
     return null;
   }
 }
@@ -350,7 +350,7 @@ async function verifyGatingRule(contentId) {
     const data = cvToJSON(result);
     return data.value ? data.value : null;
   } catch (err) {
-    console.error('Gating rule error:', err);
+    logger.error('Gating rule error:', err);
     return null;
   }
 }

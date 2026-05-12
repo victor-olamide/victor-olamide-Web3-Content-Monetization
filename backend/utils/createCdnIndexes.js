@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const { CdnCacheEntry, CdnPurgeRequest, CdnAnalytics, CdnHealthCheck } = require('../models/CdnCache');
+const logger = require('./logger');
 
 /**
  * Create database indexes for CDN collections
@@ -7,7 +8,7 @@ const { CdnCacheEntry, CdnPurgeRequest, CdnAnalytics, CdnHealthCheck } = require
  */
 async function createCdnIndexes() {
   try {
-    console.log('Creating CDN database indexes...');
+    logger.info('Creating CDN database indexes');
 
     // CdnCacheEntry indexes
     await CdnCacheEntry.collection.createIndex(
@@ -35,7 +36,7 @@ async function createCdnIndexes() {
       { name: 'expiresAt_index', expireAfterSeconds: 0 }
     );
 
-    console.log('✓ Created CdnCacheEntry indexes');
+    logger.info('Created CdnCacheEntry indexes');
 
     // CdnPurgeRequest indexes
     await CdnPurgeRequest.collection.createIndex(
@@ -53,7 +54,7 @@ async function createCdnIndexes() {
       { name: 'requestedBy_createdAt_index' }
     );
 
-    console.log('✓ Created CdnPurgeRequest indexes');
+    logger.info('Created CdnPurgeRequest indexes');
 
     // CdnAnalytics indexes
     await CdnAnalytics.collection.createIndex(
@@ -71,7 +72,7 @@ async function createCdnIndexes() {
       { name: 'totalRequests_index' }
     );
 
-    console.log('✓ Created CdnAnalytics indexes');
+    logger.info('Created CdnAnalytics indexes');
 
     // CdnHealthCheck indexes
     await CdnHealthCheck.collection.createIndex(
@@ -89,11 +90,11 @@ async function createCdnIndexes() {
       { name: 'status_checkedAt_index' }
     );
 
-    console.log('✓ Created CdnHealthCheck indexes');
+    logger.info('Created CdnHealthCheck indexes');
 
-    console.log('✅ All CDN database indexes created successfully');
+    logger.info('All CDN database indexes created successfully');
   } catch (error) {
-    console.error('❌ Failed to create CDN indexes:', error);
+    logger.error('Failed to create CDN indexes', { err: error });
     throw error;
   }
 }
@@ -103,16 +104,16 @@ async function createCdnIndexes() {
  */
 async function dropCdnIndexes() {
   try {
-    console.log('Dropping CDN database indexes...');
+    logger.info('Dropping CDN database indexes');
 
     await CdnCacheEntry.collection.dropIndexes();
     await CdnPurgeRequest.collection.dropIndexes();
     await CdnAnalytics.collection.dropIndexes();
     await CdnHealthCheck.collection.dropIndexes();
 
-    console.log('✅ All CDN database indexes dropped successfully');
+    logger.info('All CDN database indexes dropped successfully');
   } catch (error) {
-    console.error('❌ Failed to drop CDN indexes:', error);
+    logger.error('Failed to drop CDN indexes', { err: error });
     throw error;
   }
 }
@@ -122,7 +123,7 @@ async function dropCdnIndexes() {
  */
 async function getCdnIndexInfo() {
   try {
-    console.log('Getting CDN index information...');
+    logger.info('Getting CDN index information');
 
     const cacheIndexes = await CdnCacheEntry.collection.indexes();
     const purgeIndexes = await CdnPurgeRequest.collection.indexes();
@@ -136,7 +137,7 @@ async function getCdnIndexInfo() {
       CdnHealthCheck: healthIndexes
     };
   } catch (error) {
-    console.error('❌ Failed to get CDN index info:', error);
+    logger.error('Failed to get CDN index info', { err: error });
     throw error;
   }
 }
@@ -157,12 +158,12 @@ if (require.main === module) {
     useUnifiedTopology: true
   })
   .then(async () => {
-    console.log('Connected to MongoDB');
+    logger.info('Connected to MongoDB');
     await createCdnIndexes();
     process.exit(0);
   })
   .catch((error) => {
-    console.error('MongoDB connection failed:', error);
+    logger.error('MongoDB connection failed', { err: error });
     process.exit(1);
   });
 }

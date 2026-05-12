@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const cdnService = require('./cdnService');
 const { getContentFromStorage } = require('./storageService');
 const { cdnConfig, getContentTypeConfig } = require('../config/cdnConfig');
@@ -47,7 +48,7 @@ class CdnDeliveryService {
       return directResult;
 
     } catch (error) {
-      console.error('CDN delivery failed, falling back to direct:', error);
+      logger.error('CDN delivery failed, falling back to direct', { err: error });
       return await this.deliverDirect(content, options);
     }
   }
@@ -109,7 +110,7 @@ class CdnDeliveryService {
 
       // If CDN fails, try direct delivery as fallback
       if (!options.skipFallback) {
-        console.log('Falling back to direct delivery');
+        logger.info('Falling back to direct delivery');
         return await this.deliverDirect(content, { ...options, skipCdnCache: true });
       }
 
@@ -147,7 +148,7 @@ class CdnDeliveryService {
       };
 
     } catch (error) {
-      console.error('Direct content delivery failed:', error);
+      logger.error('Direct content delivery failed', { err: error });
       return {
         success: false,
         method: 'direct',
@@ -292,7 +293,7 @@ class CdnDeliveryService {
       };
 
     } catch (error) {
-      console.error('Failed to get delivery stats:', error);
+      logger.error('Failed to get delivery stats', { err: error });
       return { success: false, error: error.message };
     }
   }
@@ -314,7 +315,7 @@ class CdnDeliveryService {
     if (result.success) {
       console.log(`Successfully purged ${result.purgedCount} items from CDN cache`);
     } else {
-      console.error('Failed to purge CDN cache:', result.error);
+      logger.error('Failed to purge CDN cache:', result.error);
     }
 
     return result;

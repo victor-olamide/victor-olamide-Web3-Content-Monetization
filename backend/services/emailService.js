@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const nodemailer = require('nodemailer');
 const { emailConfig } = require('../config/emailConfig');
 
@@ -9,7 +10,7 @@ function getTransporter() {
     transporter = {
       sendMail: async (mail) => {
         // In disabled mode, log and resolve
-        console.log('Email disabled - would send:', mail);
+        logger.info('Email disabled - would send:', mail);
         return Promise.resolve({ simulated: true, mail });
       }
     };

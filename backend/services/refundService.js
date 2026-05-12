@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const Purchase = require('../models/Purchase');
 const Refund = require('../models/Refund');
 const Content = require('../models/Content');
@@ -314,7 +315,7 @@ async function getPendingRefundsForCreator(creator) {
     }).sort({ createdAt: -1 });
     return refunds;
   } catch (error) {
-    console.error('Error fetching pending refunds:', error);
+    logger.error('Error fetching pending refunds', { err: error });
     return [];
   }
 }
@@ -333,7 +334,7 @@ async function getRefundHistory(user, contentId) {
     }).sort({ createdAt: -1 });
     return refunds;
   } catch (error) {
-    console.error('Error fetching refund history:', error);
+    logger.error('Error fetching refund history', { err: error });
     return [];
   }
 }

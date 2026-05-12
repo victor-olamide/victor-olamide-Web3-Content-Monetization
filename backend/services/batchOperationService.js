@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const BatchOperation = require('../models/BatchOperation');
 const Content = require('../models/Content');
 const { updateContentPrice } = require('./contractService');
@@ -96,7 +97,7 @@ const executeBatchPriceUpdate = async (batchId, creator, contentIds, newPrice, c
     batch.completedAt = new Date();
     await batch.save();
   } catch (error) {
-    console.error('Batch price update error:', error);
+    logger.error('Batch price update error', { err: error });
     const batch = await BatchOperation.findById(batchId);
     batch.status = 'failed';
     batch.completedAt = new Date();
@@ -188,7 +189,7 @@ const executeBatchRemove = async (batchId, creator, contentIds, removalReason, c
     batch.completedAt = new Date();
     await batch.save();
   } catch (error) {
-    console.error('Batch remove error:', error);
+    logger.error('Batch remove error', { err: error });
     const batch = await BatchOperation.findById(batchId);
     batch.status = 'failed';
     batch.completedAt = new Date();
@@ -285,7 +286,7 @@ const executeBatchMetadataUpdate = async (batchId, creator, contentIds, updates)
     batch.completedAt = new Date();
     await batch.save();
   } catch (error) {
-    console.error('Batch metadata update error:', error);
+    logger.error('Batch metadata update error', { err: error });
     const batch = await BatchOperation.findById(batchId);
     batch.status = 'failed';
     batch.completedAt = new Date();
