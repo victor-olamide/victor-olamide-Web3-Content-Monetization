@@ -6,12 +6,25 @@
 import type { UserProfile, PurchaseStats } from '@/types/user';
 import type { Purchase } from '@/hooks/usePurchaseHistory';
 
+export interface ExportOptions {
 interface ExportOptions {
   format: 'json' | 'csv' | 'pdf';
   includeProfile: boolean;
   includePurchases: boolean;
   includePurchaseStats: boolean;
 }
+
+export interface ExportData {
+  profile: UserProfile;
+  purchases: Purchase[];
+  stats: PurchaseStats;
+}
+
+export const exportProfileAsJson = async (profileData: UserProfile) => {
+  const dataStr = JSON.stringify(profileData, null, 2);
+  const dataBlob = new Blob([dataStr], { type: 'application/json' });
+  downloadFile(dataBlob, `profile_${Date.now()}.json`);
+};
 
 /**
  * Export profile data as JSON
@@ -29,6 +42,19 @@ export const exportPurchasesAsCsv = async (purchases: Purchase[]) => {
   if (purchases.length === 0) {
     throw new Error('No purchases to export');
   }
+
+  const headers = [
+    'Content Title', 'Content Type', 'Creator Address', 'Purchase Price',
+    'Purchase Date', 'Transaction Status', 'Views', 'Completion %',
+    'Rating', 'Review', 'Is Favorite', 'Refunded',
+  ];
+
+  const escapeCell = (cell: string | number | boolean) => {
+    const str = String(cell);
+    return str.includes(',') || str.includes('"') || str.includes('\n')
+      ? `"${str.replace(/"/g, '""')}"`
+      : str;
+  };
 
   // Define CSV headers
   const headers = [
@@ -57,6 +83,26 @@ export const exportPurchasesAsCsv = async (purchases: Purchase[]) => {
     purchase.engagement?.viewCount || 0,
     purchase.engagement?.completionPercentage || 0,
     purchase.rating?.score || 'N/A',
+    purchase.rating?.review || '',
+    purchase.isFavorite ? 'Yes' : 'No',
+    purchase.refundInfo?.refunded ? 'Yes' : 'No',
+  ]);
+
+  const csvContent = [
+    headers.join(','),
+    ...rows.map((row) => row.map(escapeCell).join(',')),
+  ].join('\n');
+
+  const csvBlob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  downloadFile(csvBlob, `purchases_${Date.now()}.csv`);
+};
+
+export const exportPurchasesAsJson = async (purchases: Purchase[]) => {
+  const dataStr = JSON.stringify(purchases, null, 2);
+  const dataBlob = new Blob([dataStr], { type: 'application/json' });
+  downloadFile(dataBlob, `purchases_${Date.now()}.json`);
+};
+
     (purchase.rating?.review || '').replace(/"/g, '""'), // Escape quotes
     purchase.isFavorite ? 'Yes' : 'No',
     purchase.refundInfo?.refunded ? 'Yes' : 'No'
@@ -101,6 +147,14 @@ export const exportCompleteDataArchive = async (
     metadata: {
       totalPurchases: purchaseData.length,
       totalSpent: purchaseStats.totalSpent,
+      profileCompleteness: profileData.profileCompleteness,
+    },
+  };
+  const dataStr = JSON.stringify(archive, null, 2);
+  const dataBlob = new Blob([dataStr], { type: 'application/json' });
+  downloadFile(dataBlob, `data_export_${Date.now()}.json`);
+};
+
       profileCompleteness: profileData.profileCompleteness
     }
   };
@@ -144,6 +198,23 @@ export const generateProfileReport = (profileData: UserProfile, purchaseStats: P
       <div class="container">
         <h1>User Profile Report</h1>
         <p>Generated: ${new Date().toLocaleString()}</p>
+        <div class="section">
+          <h2>Profile Information</h2>
+          <div class="field"><div class="field-label">Display Name</div><div class="field-value">${profileData.displayName || 'Not set'}</div></div>
+          <div class="field"><div class="field-label">Username</div><div class="field-value">@${profileData.username || 'Not set'}</div></div>
+          <div class="field"><div class="field-label">Wallet Address</div><div class="field-value">${profileData.address}</div></div>
+          <div class="field"><div class="field-label">Bio</div><div class="field-value">${profileData.bio || 'Not provided'}</div></div>
+        </div>
+        <div class="section">
+          <h2>Profile Statistics</h2>
+          <div class="stat-grid">
+            <div class="stat-box"><div class="stat-number">${profileData.profileCompleteness || 0}%</div><div class="stat-label">Profile Complete</div></div>
+            <div class="stat-box"><div class="stat-number">${purchaseStats?.totalPurchases || 0}</div><div class="stat-label">Total Purchases</div></div>
+            <div class="stat-box"><div class="stat-number">$${(purchaseStats?.totalSpent || 0).toFixed(2)}</div><div class="stat-label">Total Spent</div></div>
+            <div class="stat-box"><div class="stat-number">${purchaseStats?.favoriteCount || 0}</div><div class="stat-label">Favorites</div></div>
+          </div>
+        </div>
+        <footer><p>This report contains your personal profile information. Please keep it secure and confidential.</p></footer>
 
         <div class="section">
           <h2>Profile Information</h2>
@@ -270,6 +341,7 @@ export const exportUserData = async (options: ExportOptions, data: ExportData) =
     switch (options.format) {
       case 'json': {
         if (options.includeProfile && options.includePurchases) {
+          await exportCompleteDataArchive(data.profile, data.purchases, data.stats);
           await exportCompleteDataArchive(
             data.profile,
             data.purchases,
@@ -317,6 +389,7 @@ export const profileExportUtils = {
   exportPurchasesAsJson,
   exportCompleteDataArchive,
   generateProfileReport,
+  exportUserData,
   exportUserData
 };
 

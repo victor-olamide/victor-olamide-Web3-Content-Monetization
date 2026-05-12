@@ -72,6 +72,167 @@ const trackEvent = async (req, res) => {
 };
 
 /**
+ * Get creator analytics dashboard data
+ */
+const getCreatorAnalytics = async (req, res) => {
+  const startTime = Date.now();
+  try {
+    const { id: creatorId } = req.params;
+    const { startDate, endDate, granularity = 'daily', includeComparison = true } = req.query;
+
+    // Validate granularity
+    const validGranularities = ['hourly', 'daily', 'weekly', 'monthly'];
+    if (!validGranularities.includes(granularity)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid granularity. Must be one of: hourly, daily, weekly, monthly',
+        validOptions: validGranularities,
+      });
+    }
+
+    // Validate creator ID
+    if (!creatorId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Creator ID is required',
+      });
+    }
+
+    // Validate creator ID format (assuming MongoDB ObjectId)
+    if (!/^[0-9a-fA-F]{24}$/.test(creatorId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid creator ID format. Must be a valid MongoDB ObjectId',
+      });
+    }
+
+    // Validate date parameters
+    if (!startDate || !endDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'startDate and endDate query parameters are required (ISO 8601 format)',
+      });
+    }
+
+    let start, end;
+    try {
+      start = new Date(startDate);
+      end = new Date(endDate);
+
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid date format. Please use ISO 8601 format (e.g., 2026-01-01 or 2026-01-01T00:00:00Z)',
+        });
+      }
+    } catch (error) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid date format',
+      });
+    }
+
+    // Validate date range
+    if (start > end) {
+      return res.status(400).json({
+        success: false,
+        message: 'startDate must be before endDate',
+      });
+    }
+
+    // Check date range limits (max 1 year for daily, max 5 years for monthly)
+    const maxRange = granularity === 'monthly' ? 5 * 365 : 365;
+    const daysDiff = (end - start) / (1000 * 60 * 60 * 24);
+
+    if (daysDiff > maxRange) {
+      return res.status(400).json({
+        success: false,
+        message: `Date range too large. Maximum ${maxRange} days allowed for ${granularity} granularity`,
+        maxDays: maxRange,
+        requestedDays: Math.ceil(daysDiff),
+      });
+    }
+
+    // Check if user is the creator or admin
+    if (req.user.id !== creatorId && req.user.role !== 'admin') {
+      console.warn(`Unauthorized analytics access attempt: user ${req.user.id} tried to access creator ${creatorId}`);
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You can only view your own analytics.',
+      });
+    }
+
+    console.log(`[Analytics] Fetching analytics for creator ${creatorId} from ${startDate} to ${endDate} with granularity ${granularity}`);
+
+    const creatorData = await analyticsService.getCreatorAnalytics(creatorId, start, end, granularity);
+
+    // Log successful retrieval with performance metrics
+    const processingTime = Date.now() - startTime;
+    console.log(`[Analytics] Successfully retrieved analytics for ${creatorId}: ${creatorData.views} views, ${creatorData.revenue || 0} revenue, ${creatorData.subscriberCount} subscribers (${processingTime}ms)`);
+
+    // Log to audit trail if admin is viewing another user's analytics
+    if (req.user.id !== creatorId && req.user.role === 'admin') {
+      try {
+        await AdminAuditLog.logAction(
+          req.user.id,
+          req.user.email,
+          'VIEW',
+          'ANALYTICS',
+          `CREATOR:${creatorId}`,
+          { startDate, endDate, granularity },
+          req.ip,
+          req.headers['user-agent']
+        );
+      } catch (auditError) {
+        console.warn('Failed to log analytics access to audit trail:', auditError);
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      data: creatorData,
+      metadata: {
+        processingTime: `${processingTime}ms`,
+        granularity: granularity,
+        timeRange: {
+          start: startDate,
+          end: endDate,
+          days: Math.ceil(daysDiff),
+        },
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    const processingTime = Date.now() - startTime;
+    console.error(`[Analytics] Error fetching creator analytics (${processingTime}ms):`, error);
+
+    // Handle specific error types
+    if (error.message.includes('not found') || error.message.includes('cannot find')) {
+      return res.status(404).json({
+        success: false,
+        message: 'Creator or analytics data not found',
+        error: error.message,
+      });
+    }
+
+    if (error.message.includes('timeout') || error.message.includes('ECONNREFUSED')) {
+      return res.status(503).json({
+        success: false,
+        message: 'Analytics service temporarily unavailable. Please try again later.',
+        error: error.message,
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching creator analytics',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error',
+      processingTime: `${processingTime}ms`,
+    });
+  }
+};
+
+/**
  * Get analytics dashboard data
  */
 const getDashboardData = async (req, res) => {
@@ -400,4 +561,5 @@ module.exports = {
   getContentPerformanceAnalytics,
   getRevenueAnalytics,
   exportAnalyticsData,
+  getCreatorAnalytics,
 };
