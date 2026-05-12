@@ -117,12 +117,22 @@ async function connectDB() {
   // Connect to MongoDB replica set
   async connect() {
     try {
+      if (!process.env.MONGODB_URI) {
+        validateDbCredentials();
+      }
+
+      const isProduction = process.env.NODE_ENV === 'production';
+      if (isProduction && process.env.MONGO_SSL_ENABLED !== 'true') {
+        logger.warn('MongoDB SSL is disabled in production — credentials transmitted in plaintext');
+      }
+
       const mongoURI = process.env.MONGODB_URI || buildMongoURI();
 
       logger.info('Connecting to MongoDB replica set', {
         hosts: process.env.MONGO_HOSTS || 'mongodb-primary:27017,mongodb-secondary1:27017,mongodb-secondary2:27017',
         replicaSet: mongoOptions.replicaSet,
-        database: process.env.MONGO_DATABASE || 'web3content',
+        database: process.env.MONGO_DATABASE,
+        user: process.env.MONGODB_URI ? '[from MONGODB_URI]' : (process.env.MONGO_APP_USERNAME || '[not set]'),
       });
 
   _registerEventHandlers();
@@ -140,7 +150,8 @@ async function connectDB() {
         await _sleep(RETRY_DELAY_MS);
       }
       this.isConnected = true;
-      logger.info('Connected to MongoDB replica set');
+      const safeURI = mongoURI.replace(/:\/\/[^@]+@/, '://***:***@');
+      logger.info('Connected to MongoDB replica set', { uri: safeURI });
 
       // Set up connection event handlers
       this.setupEventHandlers();
