@@ -1,10 +1,16 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const logger = require('../utils/logger');
+
+// JWT Authentication Middleware
+// Validates JWT tokens and attaches user to req.user
+// Returns 401 for missing or invalid tokens
 
 // Protect routes with JWT authentication
 exports.protect = async (req, res, next) => {
   let token;
 
+  // Extract token from Authorization header (Bearer) or cookie
   if (
     req.headers.authorization &&
     req.headers.authorization.startsWith('Bearer')
@@ -19,6 +25,7 @@ exports.protect = async (req, res, next) => {
 
   // Make sure token exists
   if (!token) {
+    logger.warn('Authentication failed: No token provided');
     return res.status(401).json({
       success: false,
       message: 'Not authorized to access this route'
@@ -26,13 +33,25 @@ exports.protect = async (req, res, next) => {
   }
 
   try {
-    // Verify token
+    // Verify JWT token and decode payload
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
 
+    // Attach user to request object
     req.user = await User.findById(decoded.id);
 
+    if (!req.user) {
+      logger.warn('Authentication failed: User not found', { userId: decoded.id });
+      return res.status(401).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    logger.info('User authenticated successfully', { userId: req.user._id, role: req.user.role });
     next();
   } catch (err) {
+    // Handle JWT verification errors
+    logger.warn('Authentication failed: Invalid token', { error: err.message });
     return res.status(401).json({
       success: false,
       message: 'Not authorized to access this route'
@@ -41,14 +60,20 @@ exports.protect = async (req, res, next) => {
 };
 
 // Grant access to specific roles
+// Returns 403 if user role is not in allowed roles
 exports.authorize = (...roles) => {
   return (req, res, next) => {
+    // Check if user role is authorized
     if (!roles.includes(req.user.role)) {
+      logger.warn('Authorization failed: Insufficient role', { userId: req.user._id, role: req.user.role, requiredRoles: roles });
       return res.status(403).json({
         success: false,
         message: `User role ${req.user.role} is not authorized to access this route`
       });
     }
+
+    // Proceed to next middleware if authorized
+    logger.info('User authorized for route', { userId: req.user._id, role: req.user.role });
     next();
   };
 };
