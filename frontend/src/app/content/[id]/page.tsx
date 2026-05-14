@@ -7,11 +7,13 @@ import { Lock, Unlock, PlayCircle, ChevronLeft, Loader2, ExternalLink } from 'lu
 import Link from 'next/link';
 import { useContentAccess } from '@/hooks/useContentAccess';
 import { usePayPerView } from '@/hooks/usePayPerView';
+import { useWalletBalance } from '@/hooks/useWalletBalance';
 
 export default function ContentView({ params }: { params: { id: string } }) {
   const { isLoggedIn, stxAddress } = useAuth();
   const { content, hasAccess, loading, error, refreshAccess } = useContentAccess(params.id);
   const { purchaseContent } = usePayPerView();
+  const { stx, loading: balanceLoading, error: balanceError, refetch: refetchBalance } = useWalletBalance();
   const [purchasing, setPurchasing] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
