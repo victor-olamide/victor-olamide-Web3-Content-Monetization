@@ -20,6 +20,10 @@ const ExportButton: React.FC = () => {
     setLoading(true);
     try {
       const res = await fetch(`${API_URL}/creator/export/${address}`);
+      if (!res.ok) {
+        showError('Export Failed', `Server returned an error (${res.status}). Please try again.`);
+        return;
+      }
       if (res.ok) {
         const data = await res.json();
         if (!data || data.length === 0) {
