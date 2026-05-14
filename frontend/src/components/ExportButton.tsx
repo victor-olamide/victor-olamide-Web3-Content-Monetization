@@ -12,7 +12,10 @@ const ExportButton: React.FC = () => {
   const { showSuccess, showError, showWarning } = useToast();
 
   const handleExport = async () => {
-    if (!address) return;
+    if (!address) {
+      showError('Not Connected', 'Please connect your wallet before exporting data.');
+      return;
+    }
     
     setLoading(true);
     try {
