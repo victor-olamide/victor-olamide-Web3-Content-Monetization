@@ -95,11 +95,14 @@ export default function ContentView({ params }: { params: { id: string } }) {
         console.warn("Failed to notify backend:", backendErr);
       }
 
+      showSuccess('Purchase Submitted', 'Your transaction is being processed on the blockchain.');
       pollTransaction(result as string);
     } catch (err: any) {
       console.error(err);
       setTxId(null);
-      setPurchaseError(err.message || "Purchase failed");
+      const errMsg = err.message || "Purchase failed";
+      setPurchaseError(errMsg);
+      showError('Purchase Failed', errMsg);
     } finally {
       setPurchasing(false);
     }
@@ -201,7 +204,7 @@ export default function ContentView({ params }: { params: { id: string } }) {
                     {purchasing ? 'Processing...' : 'Purchase Access'}
                   </button>
                   <button 
-                    onClick={() => alert('Initiating subscription...')}
+                    onClick={() => showInfo('Subscription', 'Subscription flow coming soon. Stay tuned!')}
                     disabled={purchasing}
                     className="bg-gray-800 text-white font-bold py-3 px-8 rounded-lg hover:bg-gray-900 transition disabled:opacity-50"
                   >
