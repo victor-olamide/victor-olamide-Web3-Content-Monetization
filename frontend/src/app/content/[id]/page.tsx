@@ -164,9 +164,28 @@ export default function ContentView({ params }: { params: { id: string } }) {
               <div className="bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl p-12 text-center">
                 <Lock size={48} className="mx-auto text-orange-500 mb-4" />
                 <h2 className="text-2xl font-bold mb-2">Content Locked</h2>
-                <p className="text-gray-600 mb-8">
-                  This content requires a one-time payment of {content?.price || 'some'} STX or a subscription.
+                <p className="text-gray-600 mb-4">
+                  This content requires a one-time payment of <strong>{content?.price || 'some'} STX</strong> or a subscription.
                 </p>
+                {isLoggedIn && (
+                  <div className="inline-flex items-center gap-2 text-sm text-gray-500 bg-gray-100 rounded-full px-4 py-1 mb-6">
+                    {balanceLoading ? (
+                      <span className="animate-pulse">Fetching balance...</span>
+                    ) : balanceError ? (
+                      <span className="text-red-500">Balance unavailable</span>
+                    ) : (
+                      <>
+                        <span>Your balance:</span>
+                        <span className={`font-bold ${stx.available < (content?.price ?? 0) ? 'text-red-600' : 'text-green-600'}`}>
+                          {stx.available.toFixed(2)} STX
+                        </span>
+                        {stx.locked > 0 && (
+                          <span className="text-xs text-gray-400">({stx.locked.toFixed(2)} locked)</span>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <button 
                     onClick={handlePurchase}
