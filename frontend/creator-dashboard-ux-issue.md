@@ -173,3 +173,4 @@ This issue focuses on improving the creator dashboard content management experie
 - [ ] Add work item 132: accessibility enhancement task for creator dashboard content browser
 - [ ] Add work item 133: sorting behavior task for creator dashboard content browser
 - [ ] Add work item 134: filtering logic task for creator dashboard content browser
+- [ ] Add work item 135: performance improvement task for creator dashboard content browser
