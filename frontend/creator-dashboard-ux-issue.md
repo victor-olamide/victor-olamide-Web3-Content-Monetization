@@ -121,3 +121,4 @@ This issue focuses on improving the creator dashboard content management experie
 - [ ] Add work item 80: code organization task for creator dashboard content browser
 - [ ] Add work item 81: UI refinement task for creator dashboard content browser
 - [ ] Add work item 82: accessibility enhancement task for creator dashboard content browser
+- [ ] Add work item 83: sorting behavior task for creator dashboard content browser
