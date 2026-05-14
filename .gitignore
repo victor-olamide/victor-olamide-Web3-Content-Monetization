@@ -12,6 +12,10 @@ node_modules/
 # Build outputs
 dist/
 build/
+.next/
+frontend/.next/
+frontend/package-lock.json
+frontend/next-env.d.ts
 
 # OS files
 .DS_Store
