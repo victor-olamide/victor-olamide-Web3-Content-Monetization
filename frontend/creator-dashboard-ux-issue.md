@@ -110,3 +110,4 @@ This issue focuses on improving the creator dashboard content management experie
 - [ ] Add work item 69: mobile responsiveness task for creator dashboard content browser
 - [ ] Add work item 70: code organization task for creator dashboard content browser
 - [ ] Add work item 71: UI refinement task for creator dashboard content browser
+- [ ] Add work item 72: accessibility enhancement task for creator dashboard content browser
