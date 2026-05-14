@@ -1,9 +1,24 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+/**
+ * ContentBrowser Component
+ *
+ * Displays a searchable, filterable, and sortable table of creator content.
+ *
+ * UX Improvements:
+ * - Search and type filter work together without resetting state
+ * - Sort operations do not mutate the original props array
+ * - Delete action requires explicit confirmation before removal
+ * - Empty state provides helpful guidance and clear filter options
+ * - Accessible labels for all interactive controls (aria-label, aria-sort)
+ * - Mobile-friendly responsive design with proper overflow handling
+ */
+
+import React, { useState } from 'react';
 import { ArrowUpDown, ExternalLink, Trash2, Edit } from 'lucide-react';
 import { ContentItem, CreatorContentType } from '@/utils/creatorApi';
 import { useContentBrowser, SortField, SortOrder } from '@/hooks/useContentBrowser';
+import { CONTENT_TYPE_COLORS, CONTENT_TYPE_LABELS } from '@/constants/contentConstants';
 
 interface ContentBrowserProps {
   items: ContentItem[];
@@ -52,22 +67,11 @@ export function ContentBrowser({
   };
 
   const getContentTypeLabel = (type: CreatorContentType) => {
-    return type.charAt(0).toUpperCase() + type.slice(1);
+    return CONTENT_TYPE_LABELS[type] || type.charAt(0).toUpperCase() + type.slice(1);
   };
 
   const getContentTypeColor = (type: CreatorContentType) => {
-    switch (type) {
-      case 'video':
-        return 'bg-red-50 text-red-700';
-      case 'article':
-        return 'bg-blue-50 text-blue-700';
-      case 'image':
-        return 'bg-purple-50 text-purple-700';
-      case 'music':
-        return 'bg-orange-50 text-orange-700';
-      default:
-        return 'bg-slate-50 text-slate-700';
-    }
+    return CONTENT_TYPE_COLORS[type] || CONTENT_TYPE_COLORS.default;
   };
 
   if (isLoading) {

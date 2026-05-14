@@ -1,15 +1,16 @@
 import { useMemo } from 'react';
 import { ContentItem, CreatorContentType } from '@/utils/creatorApi';
+import { CONTENT_TYPE_LABELS } from '@/constants/contentConstants';
 
 export type SortField = 'date' | 'views' | 'revenue' | 'price';
 export type SortOrder = 'asc' | 'desc';
 
 export const CONTENT_TYPE_OPTIONS: Array<{ value: CreatorContentType | 'all'; label: string }> = [
   { value: 'all', label: 'All types' },
-  { value: 'video', label: 'Videos' },
-  { value: 'article', label: 'Articles' },
-  { value: 'image', label: 'Images' },
-  { value: 'music', label: 'Music' },
+  { value: 'video', label: CONTENT_TYPE_LABELS.video },
+  { value: 'article', label: CONTENT_TYPE_LABELS.article },
+  { value: 'image', label: CONTENT_TYPE_LABELS.image },
+  { value: 'music', label: CONTENT_TYPE_LABELS.music },
 ];
 
 const sortValue = (item: ContentItem, field: SortField) => {
