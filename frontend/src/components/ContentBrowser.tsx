@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import { ArrowUpDown, ExternalLink, Trash2, Edit } from 'lucide-react';
 import { ContentItem, CreatorContentType } from '@/utils/creatorApi';
+import { useContentBrowser, SortField, SortOrder } from '@/hooks/useContentBrowser';
 
 interface ContentBrowserProps {
   items: ContentItem[];
@@ -12,8 +13,6 @@ interface ContentBrowserProps {
   isDeletingId?: number | null;
 }
 
-type SortField = 'date' | 'views' | 'revenue' | 'price';
-type SortOrder = 'asc' | 'desc';
 type FilterType = 'all' | CreatorContentType;
 
 export function ContentBrowser({
@@ -28,77 +27,17 @@ export function ContentBrowser({
   const [filterType, setFilterType] = useState<FilterType>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const hasFilters = filterType !== 'all' || searchQuery.trim().length > 0;
+  const { contentTypes, sortedItems, hasFilters } = useContentBrowser(
+    items,
+    filterType,
+    searchQuery,
+    sortField,
+    sortOrder
+  );
 
   const handleClearFilters = () => {
     setSearchQuery('');
     setFilterType('all');
-  };
-
-  const sortLabelMap: Record<SortField, string> = {
-    date: 'Date',
-    views: 'Views',
-    revenue: 'Revenue',
-    price: 'Price',
-  };
-
-  const filteredAndSortedItems = useMemo(() => {
-    let filtered = items;
-
-    // Apply type filter
-    if (filterType !== 'all') {
-      filtered = filtered.filter((item) => item.contentType === filterType);
-    }
-
-    // Apply search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (item) =>
-          item.title.toLowerCase().includes(query) ||
-          item.description.toLowerCase().includes(query)
-      );
-    }
-
-    // Apply sorting without mutating the original array reference.
-    return [...filtered].sort((a, b) => {
-      let aVal: number | string;
-      let bVal: number | string;
-
-      switch (sortField) {
-        case 'date':
-          aVal = new Date(a.updatedAt || a.createdAt).getTime();
-          bVal = new Date(b.updatedAt || b.createdAt).getTime();
-          break;
-        case 'views':
-          aVal = a.views;
-          bVal = b.views;
-          break;
-        case 'revenue':
-          aVal = a.revenue;
-          bVal = b.revenue;
-          break;
-        case 'price':
-          aVal = a.price;
-          bVal = b.price;
-          break;
-      }
-
-      if (sortOrder === 'asc') {
-        return aVal > bVal ? 1 : -1;
-      } else {
-        return aVal < bVal ? 1 : -1;
-      }
-    });
-  }, [items, filterType, searchQuery, sortField, sortOrder]);
-
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortOrder('desc');
-    }
   };
 
   const sortDirectionLabel = sortOrder === 'asc' ? 'ascending' : 'descending';
@@ -174,17 +113,17 @@ export function ContentBrowser({
             aria-label="Filter content type"
             className="rounded-lg border border-slate-200 px-4 py-2 text-sm focus:border-slate-400 focus:outline-none"
           >
-            <option value="all">All types</option>
-            <option value="video">Videos</option>
-            <option value="article">Articles</option>
-            <option value="image">Images</option>
-            <option value="music">Music</option>
+            {contentTypes.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </select>
         </div>
 
         {/* Result count */}
         <p className="text-xs font-medium text-slate-500" aria-live="polite">
-          Showing {filteredAndSortedItems.length} of {items.length} items
+          Showing {sortedItems.length} of {items.length} items
         </p>
       </div>
 
@@ -197,7 +136,8 @@ export function ContentBrowser({
               <th>
                 <button
                   onClick={() => handleSort('date')}
-                  aria-label={`Sort by ${sortLabelMap.date} ${sortField === 'date' ? sortDirectionLabel : 'descending'}`}
+                  aria-label={`Sort by date ${sortField === 'date' ? sortDirectionLabel : 'descending'}`}
+                  aria-sort={sortField === 'date' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
                   className="flex items-center gap-2 px-6 py-4 font-semibold text-slate-700 hover:text-slate-900"
                 >
                   Date
@@ -207,7 +147,8 @@ export function ContentBrowser({
               <th>
                 <button
                   onClick={() => handleSort('views')}
-                  aria-label={`Sort by ${sortLabelMap.views} ${sortField === 'views' ? sortDirectionLabel : 'descending'}`}
+                  aria-label={`Sort by views ${sortField === 'views' ? sortDirectionLabel : 'descending'}`}
+                  aria-sort={sortField === 'views' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
                   className="flex items-center gap-2 px-6 py-4 font-semibold text-slate-700 hover:text-slate-900"
                 >
                   Views
@@ -217,7 +158,8 @@ export function ContentBrowser({
               <th>
                 <button
                   onClick={() => handleSort('revenue')}
-                  aria-label={`Sort by ${sortLabelMap.revenue} ${sortField === 'revenue' ? sortDirectionLabel : 'descending'}`}
+                  aria-label={`Sort by revenue ${sortField === 'revenue' ? sortDirectionLabel : 'descending'}`}
+                  aria-sort={sortField === 'revenue' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
                   className="flex items-center gap-2 px-6 py-4 font-semibold text-slate-700 hover:text-slate-900"
                 >
                   Revenue
@@ -228,7 +170,7 @@ export function ContentBrowser({
             </tr>
           </thead>
           <tbody>
-            {filteredAndSortedItems.length === 0 ? (
+            {sortedItems.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-6 py-8 text-center">
                   <div className="space-y-3">
@@ -250,7 +192,7 @@ export function ContentBrowser({
                 </td>
               </tr>
             ) : (
-              filteredAndSortedItems.map((item) => (
+              sortedItems.map((item) => (
                 <tr key={item.contentId} className="border-b border-slate-100 hover:bg-slate-50">
                   <td className="px-6 py-4">
                     <div className="flex items-start gap-3">
