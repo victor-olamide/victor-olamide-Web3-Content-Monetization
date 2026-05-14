@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { ArrowUpDown, Eye, ExternalLink, Trash2, Edit } from 'lucide-react';
+import { ArrowUpDown, ExternalLink, Trash2, Edit } from 'lucide-react';
 import { ContentItem, CreatorContentType } from '@/utils/creatorApi';
 
 interface ContentBrowserProps {
@@ -28,6 +28,20 @@ export function ContentBrowser({
   const [filterType, setFilterType] = useState<FilterType>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
+  const hasFilters = filterType !== 'all' || searchQuery.trim().length > 0;
+
+  const handleClearFilters = () => {
+    setSearchQuery('');
+    setFilterType('all');
+  };
+
+  const sortLabelMap: Record<SortField, string> = {
+    date: 'Date',
+    views: 'Views',
+    revenue: 'Revenue',
+    price: 'Price',
+  };
+
   const filteredAndSortedItems = useMemo(() => {
     let filtered = items;
 
@@ -46,8 +60,8 @@ export function ContentBrowser({
       );
     }
 
-    // Apply sorting
-    return filtered.sort((a, b) => {
+    // Apply sorting without mutating the original array reference.
+    return [...filtered].sort((a, b) => {
       let aVal: number | string;
       let bVal: number | string;
 
@@ -86,6 +100,8 @@ export function ContentBrowser({
       setSortOrder('desc');
     }
   };
+
+  const sortDirectionLabel = sortOrder === 'asc' ? 'ascending' : 'descending';
 
   const formatDate = (date?: string) => {
     if (!date) return 'Recently';
@@ -133,16 +149,29 @@ export function ContentBrowser({
       <div className="space-y-4 border-b border-slate-200 p-6">
         {/* Filters */}
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <input
-            type="text"
-            placeholder="Search by title or description..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1 rounded-lg border border-slate-200 px-4 py-2 text-sm focus:border-slate-400 focus:outline-none"
-          />
+          <div className="flex flex-1 flex-col gap-3 sm:flex-row">
+            <input
+              type="text"
+              placeholder="Search by title or description..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="Search content"
+              className="flex-1 rounded-lg border border-slate-200 px-4 py-2 text-sm focus:border-slate-400 focus:outline-none"
+            />
+            {hasFilters ? (
+              <button
+                type="button"
+                onClick={handleClearFilters}
+                className="self-start rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-100"
+              >
+                Clear filters
+              </button>
+            ) : null}
+          </div>
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value as FilterType)}
+            aria-label="Filter content type"
             className="rounded-lg border border-slate-200 px-4 py-2 text-sm focus:border-slate-400 focus:outline-none"
           >
             <option value="all">All types</option>
@@ -154,7 +183,7 @@ export function ContentBrowser({
         </div>
 
         {/* Result count */}
-        <p className="text-xs font-medium text-slate-500">
+        <p className="text-xs font-medium text-slate-500" aria-live="polite">
           Showing {filteredAndSortedItems.length} of {items.length} items
         </p>
       </div>
@@ -168,6 +197,7 @@ export function ContentBrowser({
               <th>
                 <button
                   onClick={() => handleSort('date')}
+                  aria-label={`Sort by ${sortLabelMap.date} ${sortField === 'date' ? sortDirectionLabel : 'descending'}`}
                   className="flex items-center gap-2 px-6 py-4 font-semibold text-slate-700 hover:text-slate-900"
                 >
                   Date
@@ -177,6 +207,7 @@ export function ContentBrowser({
               <th>
                 <button
                   onClick={() => handleSort('views')}
+                  aria-label={`Sort by ${sortLabelMap.views} ${sortField === 'views' ? sortDirectionLabel : 'descending'}`}
                   className="flex items-center gap-2 px-6 py-4 font-semibold text-slate-700 hover:text-slate-900"
                 >
                   Views
@@ -186,6 +217,7 @@ export function ContentBrowser({
               <th>
                 <button
                   onClick={() => handleSort('revenue')}
+                  aria-label={`Sort by ${sortLabelMap.revenue} ${sortField === 'revenue' ? sortDirectionLabel : 'descending'}`}
                   className="flex items-center gap-2 px-6 py-4 font-semibold text-slate-700 hover:text-slate-900"
                 >
                   Revenue
@@ -199,11 +231,22 @@ export function ContentBrowser({
             {filteredAndSortedItems.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-6 py-8 text-center">
-                  <p className="text-sm text-slate-500">
-                    {searchQuery || filterType !== 'all'
-                      ? 'No content matches your filters'
-                      : 'No content uploaded yet'}
-                  </p>
+                  <div className="space-y-3">
+                    <p className="text-sm text-slate-500">
+                      {searchQuery || filterType !== 'all'
+                        ? 'No content matches your filters.'
+                        : 'No content uploaded yet.'}
+                    </p>
+                    {hasFilters ? (
+                      <button
+                        type="button"
+                        onClick={handleClearFilters}
+                        className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-100"
+                      >
+                        Clear filters and search
+                      </button>
+                    ) : null}
+                  </div>
                 </td>
               </tr>
             ) : (
@@ -247,27 +290,38 @@ export function ContentBrowser({
                           rel="noopener noreferrer"
                           className="rounded-md p-2 hover:bg-slate-100"
                           title="View content"
+                          aria-label={`View ${item.title}`}
                         >
                           <ExternalLink className="h-4 w-4 text-slate-500" />
                         </a>
                       )}
-                      <button
-                        onClick={() => onEdit?.(item)}
-                        className="rounded-md p-2 hover:bg-slate-100"
-                        title="Edit"
-                      >
-                        <Edit className="h-4 w-4 text-slate-500" />
-                      </button>
-                      <button
-                        onClick={() => onDelete?.(item.contentId)}
-                        disabled={isDeletingId === item.contentId}
-                        className="rounded-md p-2 hover:bg-red-50 disabled:opacity-50"
-                        title="Delete"
-                      >
-                        <Trash2
-                          className={`h-4 w-4 ${isDeletingId === item.contentId ? 'text-slate-300' : 'text-slate-500'}`}
-                        />
-                      </button>
+                      {onEdit ? (
+                        <button
+                          onClick={() => onEdit(item)}
+                          className="rounded-md p-2 hover:bg-slate-100"
+                          title={`Edit ${item.title}`}
+                          aria-label={`Edit ${item.title}`}
+                        >
+                          <Edit className="h-4 w-4 text-slate-500" />
+                        </button>
+                      ) : null}
+                      {onDelete ? (
+                        <button
+                          onClick={() => {
+                            if (window.confirm(`Delete "${item.title}"? This cannot be undone.`)) {
+                              onDelete(item.contentId);
+                            }
+                          }}
+                          disabled={isDeletingId === item.contentId}
+                          className="rounded-md p-2 hover:bg-red-50 disabled:opacity-50"
+                          title={`Delete ${item.title}`}
+                          aria-label={`Delete ${item.title}`}
+                        >
+                          <Trash2
+                            className={`h-4 w-4 ${isDeletingId === item.contentId ? 'text-slate-300' : 'text-slate-500'}`}
+                          />
+                        </button>
+                      ) : null}
                     </div>
                   </td>
                 </tr>
