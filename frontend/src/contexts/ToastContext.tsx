@@ -1,0 +1,52 @@
+'use client';
+
+import React, { createContext, useContext, useState, useCallback } from 'react';
+import { ToastContainer, ToastMessage } from '@/components/ToastContainer';
+import { ToastType } from '@/components/Toast';
+
+interface ToastContextType {
+  showSuccess: (title: string, message?: string) => void;
+  showError: (title: string, message?: string) => void;
+  showInfo: (title: string, message?: string) => void;
+  showWarning: (title: string, message?: string) => void;
+  dismiss: (id: string) => void;
+}
+
+const ToastContext = createContext<ToastContextType | undefined>(undefined);
+
+let idCounter = 0;
+const generateId = () => `toast-${++idCounter}-${Date.now()}`;
+
+export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const add = useCallback((type: ToastType, title: string, message?: string) => {
+    const id = generateId();
+    setToasts(prev => [...prev, { id, type, title, message, duration: 5000 }]);
+  }, []);
+
+  const dismiss = useCallback((id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
+
+  return (
+    <ToastContext.Provider
+      value={{
+        showSuccess: (title, message) => add('success', title, message),
+        showError: (title, message) => add('error', title, message),
+        showInfo: (title, message) => add('info', title, message),
+        showWarning: (title, message) => add('warning', title, message),
+        dismiss,
+      }}
+    >
+      {children}
+      <ToastContainer toasts={toasts} onDismiss={dismiss} position="top-right" />
+    </ToastContext.Provider>
+  );
+};
+
+export const useToast = (): ToastContextType => {
+  const ctx = useContext(ToastContext);
+  if (!ctx) throw new Error('useToast must be used within a ToastProvider');
+  return ctx;
+};
