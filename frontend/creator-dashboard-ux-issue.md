@@ -66,3 +66,4 @@ This issue focuses on improving the creator dashboard content management experie
 - [ ] Add work item 25: performance improvement task for creator dashboard content browser
 - [ ] Add work item 26: error handling task for creator dashboard content browser
 - [ ] Add work item 27: notification flow task for creator dashboard content browser
+- [ ] Add work item 28: analytics display task for creator dashboard content browser
