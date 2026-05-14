@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import { ToastContainer, ToastMessage } from '@/components/ToastContainer';
+import { ToastContainer, ToastMessage, NOTIFICATION_DEFAULTS } from '@/components/ToastContainer';
 import { ToastType } from '@/components/Toast';
 
 interface ToastContextType {
@@ -20,9 +20,16 @@ const generateId = () => `toast-${++idCounter}-${Date.now()}`;
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
+  const DURATIONS: Record<ToastType, number> = {
+    success: NOTIFICATION_DEFAULTS.SUCCESS_DURATION,
+    error: NOTIFICATION_DEFAULTS.ERROR_DURATION,
+    info: NOTIFICATION_DEFAULTS.INFO_DURATION,
+    warning: NOTIFICATION_DEFAULTS.WARNING_DURATION,
+  };
+
   const add = useCallback((type: ToastType, title: string, message?: string) => {
     const id = generateId();
-    setToasts(prev => [...prev, { id, type, title, message, duration: 5000 }]);
+    setToasts(prev => [...prev, { id, type, title, message, duration: DURATIONS[type] }]);
   }, []);
 
   const dismiss = useCallback((id: string) => {
