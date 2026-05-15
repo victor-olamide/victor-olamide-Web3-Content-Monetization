@@ -55,6 +55,16 @@ export function ContentBrowser({
     setFilterType('all');
   };
 
+  const handleSort = (field: SortField) => {
+    if (field === sortField) {
+      setSortOrder((current) => (current === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+
+    setSortField(field);
+    setSortOrder('desc');
+  };
+
   const sortDirectionLabel = sortOrder === 'asc' ? 'ascending' : 'descending';
 
   const formatDate = (date?: string) => {
@@ -139,6 +149,7 @@ export function ContentBrowser({
               <th className="px-6 py-4 text-left font-semibold text-slate-700">Content</th>
               <th>
                 <button
+                  type="button"
                   onClick={() => handleSort('date')}
                   aria-label={`Sort by date ${sortField === 'date' ? sortDirectionLabel : 'descending'}`}
                   aria-sort={sortField === 'date' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
@@ -150,6 +161,7 @@ export function ContentBrowser({
               </th>
               <th>
                 <button
+                  type="button"
                   onClick={() => handleSort('views')}
                   aria-label={`Sort by views ${sortField === 'views' ? sortDirectionLabel : 'descending'}`}
                   aria-sort={sortField === 'views' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
@@ -161,6 +173,7 @@ export function ContentBrowser({
               </th>
               <th>
                 <button
+                  type="button"
                   onClick={() => handleSort('revenue')}
                   aria-label={`Sort by revenue ${sortField === 'revenue' ? sortDirectionLabel : 'descending'}`}
                   aria-sort={sortField === 'revenue' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}

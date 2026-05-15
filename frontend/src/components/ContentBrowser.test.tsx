@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ContentBrowser } from './ContentBrowser';
 
@@ -49,7 +49,10 @@ describe('ContentBrowser', () => {
 
     await user.selectOptions(screen.getByRole('combobox', { name: /filter content type/i }), 'article');
 
-    expect(screen.getByText('Showing 1 of 2 items')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Showing 1 of 2 items')).toBeInTheDocument();
+    });
+
     expect(screen.getByText('Second Article')).toBeInTheDocument();
     expect(screen.queryByText('First Content')).not.toBeInTheDocument();
   });
@@ -60,7 +63,10 @@ describe('ContentBrowser', () => {
 
     await user.type(screen.getByPlaceholderText('Search by title or description...'), 'helpful');
 
-    expect(screen.getByText('Showing 1 of 2 items')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Showing 1 of 2 items')).toBeInTheDocument();
+    });
+
     expect(screen.getByText('Second Article')).toBeInTheDocument();
     expect(screen.queryByText('First Content')).not.toBeInTheDocument();
   });
@@ -71,6 +77,49 @@ describe('ContentBrowser', () => {
 
     await user.type(screen.getByPlaceholderText('Search by title or description...'), 'first');
 
-    expect(screen.getByRole('button', { name: /clear filters/i })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /clear filters/i })).toBeInTheDocument();
+    });
+  });
+
+  it('sorts content items by views and toggles order on repeated clicks', async () => {
+    render(<ContentBrowser items={sampleItems} />);
+    const user = userEvent.setup();
+    const viewsSortButton = screen.getByRole('button', { name: /sort by views/i });
+
+    await user.click(viewsSortButton);
+
+    await waitFor(() => {
+      const rows = screen.getAllByRole('row');
+      expect(rows[1]).toHaveTextContent('First Content');
+      expect(rows[2]).toHaveTextContent('Second Article');
+    });
+
+    await user.click(viewsSortButton);
+
+    await waitFor(() => {
+      const toggledRows = screen.getAllByRole('row');
+      expect(toggledRows[1]).toHaveTextContent('Second Article');
+      expect(toggledRows[2]).toHaveTextContent('First Content');
+    });
+  });
+
+  it('shows an empty state when no items match and clears filters', async () => {
+    render(<ContentBrowser items={sampleItems} />);
+    const user = userEvent.setup();
+
+    await user.type(screen.getByPlaceholderText('Search by title or description...'), 'missing');
+
+    await waitFor(() => {
+      expect(screen.getByText(/no content matches your filters/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /clear filters and search/i })).toBeInTheDocument();
+    });
+
+    const clearButton = screen.getByRole('button', { name: /clear filters and search/i });
+    await user.click(clearButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('Showing 2 of 2 items')).toBeInTheDocument();
+    });
   });
 });
