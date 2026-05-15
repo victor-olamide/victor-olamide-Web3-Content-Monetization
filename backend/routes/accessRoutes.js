@@ -2,9 +2,10 @@ const express = require('express');
 const router = express.Router();
 const Content = require('../models/Content');
 const { verifyAccess } = require('../services/accessService');
+const { validateAddressParam, isValidStxAddress } = require('../middleware/inputValidation');
 
 // Verify access to specific content
-router.get('/verify/:user/:contentId', async (req, res) => {
+router.get('/verify/:user/:contentId', validateAddressParam, async (req, res) => {
   try {
     const { user, contentId } = req.params;
     const result = await verifyAccess(parseInt(contentId), user);
@@ -31,6 +32,12 @@ router.post('/verify-batch', async (req, res) => {
     
     if (!user || !Array.isArray(contentIds)) {
       return res.status(400).json({ message: 'Invalid request' });
+    }
+
+    if (!isValidStxAddress(user)) {
+      return res.status(400).json({
+        message: 'user must be a valid Stacks wallet address (SP… or ST…)',
+      });
     }
 
     const results = await Promise.all(
