@@ -2,6 +2,7 @@
 // Provides health check endpoints for MongoDB replica set
 
 const { dbConnection } = require('../config/database');
+const logger = require('../utils/logger');
 
 /**
  * Database health check endpoint
@@ -28,7 +29,7 @@ const databaseHealthCheck = async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Database health check error:', error);
+    logger.error('Database health check error', { err: error });
     return res.status(503).json({
       status: 'error',
       database: 'mongodb',
@@ -59,7 +60,7 @@ const databaseStatusCheck = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Database status check error:', error);
+    logger.error('Database status check error', { err: error });
     return res.status(500).json({
       error: 'Failed to get database status',
       message: error.message,
@@ -91,7 +92,7 @@ const requireDatabaseConnection = async (req, res, next) => {
 
     next();
   } catch (error) {
-    console.error('Database connection middleware error:', error);
+    logger.error('Database connection middleware error', { err: error });
     return res.status(503).json({
       error: 'Database connection failed',
       message: error.message,
