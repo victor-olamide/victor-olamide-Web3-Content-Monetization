@@ -2,9 +2,10 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import type { Content } from '@/types/content';
 
 const DashboardContentList: React.FC = () => {
-  const [contentItems, setContentItems] = useState<any[]>([]);
+  const [contentItems, setContentItems] = useState<Content[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
