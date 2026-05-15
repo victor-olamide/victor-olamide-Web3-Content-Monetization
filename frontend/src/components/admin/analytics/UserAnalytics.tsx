@@ -16,9 +16,10 @@ import {
   Smartphone,
 } from 'lucide-react';
 import { useUserAnalytics } from '@/hooks/admin/useAnalyticsData';
+import type { DateRange } from '@/types/analytics';
 
 interface UserAnalyticsProps {
-  dateRange: any;
+  dateRange: DateRange;
   granularity: string;
 }
 
