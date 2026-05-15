@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { useContentAccess } from '@/hooks/useContentAccess';
 import { usePayPerView } from '@/hooks/usePayPerView';
 import { useWalletBalance } from '@/hooks/useWalletBalance';
+import { STACKS_API_BASE, STACKS_EXPLORER_BASE, STACKS_CHAIN } from '@/utils/constants';
 
 export default function ContentView({ params }: { params: { id: string } }) {
   const { isLoggedIn, stxAddress } = useAuth();
@@ -23,7 +24,7 @@ export default function ContentView({ params }: { params: { id: string } }) {
     setTxStatus('pending');
     const interval = setInterval(async () => {
       try {
-        const response = await fetch(`https://stacks-node-api.testnet.stacks.co/extended/v1/tx/${id}`);
+        const response = await fetch(`${STACKS_API_BASE}/extended/v1/tx/${id}`);
         const data = await response.json();
         if (data.tx_status === 'success') {
           setTxStatus('success');
