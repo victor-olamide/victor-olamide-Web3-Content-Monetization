@@ -3,6 +3,11 @@ const router = express.Router();
 const Purchase = require('../models/Purchase');
 const { getPlatformFee, calculatePlatformFee } = require('../services/contractService');
 const { distributePurchaseRoyalties } = require('../services/royaltyService');
+const {
+  validatePurchaseBody,
+  validateAmountParam,
+  validateAddressParam,
+} = require('../middleware/inputValidation');
 
 // Get platform fee information
 router.get('/platform-fee', async (req, res) => {
