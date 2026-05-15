@@ -269,7 +269,7 @@ export const ERROR_MESSAGES: Record<string, string> = {
 /**
  * Handle purchase error and return notification
  */
-export const handlePurchaseError = (error: any) => {
+export const handlePurchaseError = (error: unknown) => {
   let message = ERROR_MESSAGES.UNKNOWN_ERROR;
 
   if (error?.code === 'INSUFFICIENT_BALANCE') {
@@ -290,7 +290,7 @@ export const handlePurchaseError = (error: any) => {
 /**
  * Handle wallet errors
  */
-export const handleWalletError = (error: any) => {
+export const handleWalletError = (error: unknown) => {
   let message = ERROR_MESSAGES.UNKNOWN_ERROR;
 
   if (error?.code === 'WALLET_DISCONNECTED') {
