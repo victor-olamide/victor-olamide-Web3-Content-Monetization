@@ -198,8 +198,21 @@ async function markAsRead(notificationId) {
 
 /**
  * Mark multiple notifications as read
+ * @param {Array<string>} notificationIds - Array of notification IDs
+ * @returns {Promise<Object>} MongoDB update result
+ * @throws {Error} When notificationIds is invalid or database error occurs
  */
 async function markMultipleAsRead(notificationIds) {
+  // Input validation
+  if (!Array.isArray(notificationIds)) {
+    throw new Error('Invalid notificationIds: expected array');
+  }
+  if (notificationIds.length === 0) {
+    throw new Error('Invalid notificationIds: expected non-empty array');
+  }
+  if (!notificationIds.every(id => typeof id === 'string' && id.length > 0)) {
+    throw new Error('Invalid notificationIds: expected array of non-empty strings');
+  }
   try {
     const result = await Notification.updateMany(
       { _id: { $in: notificationIds } },
