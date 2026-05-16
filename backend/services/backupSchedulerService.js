@@ -10,6 +10,9 @@ const logger = require('../utils/logger');
  */
 
 let schedulerInstance = null;
+let contentSchedulerInstance = null;
+let retentionCleanupInstance = null;
+let retentionCleanupTimeout = null;
 let isRunning = false;
 let activeBackups = new Set();
 
@@ -59,6 +62,9 @@ class BackupSchedulerService {
       const contentScheduler = setInterval(async () => {
         await this.runContentBackup();
       }, this.contentInterval);
+      
+      // Store content scheduler instance for cleanup
+      contentSchedulerInstance = contentScheduler;
 
       logger.info(`Content backup scheduler initialized with interval: ${this.contentInterval}ms`);
     }
@@ -165,13 +171,15 @@ class BackupSchedulerService {
     // Run retention cleanup daily
     const cleanupInterval = 24 * 60 * 60 * 1000; // 24 hours
 
-    setTimeout(async () => {
+    const timeoutId = setTimeout(async () => {
       await this.runRetentionCleanup();
     }, 30000); // Initial delay
+    retentionCleanupTimeout = timeoutId;
 
-    setInterval(async () => {
+    const intervalId = setInterval(async () => {
       await this.runRetentionCleanup();
     }, cleanupInterval);
+    retentionCleanupInstance = intervalId;
 
     logger.info(`Retention cleanup scheduler initialized with interval: ${cleanupInterval}ms`);
   }
@@ -373,6 +381,21 @@ class BackupSchedulerService {
       activeBackups.clear();
       logger.info('Backup scheduler stopped');
     }
+    if (contentSchedulerInstance) {
+      clearInterval(contentSchedulerInstance);
+      contentSchedulerInstance = null;
+    }
+    if (retentionCleanupInstance) {
+      clearInterval(retentionCleanupInstance);
+      retentionCleanupInstance = null;
+    }
+    if (retentionCleanupTimeout) {
+      clearTimeout(retentionCleanupTimeout);
+      retentionCleanupTimeout = null;
+    }
+    isRunning = false;
+    activeBackups.clear();
+    console.log('Backup scheduler stopped');
   }
 
   /**
@@ -381,6 +404,28 @@ class BackupSchedulerService {
    */
   isSchedulerRunning() {
     return isRunning;
+  }
+
+  /**
+   * Get detailed scheduler status including interval information
+   * @returns {Object} Detailed scheduler status
+   */
+  getSchedulerStatus() {
+    return {
+      isRunning,
+      schedulerActive: schedulerInstance !== null,
+      contentSchedulerActive: contentSchedulerInstance !== null,
+      retentionCleanupActive: retentionCleanupInstance !== null,
+      retentionTimeoutActive: retentionCleanupTimeout !== null,
+      activeBackups: Array.from(activeBackups),
+      activeBackupCount: activeBackups.size,
+      config: {
+        enabled: this.config.enabled,
+        maxConcurrentBackups: this.config.maxConcurrentBackups,
+        databaseInterval: this.databaseInterval,
+        contentInterval: this.contentInterval
+      }
+    };
   }
 }
 
