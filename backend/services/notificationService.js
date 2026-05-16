@@ -1,6 +1,7 @@
 /**
  * Notification Service
  * Manages user notifications for purchases, errors, and system events
+ * @module services/notificationService
  */
 
 const Notification = require('../models/Notification');
@@ -10,9 +11,40 @@ const { sendEmail } = require('./emailService');
 const { emailConfig } = require('../config/emailConfig');
 
 /**
+ * Notification data object
+ * @typedef {Object} NotificationData
+ * @property {string} userId - User ID to notify
+ * @property {string} type - Notification type ('purchase_success', 'purchase_error', 'refund', 'listing_update', 'system')
+ * @property {string} title - Notification title
+ * @property {string} message - Notification message
+ * @property {string} [icon] - Optional icon identifier
+ * @property {string} [actionUrl] - Optional action URL
+ * @property {Object} [metadata] - Optional metadata object
+ */
+
+/**
  * Create a new notification
+ * @param {NotificationData} data - Notification data
+ * @returns {Promise<Object>} Created notification
+ * @throws {Error} When validation fails or database error occurs
  */
 async function createNotification(data) {
+  // Input validation
+  if (!data || typeof data !== 'object') {
+    throw new Error('Invalid notification data: expected object');
+  }
+  if (!data.userId || typeof data.userId !== 'string') {
+    throw new Error('Invalid userId: expected non-empty string');
+  }
+  if (!data.type || typeof data.type !== 'string') {
+    throw new Error('Invalid type: expected non-empty string');
+  }
+  if (!data.title || typeof data.title !== 'string') {
+    throw new Error('Invalid title: expected non-empty string');
+  }
+  if (!data.message || typeof data.message !== 'string') {
+    throw new Error('Invalid message: expected non-empty string');
+  }
   try {
     const notification = new Notification({
       userId: data.userId,
