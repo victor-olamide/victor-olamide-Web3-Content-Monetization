@@ -251,12 +251,24 @@ class UserProfileService {
 
   /**
    * Update user tier
+   * @param {string} address - Wallet address
+   * @param {string} tier - Tier to set ('free', 'basic', 'premium', 'enterprise', 'admin')
+   * @returns {Promise<Object>} Updated profile
+   * @throws {Error} When address or tier is invalid, or profile not found
    */
   async updateTier(address, tier) {
+    // Input validation
+    if (!address || typeof address !== 'string') {
+      throw new Error('Invalid address: expected non-empty string');
+    }
+    if (!tier || typeof tier !== 'string') {
+      throw new Error('Invalid tier: expected non-empty string');
+    }
     try {
       const allowedTiers = ['free', 'basic', 'premium', 'enterprise', 'admin'];
       if (!allowedTiers.includes(tier)) {
-        throw new Error('Invalid tier');
+        logger.warn('Invalid tier attempted', { address: address.toLowerCase(), tier, allowedTiers });
+        throw new Error(`Invalid tier: must be one of ${allowedTiers.join(', ')}`);
       }
 
       const profile = await UserProfile.findOneAndUpdate(
@@ -266,12 +278,19 @@ class UserProfileService {
       );
 
       if (!profile) {
+        logger.warn('Profile not found for tier update', { address: address.toLowerCase() });
         throw new Error('Profile not found');
       }
 
+      logger.info('User tier updated successfully', { address: address.toLowerCase(), tier });
       return profile;
     } catch (error) {
-      logger.error('Error updating tier:', { err: error });
+      logger.error('Failed to update user tier', { 
+        address: address.toLowerCase(),
+        tier,
+        error: error.message,
+        code: error.code || 'UNKNOWN'
+      });
       throw error;
     }
   }
