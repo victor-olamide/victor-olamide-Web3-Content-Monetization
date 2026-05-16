@@ -45,18 +45,30 @@ class UserProfileService {
 
   /**
    * Get user profile
+   * @param {string} address - Wallet address
+   * @returns {Promise<Object>} User profile
+   * @throws {Error} When address is invalid or profile not found
    */
   async getProfile(address) {
+    // Input validation
+    if (!address || typeof address !== 'string') {
+      throw new Error('Invalid address: expected non-empty string');
+    }
     try {
       const profile = await UserProfile.findOne({ address: address.toLowerCase() });
 
       if (!profile) {
+        logger.warn('Profile not found', { address: address.toLowerCase() });
         throw new Error('Profile not found');
       }
 
       return profile;
     } catch (error) {
-      logger.error('Error fetching profile:', { err: error });
+      logger.error('Failed to fetch user profile', { 
+        address: address.toLowerCase(),
+        error: error.message,
+        code: error.code || 'UNKNOWN'
+      });
       throw error;
     }
   }
