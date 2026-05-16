@@ -131,12 +131,12 @@ class BackupSchedulerService {
    */
   async runContentBackup() {
     if (activeBackups.has('content')) {
-      console.log('Content backup already running, skipping...');
+      logger.info('Content backup already running, skipping...');
       return;
     }
 
     if (this.getActiveBackupCount() >= this.config.maxConcurrentBackups) {
-      console.log('Maximum concurrent backups reached, skipping content backup...');
+      logger.info('Maximum concurrent backups reached, skipping content backup...');
       return;
     }
 
