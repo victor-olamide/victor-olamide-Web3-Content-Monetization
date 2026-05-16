@@ -422,9 +422,30 @@ async function notifyPurchaseSuccess(userId, purchaseData) {
   }
 
 /**
+ * Error data object
+ * @typedef {Object} ErrorData
+ * @property {string} [contentId] - Content ID
+ * @property {string} [contentTitle] - Content title
+ * @property {string} [errorCode] - Error code
+ * @property {boolean} [retryable] - Whether the error is retryable
+ * @property {string} [message] - Error message
+ */
+
+/**
  * Create purchase error notification
+ * @param {string} userId - User ID
+ * @param {ErrorData} errorData - Error data
+ * @returns {Promise<Object>} Created notification
+ * @throws {Error} When userId is invalid
  */
 async function notifyPurchaseError(userId, errorData) {
+  // Input validation
+  if (!userId || typeof userId !== 'string') {
+    throw new Error('Invalid userId: expected non-empty string');
+  }
+  if (errorData && typeof errorData !== 'object') {
+    throw new Error('Invalid errorData: expected object');
+  }
   try {
     const notification = await createNotification({
       userId,
