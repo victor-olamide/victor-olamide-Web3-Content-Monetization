@@ -540,8 +540,15 @@ class UserProfileService {
 
   /**
    * Get profile statistics
+   * @param {string} address - Wallet address
+   * @returns {Promise<Object>} Profile statistics
+   * @throws {Error} When address is invalid or database error occurs
    */
   async getProfileStats(address) {
+    // Input validation
+    if (!address || typeof address !== 'string') {
+      throw new Error('Invalid address: expected non-empty string');
+    }
     try {
       const address_lower = address.toLowerCase();
 
@@ -564,6 +571,13 @@ class UserProfileService {
         'rating.score': { $ne: null }
       });
 
+      logger.info('Profile stats retrieved', { 
+        address: address_lower,
+        purchaseCount,
+        favoriteCount,
+        ratedCount
+      });
+
       return {
         totalPurchases: purchaseCount,
         totalSpent: totalSpent.length > 0 ? totalSpent[0].total : 0,
@@ -571,7 +585,11 @@ class UserProfileService {
         ratedCount
       };
     } catch (error) {
-      logger.error('Error getting profile stats:', { err: error });
+      logger.error('Failed to get profile stats', { 
+        address: address.toLowerCase(),
+        error: error.message,
+        code: error.code || 'UNKNOWN'
+      });
       throw error;
     }
   }
