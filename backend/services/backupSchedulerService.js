@@ -2,6 +2,7 @@ const databaseBackupService = require('./databaseBackupService');
 const contentBackupService = require('./contentBackupService');
 const { backupConfig } = require('../config/backupConfig');
 const { BackupJob, BackupRetention } = require('../models/BackupJob');
+const logger = require('../utils/logger');
 
 /**
  * Backup scheduler service
@@ -24,16 +25,16 @@ class BackupSchedulerService {
    */
   initializeScheduler() {
     if (schedulerInstance) {
-      console.warn('Backup scheduler already initialized');
+      logger.warn('Backup scheduler already initialized');
       return;
     }
 
     if (!this.config.enabled) {
-      console.log('Backup scheduler disabled in configuration');
+      logger.info('Backup scheduler disabled in configuration');
       return;
     }
 
-    console.log('Initializing backup scheduler...');
+    logger.info('Initializing backup scheduler...');
 
     // Run initial backups (with delay to ensure DB connection)
     setTimeout(async () => {
@@ -46,7 +47,7 @@ class BackupSchedulerService {
         await this.runDatabaseBackup();
       }, this.databaseInterval);
 
-      console.log(`Database backup scheduler initialized with interval: ${this.databaseInterval}ms`);
+      logger.info(`Database backup scheduler initialized with interval: ${this.databaseInterval}ms`);
     }
 
     // Schedule recurring content backups
@@ -59,21 +60,21 @@ class BackupSchedulerService {
         await this.runContentBackup();
       }, this.contentInterval);
 
-      console.log(`Content backup scheduler initialized with interval: ${this.contentInterval}ms`);
+      logger.info(`Content backup scheduler initialized with interval: ${this.contentInterval}ms`);
     }
 
     // Schedule retention cleanup
     this.scheduleRetentionCleanup();
 
     isRunning = true;
-    console.log('Backup scheduler initialized successfully');
+    logger.info('Backup scheduler initialized successfully');
   }
 
   /**
    * Run all scheduled backups
    */
   async runScheduledBackups() {
-    console.log(`[${new Date().toISOString()}] Running scheduled backups...`);
+    logger.info('Running scheduled backups...', { timestamp: new Date().toISOString() });
 
     const promises = [];
 
@@ -87,9 +88,9 @@ class BackupSchedulerService {
 
     try {
       await Promise.allSettled(promises);
-      console.log(`[${new Date().toISOString()}] Scheduled backups completed`);
+      logger.info('Scheduled backups completed', { timestamp: new Date().toISOString() });
     } catch (error) {
-      console.error(`[${new Date().toISOString()}] Scheduled backups failed:`, error);
+      logger.error('Scheduled backups failed', { timestamp: new Date().toISOString(), error: error.message });
     }
   }
 
@@ -98,28 +99,28 @@ class BackupSchedulerService {
    */
   async runDatabaseBackup() {
     if (activeBackups.has('database')) {
-      console.log('Database backup already running, skipping...');
+      logger.info('Database backup already running, skipping...');
       return;
     }
 
     if (this.getActiveBackupCount() >= this.config.maxConcurrentBackups) {
-      console.log('Maximum concurrent backups reached, skipping database backup...');
+      logger.info('Maximum concurrent backups reached, skipping database backup...');
       return;
     }
 
     activeBackups.add('database');
 
     try {
-      console.log(`[${new Date().toISOString()}] Starting scheduled database backup...`);
+      logger.info('Starting scheduled database backup...', { timestamp: new Date().toISOString() });
       const result = await databaseBackupService.createBackup({ triggeredBy: 'scheduler' });
 
       if (result.success) {
-        console.log(`[${new Date().toISOString()}] Scheduled database backup completed: ${result.backupId}`);
+        logger.info('Scheduled database backup completed', { timestamp: new Date().toISOString(), backupId: result.backupId });
       } else {
-        console.error(`[${new Date().toISOString()}] Scheduled database backup failed:`, result.error);
+        logger.error('Scheduled database backup failed', { timestamp: new Date().toISOString(), error: result.error });
       }
     } catch (error) {
-      console.error(`[${new Date().toISOString()}] Scheduled database backup error:`, error);
+      logger.error('Scheduled database backup error', { timestamp: new Date().toISOString(), error: error.message });
     } finally {
       activeBackups.delete('database');
     }
@@ -130,28 +131,28 @@ class BackupSchedulerService {
    */
   async runContentBackup() {
     if (activeBackups.has('content')) {
-      console.log('Content backup already running, skipping...');
+      logger.info('Content backup already running, skipping...');
       return;
     }
 
     if (this.getActiveBackupCount() >= this.config.maxConcurrentBackups) {
-      console.log('Maximum concurrent backups reached, skipping content backup...');
+      logger.info('Maximum concurrent backups reached, skipping content backup...');
       return;
     }
 
     activeBackups.add('content');
 
     try {
-      console.log(`[${new Date().toISOString()}] Starting scheduled content backup...`);
+      logger.info('Starting scheduled content backup...', { timestamp: new Date().toISOString() });
       const result = await contentBackupService.createBackup({ triggeredBy: 'scheduler' });
 
       if (result.success) {
-        console.log(`[${new Date().toISOString()}] Scheduled content backup completed: ${result.backupId}`);
+        logger.info('Scheduled content backup completed', { timestamp: new Date().toISOString(), backupId: result.backupId });
       } else {
-        console.error(`[${new Date().toISOString()}] Scheduled content backup failed:`, result.error);
+        logger.error('Scheduled content backup failed', { timestamp: new Date().toISOString(), error: result.error });
       }
     } catch (error) {
-      console.error(`[${new Date().toISOString()}] Scheduled content backup error:`, error);
+      logger.error('Scheduled content backup error', { timestamp: new Date().toISOString(), error: error.message });
     } finally {
       activeBackups.delete('content');
     }
@@ -172,7 +173,7 @@ class BackupSchedulerService {
       await this.runRetentionCleanup();
     }, cleanupInterval);
 
-    console.log(`Retention cleanup scheduler initialized with interval: ${cleanupInterval}ms`);
+    logger.info(`Retention cleanup scheduler initialized with interval: ${cleanupInterval}ms`);
   }
 
   /**
@@ -180,7 +181,7 @@ class BackupSchedulerService {
    */
   async runRetentionCleanup() {
     try {
-      console.log(`[${new Date().toISOString()}] Running retention cleanup...`);
+      logger.info('Running retention cleanup...', { timestamp: new Date().toISOString() });
 
       // Cleanup database backups
       if (backupConfig.database.enabled) {
@@ -192,9 +193,9 @@ class BackupSchedulerService {
         await this.cleanupBackupsByRetention('content');
       }
 
-      console.log(`[${new Date().toISOString()}] Retention cleanup completed`);
+      logger.info('Retention cleanup completed', { timestamp: new Date().toISOString() });
     } catch (error) {
-      console.error(`[${new Date().toISOString()}] Retention cleanup failed:`, error);
+      logger.error('Retention cleanup failed', { timestamp: new Date().toISOString(), error: error.message });
     }
   }
 
@@ -206,7 +207,7 @@ class BackupSchedulerService {
     try {
       const retentionPolicy = await BackupRetention.findOne({ type, enabled: true });
       if (!retentionPolicy) {
-        console.log(`No retention policy found for ${type} backups`);
+        logger.info(`No retention policy found for ${type} backups`);
         return;
       }
 
@@ -222,7 +223,7 @@ class BackupSchedulerService {
       }).sort({ startedAt: -1 });
 
       if (oldBackups.length <= retentionPolicy.policy.minCount) {
-        console.log(`Keeping all ${oldBackups.length} ${type} backups (minimum count)`);
+        logger.info(`Keeping all ${oldBackups.length} ${type} backups (minimum count)`);
         return;
       }
 
@@ -243,7 +244,7 @@ class BackupSchedulerService {
           deletedIds.push(backup.backupId);
 
         } catch (error) {
-          console.error(`Failed to delete ${type} backup ${backup.backupId}:`, error);
+          logger.error(`Failed to delete ${type} backup`, { backupId: backup.backupId, error: error.message });
         }
       }
 
@@ -253,10 +254,10 @@ class BackupSchedulerService {
       retentionPolicy.totalCleaned += deletedIds.length;
       await retentionPolicy.save();
 
-      console.log(`Cleaned up ${deletedIds.length} old ${type} backups`);
+      logger.info(`Cleaned up ${deletedIds.length} old ${type} backups`);
 
     } catch (error) {
-      console.error(`Failed to cleanup ${type} backups:`, error);
+      logger.error(`Failed to cleanup ${type} backups`, { error: error.message });
     }
   }
 
@@ -274,7 +275,7 @@ class BackupSchedulerService {
    * @returns {Promise<Object>} Backup result
    */
   async triggerManualBackup(type) {
-    console.log(`[${new Date().toISOString()}] Manual backup triggered: ${type}`);
+    logger.info('Manual backup triggered', { timestamp: new Date().toISOString(), type });
 
     switch (type) {
       case 'database':
@@ -355,7 +356,7 @@ class BackupSchedulerService {
       }
 
     } catch (error) {
-      console.error('Failed to get backup status:', error);
+      logger.error('Failed to get backup status', { error: error.message });
     }
 
     return stats;
@@ -370,7 +371,7 @@ class BackupSchedulerService {
       schedulerInstance = null;
       isRunning = false;
       activeBackups.clear();
-      console.log('Backup scheduler stopped');
+      logger.info('Backup scheduler stopped');
     }
   }
 

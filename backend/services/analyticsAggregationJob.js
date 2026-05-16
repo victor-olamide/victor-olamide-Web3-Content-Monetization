@@ -5,6 +5,7 @@
 
 const cron = require('node-cron');
 const analyticsService = require('../services/analyticsService');
+const logger = require('../utils/logger');
 
 class AnalyticsAggregationJob {
   constructor() {
@@ -16,7 +17,7 @@ class AnalyticsAggregationJob {
    * Start the analytics aggregation jobs
    */
   start() {
-    console.log('Starting analytics aggregation jobs...');
+    logger.info('Starting analytics aggregation jobs...');
 
     // Hourly aggregation (runs at the top of every hour)
     this.jobs.push(
@@ -65,20 +66,20 @@ class AnalyticsAggregationJob {
 
     // Start all jobs
     this.jobs.forEach(job => job.start());
-    console.log('Analytics aggregation jobs started successfully');
+    logger.info('Analytics aggregation jobs started successfully');
   }
 
   /**
    * Stop all analytics aggregation jobs
    */
   stop() {
-    console.log('Stopping analytics aggregation jobs...');
+    logger.info('Stopping analytics aggregation jobs...');
 
     this.jobs.forEach(job => job.stop());
     this.jobs = [];
     this.isRunning = false;
 
-    console.log('Analytics aggregation jobs stopped');
+    logger.info('Analytics aggregation jobs stopped');
   }
 
   /**
@@ -86,22 +87,22 @@ class AnalyticsAggregationJob {
    */
   async runHourlyAggregation() {
     if (this.isRunning) {
-      console.log('Hourly aggregation already running, skipping...');
+      logger.info('Hourly aggregation already running, skipping...');
       return;
     }
 
     try {
       this.isRunning = true;
-      console.log('Starting hourly analytics aggregation...');
+      logger.info('Starting hourly analytics aggregation...');
 
       const now = new Date();
       const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
 
       await analyticsService.aggregateData(oneHourAgo, now, 'hourly');
 
-      console.log('Hourly analytics aggregation completed');
+      logger.info('Hourly analytics aggregation completed');
     } catch (error) {
-      console.error('Error in hourly analytics aggregation:', error);
+      logger.error('Error in hourly analytics aggregation', { error: error.message });
     } finally {
       this.isRunning = false;
     }
