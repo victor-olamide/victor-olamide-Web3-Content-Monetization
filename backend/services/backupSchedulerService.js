@@ -143,16 +143,16 @@ class BackupSchedulerService {
     activeBackups.add('content');
 
     try {
-      console.log(`[${new Date().toISOString()}] Starting scheduled content backup...`);
+      logger.info('Starting scheduled content backup...', { timestamp: new Date().toISOString() });
       const result = await contentBackupService.createBackup({ triggeredBy: 'scheduler' });
 
       if (result.success) {
-        console.log(`[${new Date().toISOString()}] Scheduled content backup completed: ${result.backupId}`);
+        logger.info('Scheduled content backup completed', { timestamp: new Date().toISOString(), backupId: result.backupId });
       } else {
-        console.error(`[${new Date().toISOString()}] Scheduled content backup failed:`, result.error);
+        logger.error('Scheduled content backup failed', { timestamp: new Date().toISOString(), error: result.error });
       }
     } catch (error) {
-      console.error(`[${new Date().toISOString()}] Scheduled content backup error:`, error);
+      logger.error('Scheduled content backup error', { timestamp: new Date().toISOString(), error: error.message });
     } finally {
       activeBackups.delete('content');
     }
