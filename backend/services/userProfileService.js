@@ -75,8 +75,19 @@ class UserProfileService {
 
   /**
    * Update user profile
+   * @param {string} address - Wallet address
+   * @param {Object} profileData - Profile data to update
+   * @returns {Promise<Object>} Updated profile
+   * @throws {Error} When address is invalid or profile not found
    */
   async updateProfile(address, profileData) {
+    // Input validation
+    if (!address || typeof address !== 'string') {
+      throw new Error('Invalid address: expected non-empty string');
+    }
+    if (!profileData || typeof profileData !== 'object') {
+      throw new Error('Invalid profileData: expected object');
+    }
     try {
       const allowedFields = [
         'displayName',
@@ -105,12 +116,18 @@ class UserProfileService {
       );
 
       if (!profile) {
+        logger.warn('Profile not found for update', { address: address.toLowerCase() });
         throw new Error('Profile not found');
       }
 
+      logger.info('Profile updated successfully', { address: address.toLowerCase(), fields: Object.keys(updateData) });
       return profile;
     } catch (error) {
-      logger.error('Error updating profile:', { err: error });
+      logger.error('Failed to update user profile', { 
+        address: address.toLowerCase(),
+        error: error.message,
+        code: error.code || 'UNKNOWN'
+      });
       throw error;
     }
   }
