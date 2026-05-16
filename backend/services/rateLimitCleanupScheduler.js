@@ -11,6 +11,7 @@ const { DEFAULTS } = require('../config/rateLimitConfig');
  */
 
 let cleanupInterval = null;
+let cleanupTimeout = null;
 let lastCleanupAt = null;
 let lastCleanupCount = 0;
 let totalCleanedUp = 0;
@@ -57,7 +58,8 @@ function initializeCleanupScheduler(intervalMs) {
   console.log(`[RateLimitCleanup] Initializing scheduler with ${interval / 1000}s interval`);
 
   // Run initial cleanup after a short delay
-  setTimeout(() => runCleanup(), 5000);
+  const timeoutId = setTimeout(() => runCleanup(), 5000);
+  cleanupTimeout = timeoutId;
 
   // Schedule periodic cleanup
   cleanupInterval = setInterval(() => runCleanup(), interval);
@@ -70,8 +72,12 @@ function stopCleanupScheduler() {
   if (cleanupInterval) {
     clearInterval(cleanupInterval);
     cleanupInterval = null;
-    console.log('[RateLimitCleanup] Scheduler stopped');
   }
+  if (cleanupTimeout) {
+    clearTimeout(cleanupTimeout);
+    cleanupTimeout = null;
+  }
+  console.log('[RateLimitCleanup] Scheduler stopped');
 }
 
 /**
