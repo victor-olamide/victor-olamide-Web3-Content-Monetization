@@ -401,6 +401,28 @@ class BackupSchedulerService {
   isSchedulerRunning() {
     return isRunning;
   }
+
+  /**
+   * Get detailed scheduler status including interval information
+   * @returns {Object} Detailed scheduler status
+   */
+  getSchedulerStatus() {
+    return {
+      isRunning,
+      schedulerActive: schedulerInstance !== null,
+      contentSchedulerActive: contentSchedulerInstance !== null,
+      retentionCleanupActive: retentionCleanupInstance !== null,
+      retentionTimeoutActive: retentionCleanupTimeout !== null,
+      activeBackups: Array.from(activeBackups),
+      activeBackupCount: activeBackups.size,
+      config: {
+        enabled: this.config.enabled,
+        maxConcurrentBackups: this.config.maxConcurrentBackups,
+        databaseInterval: this.databaseInterval,
+        contentInterval: this.contentInterval
+      }
+    };
+  }
 }
 
 module.exports = new BackupSchedulerService();
