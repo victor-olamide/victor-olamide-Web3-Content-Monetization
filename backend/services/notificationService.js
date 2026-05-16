@@ -68,9 +68,41 @@ async function createNotification(data) {
 }
 
 /**
+ * Pagination options object
+ * @typedef {Object} PaginationOptions
+ * @property {number} [page=1] - Page number (default: 1)
+ * @property {number} [limit=20] - Items per page (default: 20)
+ * @property {boolean} [unreadOnly=false] - Filter unread only (default: false)
+ * @property {string} [type] - Filter by notification type
+ * @property {string} [sort='-createdAt'] - Sort order (default: '-createdAt')
+ */
+
+/**
+ * Paginated notifications result
+ * @typedef {Object} PaginatedNotifications
+ * @property {Array<Object>} notifications - Array of notification objects
+ * @property {Object} pagination - Pagination info
+ * @property {number} pagination.page - Current page
+ * @property {number} pagination.limit - Items per page
+ * @property {number} pagination.total - Total items
+ * @property {number} pagination.pages - Total pages
+ */
+
+/**
  * Get user notifications with pagination
+ * @param {string} userId - User ID
+ * @param {PaginationOptions} [options={}] - Pagination options
+ * @returns {Promise<PaginatedNotifications>} Paginated notifications
+ * @throws {Error} When userId is invalid or database error occurs
  */
 async function getUserNotifications(userId, options = {}) {
+  // Input validation
+  if (!userId || typeof userId !== 'string') {
+    throw new Error('Invalid userId: expected non-empty string');
+  }
+  if (options && typeof options !== 'object') {
+    throw new Error('Invalid options: expected object');
+  }
   try {
     const {
       page = 1,
