@@ -207,7 +207,7 @@ class BackupSchedulerService {
     try {
       const retentionPolicy = await BackupRetention.findOne({ type, enabled: true });
       if (!retentionPolicy) {
-        console.log(`No retention policy found for ${type} backups`);
+        logger.info(`No retention policy found for ${type} backups`);
         return;
       }
 
@@ -223,7 +223,7 @@ class BackupSchedulerService {
       }).sort({ startedAt: -1 });
 
       if (oldBackups.length <= retentionPolicy.policy.minCount) {
-        console.log(`Keeping all ${oldBackups.length} ${type} backups (minimum count)`);
+        logger.info(`Keeping all ${oldBackups.length} ${type} backups (minimum count)`);
         return;
       }
 
