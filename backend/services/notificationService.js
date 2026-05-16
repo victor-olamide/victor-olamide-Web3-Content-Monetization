@@ -573,9 +573,36 @@ async function notifyListingUpdate(userId, listingData) {
 }
 
 /**
+ * System data object
+ * @typedef {Object} SystemData
+ * @property {string} title - Notification title
+ * @property {string} message - Notification message
+ * @property {string} [icon] - Icon identifier (default: 'info')
+ * @property {string} [actionUrl] - Action URL
+ * @property {Object} [metadata] - Additional metadata
+ */
+
+/**
  * Create system notification
+ * @param {string} userId - User ID
+ * @param {SystemData} systemData - System data
+ * @returns {Promise<Object>} Created notification
+ * @throws {Error} When userId or systemData is invalid
  */
 async function notifySystem(userId, systemData) {
+  // Input validation
+  if (!userId || typeof userId !== 'string') {
+    throw new Error('Invalid userId: expected non-empty string');
+  }
+  if (!systemData || typeof systemData !== 'object') {
+    throw new Error('Invalid systemData: expected object');
+  }
+  if (!systemData.title || typeof systemData.title !== 'string') {
+    throw new Error('Invalid systemData.title: expected non-empty string');
+  }
+  if (!systemData.message || typeof systemData.message !== 'string') {
+    throw new Error('Invalid systemData.message: expected non-empty string');
+  }
   try {
     const notification = await createNotification({
       userId,
