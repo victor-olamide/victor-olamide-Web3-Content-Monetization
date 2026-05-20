@@ -9,6 +9,7 @@
  */
 
 const request = require('supertest');
+const express = require('express');
 
 // ── validateProfileId ─────────────────────────────────────────────────────────
 describe('validateProfileId middleware', () => {
@@ -223,5 +224,62 @@ describe('userProfileService.updateProfileById', () => {
     const callArg = UserProfile.findOneAndUpdate.mock.calls[0][1].$set;
     expect(callArg).not.toHaveProperty('status');
     expect(callArg).toHaveProperty('displayName', 'Alice');
+  });
+});
+
+describe('profile route ordering', () => {
+  let app;
+  const mockService = {
+    getProfileById: jest.fn(),
+    updateProfileById: jest.fn(),
+    updatePreferences: jest.fn(),
+  };
+
+  beforeEach(() => {
+    jest.resetModules();
+    jest.mock('../middleware/walletAuth', () => ({
+      verifyWalletAuth: jest.fn((req, res, next) => {
+        req.walletAddress = 'sp1abc';
+        next();
+      }),
+    }));
+    jest.mock('../services/userProfileService', () => mockService);
+
+    const profileRoutes = require('../routes/profileRoutes');
+    app = express();
+    app.use(express.json());
+    app.use('/api/profile', profileRoutes);
+  });
+
+  afterEach(() => {
+    jest.resetModules();
+    jest.unmock('../middleware/walletAuth');
+    jest.unmock('../services/userProfileService');
+  });
+
+  it('routes GET /api/profile/me through the dedicated /me handler, not GET /:id', async () => {
+    mockService.getProfileById.mockImplementation((id) => {
+      if (id === 'sp1abc') return Promise.resolve({ address: 'sp1abc', displayName: 'Owner' });
+      return Promise.reject(new Error('Unexpected id'));
+    });
+
+    const response = await request(app).get('/api/profile/me');
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(mockService.getProfileById).toHaveBeenCalledWith('sp1abc');
+  });
+
+  it('routes PUT /api/profile/preferences through preferences handler, not PUT /:id', async () => {
+    mockService.updatePreferences.mockResolvedValue({ address: 'sp1abc', preferences: { emailNotifications: true } });
+
+    const response = await request(app)
+      .put('/api/profile/preferences')
+      .send({ emailNotifications: true });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(mockService.updatePreferences).toHaveBeenCalledWith('sp1abc', { emailNotifications: true });
+    expect(mockService.updateProfileById).not.toHaveBeenCalled();
   });
 });
