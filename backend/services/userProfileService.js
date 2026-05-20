@@ -1,6 +1,8 @@
+'use strict';
+
 /**
  * User Profile Service
- * Manages user profiles, settings, and preferences
+ * Manages user profiles, settings, preferences, and purchase history.
  */
 
 const UserProfile = require('../models/UserProfile');
@@ -8,9 +10,20 @@ const logger = require('../utils/logger');
 const Purchase = require('../models/Purchase');
 const PurchaseHistory = require('../models/PurchaseHistory');
 const Content = require('../models/Content');
+const logger = require('../utils/logger');
+
+// Fields callers are allowed to set via updateProfile / updateProfileById
+const UPDATABLE_FIELDS = ['displayName', 'avatar', 'username', 'bio', 'preferences', 'settings', 'socialLinks'];
+
+// Fields exposed on a public (unauthenticated) profile view
+const PUBLIC_FIELDS = 'address displayName avatar username bio isVerified socialLinks totalPurchases';
 
 class UserProfileService {
+
+  // ── Core CRUD ──────────────────────────────────────────────────────────────
+
   /**
+   * Get or create a profile by wallet address.
    * Get or create user profile
    * @param {string} address - Wallet address
    * @returns {Promise<Object>} User profile
@@ -22,17 +35,29 @@ class UserProfileService {
       throw new Error('Invalid address: expected non-empty string');
     }
     try {
-      let profile = await UserProfile.findOne({ address: address.toLowerCase() });
-
+      const addr = address.toLowerCase();
+      let profile = await UserProfile.findOne({ address: addr });
       if (!profile) {
+        profile = await UserProfile.create({ address: addr });
         profile = new UserProfile({
           address: address.toLowerCase()
         });
         await profile.save();
         logger.info('Created new user profile', { address: address.toLowerCase() });
       }
-
       return profile;
+    } catch (err) {
+      logger.error('getOrCreateProfile failed', { err, address });
+      throw err;
+    }
+  }
+
+  /**
+   * GET /profile/:id — fetch profile by wallet address (the :id param).
+   * Returns the full document; callers decide what to expose.
+   * Throws with status 404 if not found.
+   */
+  async getProfileById(id) {
     } catch (error) {
       logger.error('Failed to get or create user profile', { 
         address: address.toLowerCase(),
@@ -55,14 +80,28 @@ class UserProfileService {
       throw new Error('Invalid address: expected non-empty string');
     }
     try {
-      const profile = await UserProfile.findOne({ address: address.toLowerCase() });
-
+      const profile = await UserProfile.findOne({ address: id.toLowerCase() });
       if (!profile) {
+        const err = new Error('Profile not found');
+        err.statusCode = 404;
+        throw err;
         logger.warn('Profile not found', { address: address.toLowerCase() });
         throw new Error('Profile not found');
       }
-
       return profile;
+    } catch (err) {
+      logger.error('getProfileById failed', { err, id });
+      throw err;
+    }
+  }
+
+  /**
+   * PUT /profile/:id — update displayName, bio, avatar (and optionally other
+   * allowed fields) for the profile identified by wallet address :id.
+   * Only fields present in UPDATABLE_FIELDS are written.
+   * Throws 404 if the profile does not exist.
+   */
+  async updateProfileById(id, data) {
     } catch (error) {
       logger.error('Failed to fetch user profile', { 
         address: address.toLowerCase(),
@@ -89,33 +128,36 @@ class UserProfileService {
       throw new Error('Invalid profileData: expected object');
     }
     try {
-      const allowedFields = [
-        'displayName',
-        'avatar',
-        'username',
-        'bio',
-        'preferences',
-        'settings',
-        'socialLinks',
-        'tier'
-      ];
-
       const updateData = {};
-      for (const field of allowedFields) {
-        if (field in profileData) {
-          updateData[field] = profileData[field];
-        }
+      for (const field of UPDATABLE_FIELDS) {
+        if (field in data) updateData[field] = data[field];
       }
-
+      if (Object.keys(updateData).length === 0) {
+        const err = new Error('No updatable fields provided');
+        err.statusCode = 400;
+        throw err;
+      }
       updateData.lastProfileUpdate = new Date();
 
       const profile = await UserProfile.findOneAndUpdate(
-        { address: address.toLowerCase() },
-        updateData,
+        { address: id.toLowerCase() },
+        { $set: updateData },
         { new: true, runValidators: true }
       );
-
       if (!profile) {
+        const err = new Error('Profile not found');
+        err.statusCode = 404;
+        throw err;
+      }
+      return profile;
+    } catch (err) {
+      logger.error('updateProfileById failed', { err, id });
+      throw err;
+    }
+  }
+
+  /**
+   * Legacy: get profile by address (alias for getProfileById).
         logger.warn('Profile not found for update', { address: address.toLowerCase() });
         throw new Error('Profile not found');
       }
@@ -139,6 +181,19 @@ class UserProfileService {
    * @returns {Promise<Object>} Updated profile
    * @throws {Error} When address is invalid or profile not found
    */
+  async getProfile(address) {
+    return this.getProfileById(address);
+  }
+
+  /**
+   * Legacy: update profile by address (alias for updateProfileById).
+   */
+  async updateProfile(address, data) {
+    return this.updateProfileById(address, data);
+  }
+
+  // ── Sub-resource updates ───────────────────────────────────────────────────
+
   async updatePreferences(address, preferences) {
     // Input validation
     if (!address || typeof address !== 'string') {
@@ -150,9 +205,17 @@ class UserProfileService {
     try {
       const profile = await UserProfile.findOneAndUpdate(
         { address: address.toLowerCase() },
-        { preferences },
+        { $set: { preferences } },
         { new: true }
       );
+      if (!profile) { const e = new Error('Profile not found'); e.statusCode = 404; throw e; }
+      return profile;
+    } catch (err) {
+      logger.error('updatePreferences failed', { err, address });
+      throw err;
+    }
+  }
+
 
       if (!profile) {
         logger.warn('Profile not found for preferences update', { address: address.toLowerCase() });
@@ -189,9 +252,17 @@ class UserProfileService {
     try {
       const profile = await UserProfile.findOneAndUpdate(
         { address: address.toLowerCase() },
-        { settings },
+        { $set: { settings } },
         { new: true }
       );
+      if (!profile) { const e = new Error('Profile not found'); e.statusCode = 404; throw e; }
+      return profile;
+    } catch (err) {
+      logger.error('updateSettings failed', { err, address });
+      throw err;
+    }
+  }
+
 
       if (!profile) {
         logger.warn('Profile not found for settings update', { address: address.toLowerCase() });
@@ -228,9 +299,23 @@ class UserProfileService {
     try {
       const profile = await UserProfile.findOneAndUpdate(
         { address: address.toLowerCase() },
-        { socialLinks },
+        { $set: { socialLinks } },
         { new: true }
       );
+      if (!profile) { const e = new Error('Profile not found'); e.statusCode = 404; throw e; }
+      return profile;
+    } catch (err) {
+      logger.error('updateSocialLinks failed', { err, address });
+      throw err;
+    }
+  }
+
+  async updateTier(address, tier) {
+    const ALLOWED = ['free', 'basic', 'premium', 'enterprise', 'admin'];
+    if (!ALLOWED.includes(tier)) {
+      const e = new Error('Invalid tier'); e.statusCode = 400; throw e;
+    }
+    try {
 
       if (!profile) {
         logger.warn('Profile not found for social links update', { address: address.toLowerCase() });
@@ -273,9 +358,32 @@ class UserProfileService {
 
       const profile = await UserProfile.findOneAndUpdate(
         { address: address.toLowerCase() },
-        { tier },
+        { $set: { tier } },
         { new: true }
       );
+      if (!profile) { const e = new Error('Profile not found'); e.statusCode = 404; throw e; }
+      return profile;
+    } catch (err) {
+      logger.error('updateTier failed', { err, address });
+      throw err;
+    }
+  }
+
+  async updateLastLogin(address) {
+    try {
+      return await UserProfile.findOneAndUpdate(
+        { address: address.toLowerCase() },
+        { $set: { lastLogin: new Date() } },
+        { new: true }
+      );
+    } catch (err) {
+      logger.error('updateLastLogin failed', { err, address });
+      throw err;
+    }
+  }
+
+  // ── Purchase history ───────────────────────────────────────────────────────
+
 
       if (!profile) {
         logger.warn('Profile not found for tier update', { address: address.toLowerCase() });
@@ -323,12 +431,13 @@ class UserProfileService {
     }
     try {
       const content = await Content.findOne({ contentId });
+      if (!content) { const e = new Error('Content not found'); e.statusCode = 404; throw e; }
       if (!content) {
         logger.warn('Content not found for purchase recording', { contentId });
         throw new Error('Content not found');
       }
 
-      const purchaseHistory = new PurchaseHistory({
+      const purchaseHistory = await PurchaseHistory.create({
         buyerAddress: buyerAddress.toLowerCase(),
         contentId,
         contentTitle: content.title,
@@ -338,18 +447,13 @@ class UserProfileService {
         purchasePrice: purchaseData.price,
         purchaseCurrency: purchaseData.currency || 'USD',
         transactionHash: purchaseData.transactionHash,
-        transactionStatus: purchaseData.status || 'completed'
+        transactionStatus: purchaseData.status || 'completed',
       });
 
-      await purchaseHistory.save();
-
-      // Update user profile purchase stats
-      const profile = await UserProfile.findOne({ address: buyerAddress.toLowerCase() });
-      if (profile) {
-        profile.totalPurchases = (profile.totalPurchases || 0) + 1;
-        profile.totalSpent = (profile.totalSpent || 0) + purchaseData.price;
-        await profile.save();
-      }
+      await UserProfile.findOneAndUpdate(
+        { address: buyerAddress.toLowerCase() },
+        { $inc: { totalPurchases: 1, totalSpent: purchaseData.price } }
+      );
 
       logger.info('Purchase recorded successfully', { 
         buyerAddress: buyerAddress.toLowerCase(),
@@ -357,6 +461,12 @@ class UserProfileService {
         price: purchaseData.price
       });
       return purchaseHistory;
+    } catch (err) {
+      logger.error('recordPurchase failed', { err, buyerAddress, contentId });
+      throw err;
+    }
+  }
+
     } catch (error) {
       logger.error('Failed to record purchase', { 
         buyerAddress: buyerAddress.toLowerCase(),
@@ -385,6 +495,18 @@ class UserProfileService {
     }
     try {
       const { skip = 0, limit = 20, sortBy = 'purchaseDate' } = options;
+      const query = { buyerAddress: address.toLowerCase() };
+      const [data, total] = await Promise.all([
+        PurchaseHistory.find(query).sort({ [sortBy]: -1 }).skip(skip).limit(limit),
+        PurchaseHistory.countDocuments(query),
+      ]);
+      return { data, total, skip, limit };
+    } catch (err) {
+      logger.error('getPurchaseHistory failed', { err, address });
+      throw err;
+    }
+  }
+
 
       // Validate pagination options
       if (typeof skip !== 'number' || skip < 0) {
@@ -443,6 +565,18 @@ class UserProfileService {
     }
     try {
       const { skip = 0, limit = 20 } = options;
+      const query = { buyerAddress: address.toLowerCase(), isFavorite: true };
+      const [data, total] = await Promise.all([
+        PurchaseHistory.find(query).sort({ favoriteDate: -1 }).skip(skip).limit(limit),
+        PurchaseHistory.countDocuments(query),
+      ]);
+      return { data, total, skip, limit };
+    } catch (err) {
+      logger.error('getFavorites failed', { err, address });
+      throw err;
+    }
+  }
+
 
       // Validate pagination options
       if (typeof skip !== 'number' || skip < 0) {
@@ -503,6 +637,18 @@ class UserProfileService {
       throw new Error('Invalid purchaseId: expected non-empty string');
     }
     try {
+      const purchase = await PurchaseHistory.findOne({ _id: purchaseId, buyerAddress: address.toLowerCase() });
+      if (!purchase) { const e = new Error('Purchase not found'); e.statusCode = 404; throw e; }
+      purchase.isFavorite = !purchase.isFavorite;
+      purchase.favoriteDate = purchase.isFavorite ? new Date() : null;
+      await purchase.save();
+      return purchase;
+    } catch (err) {
+      logger.error('toggleFavorite failed', { err, address, purchaseId });
+      throw err;
+    }
+  }
+
       const purchase = await PurchaseHistory.findOne({
         _id: purchaseId,
         buyerAddress: address.toLowerCase()
@@ -550,15 +696,12 @@ class UserProfileService {
       throw new Error('Invalid address: expected non-empty string');
     }
     try {
-      const address_lower = address.toLowerCase();
-
-      const purchaseCount = await PurchaseHistory.countDocuments({
-        buyerAddress: address_lower
-      });
-
-      const totalSpent = await PurchaseHistory.aggregate([
-        { $match: { buyerAddress: address_lower } },
-        { $group: { _id: null, total: { $sum: '$purchasePrice' } } }
+      const addr = address.toLowerCase();
+      const [purchaseCount, totalSpentAgg, favoriteCount, ratedCount] = await Promise.all([
+        PurchaseHistory.countDocuments({ buyerAddress: addr }),
+        PurchaseHistory.aggregate([{ $match: { buyerAddress: addr } }, { $group: { _id: null, total: { $sum: '$purchasePrice' } } }]),
+        PurchaseHistory.countDocuments({ buyerAddress: addr, isFavorite: true }),
+        PurchaseHistory.countDocuments({ buyerAddress: addr, 'rating.score': { $ne: null } }),
       ]);
 
       const favoriteCount = await PurchaseHistory.countDocuments({
@@ -580,10 +723,16 @@ class UserProfileService {
 
       return {
         totalPurchases: purchaseCount,
-        totalSpent: totalSpent.length > 0 ? totalSpent[0].total : 0,
+        totalSpent: totalSpentAgg.length > 0 ? totalSpentAgg[0].total : 0,
         favoriteCount,
-        ratedCount
+        ratedCount,
       };
+    } catch (err) {
+      logger.error('getProfileStats failed', { err, address });
+      throw err;
+    }
+  }
+
     } catch (error) {
       logger.error('Failed to get profile stats', { 
         address: address.toLowerCase(),
@@ -618,6 +767,9 @@ class UserProfileService {
       throw new Error('Invalid review: expected string');
     }
     try {
+      const purchase = await PurchaseHistory.findOne({ _id: purchaseId, buyerAddress: address.toLowerCase() });
+      if (!purchase) { const e = new Error('Purchase not found'); e.statusCode = 404; throw e; }
+      purchase.rating = { score: Math.min(Math.max(rating, 0), 5), review, reviewDate: new Date() };
       const purchase = await PurchaseHistory.findOne({
         _id: purchaseId,
         buyerAddress: address.toLowerCase()
@@ -646,6 +798,9 @@ class UserProfileService {
       });
 
       return purchase;
+    } catch (err) {
+      logger.error('addRating failed', { err, address, purchaseId });
+      throw err;
     } catch (error) {
       logger.error('Failed to add rating', { 
         address: address.toLowerCase(),
@@ -658,98 +813,74 @@ class UserProfileService {
     }
   }
 
-  /**
-   * Record content access/download
-   */
   async recordAccess(address, purchaseId, accessType = 'view') {
     try {
-      const purchase = await PurchaseHistory.findOne({
-        _id: purchaseId,
-        buyerAddress: address.toLowerCase()
-      });
-
-      if (!purchase) {
-        throw new Error('Purchase not found');
-      }
-
+      const purchase = await PurchaseHistory.findOne({ _id: purchaseId, buyerAddress: address.toLowerCase() });
+      if (!purchase) { const e = new Error('Purchase not found'); e.statusCode = 404; throw e; }
       if (accessType === 'download') {
         purchase.downloads.total = (purchase.downloads.total || 0) + 1;
         purchase.downloads.lastDownloadDate = new Date();
       }
-
       purchase.engagement.lastAccessedAt = new Date();
       purchase.engagement.viewCount = (purchase.engagement.viewCount || 0) + 1;
-
       await purchase.save();
       return purchase;
+    } catch (err) {
+      logger.error('recordAccess failed', { err, address, purchaseId });
+      throw err;
     } catch (error) {
       logger.error('Error recording access:', { err: error });
       throw error;
     }
   }
 
-  /**
-   * Update completion percentage
-   */
   async updateCompletionPercentage(address, purchaseId, percentage) {
     try {
-      const purchase = await PurchaseHistory.findOne({
-        _id: purchaseId,
-        buyerAddress: address.toLowerCase()
-      });
-
-      if (!purchase) {
-        throw new Error('Purchase not found');
-      }
-
+      const purchase = await PurchaseHistory.findOne({ _id: purchaseId, buyerAddress: address.toLowerCase() });
+      if (!purchase) { const e = new Error('Purchase not found'); e.statusCode = 404; throw e; }
       purchase.engagement.completionPercentage = Math.min(Math.max(percentage, 0), 100);
       await purchase.save();
-
       return purchase;
+    } catch (err) {
+      logger.error('updateCompletionPercentage failed', { err, address, purchaseId });
+      throw err;
     } catch (error) {
       logger.error('Error updating completion:', { err: error });
       throw error;
     }
   }
 
-  /**
-   * Block a user
-   */
+  // ── Block / unblock ────────────────────────────────────────────────────────
+
   async blockUser(address, blockedAddress) {
     try {
       const profile = await UserProfile.findOne({ address: address.toLowerCase() });
-
-      if (!profile) {
-        throw new Error('Profile not found');
-      }
-
-      if (!profile.blockedUsers.includes(blockedAddress.toLowerCase())) {
-        profile.blockedUsers.push(blockedAddress.toLowerCase());
+      if (!profile) { const e = new Error('Profile not found'); e.statusCode = 404; throw e; }
+      const blocked = blockedAddress.toLowerCase();
+      if (!profile.blockedUsers.includes(blocked)) {
+        profile.blockedUsers.push(blocked);
         await profile.save();
       }
-
       return profile;
+    } catch (err) {
+      logger.error('blockUser failed', { err, address, blockedAddress });
+      throw err;
     } catch (error) {
       logger.error('Error blocking user:', { err: error });
       throw error;
     }
   }
 
-  /**
-   * Unblock a user
-   */
   async unblockUser(address, blockedAddress) {
     try {
       const profile = await UserProfile.findOne({ address: address.toLowerCase() });
-
-      if (!profile) {
-        throw new Error('Profile not found');
-      }
-
-      profile.blockedUsers = profile.blockedUsers.filter(
-        (addr) => addr !== blockedAddress.toLowerCase()
-      );
+      if (!profile) { const e = new Error('Profile not found'); e.statusCode = 404; throw e; }
+      profile.blockedUsers = profile.blockedUsers.filter(a => a !== blockedAddress.toLowerCase());
       await profile.save();
+      return profile;
+    } catch (err) {
+      logger.error('unblockUser failed', { err, address, blockedAddress });
+      throw err;
 
       return profile;
     } catch (error) {
