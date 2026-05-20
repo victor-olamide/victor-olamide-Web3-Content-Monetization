@@ -57,4 +57,25 @@ describe('GET /api/content', () => {
     expect(response.status).toBe(500);
     expect(response.body.error).toBe('search failed');
   });
+
+  it('routes GET /api/content/search through searchService', async () => {
+    const payload = {
+      page: 1,
+      limit: 20,
+      total: 1,
+      pages: 1,
+      results: [{ contentId: 99, title: 'Search Endpoint Content' }],
+      facets: { contentType: { image: 1 } }
+    };
+
+    searchService.searchContent.mockResolvedValue(payload);
+
+    const response = await request(app)
+      .get('/api/content/search')
+      .query({ q: 'hello' });
+
+    expect(response.status).toBe(200);
+    expect(searchService.searchContent).toHaveBeenCalledWith({ q: 'hello' });
+    expect(response.body).toEqual(payload);
+  });
 });
