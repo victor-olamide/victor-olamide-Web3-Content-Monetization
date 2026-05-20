@@ -71,4 +71,13 @@ export const useToast = (): ToastContextType => {
   return ctx;
 };
 
+/**
+ * Convenience hook that returns only the show* methods and dismissAll.
+ * Useful when you only need to trigger toasts without reading state.
+ */
+export const useToastActions = () => {
+  const { showSuccess, showError, showInfo, showWarning, dismissAll } = useToast();
+  return { showSuccess, showError, showInfo, showWarning, dismissAll };
+};
+
 export type { ToastContextType };
