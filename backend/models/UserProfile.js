@@ -14,7 +14,8 @@ const userProfileSchema = new mongoose.Schema(
     // Display information
     displayName: {
       type: String,
-      trim: true
+      trim: true,
+      maxlength: [100, 'displayName must be 100 characters or fewer'],
     },
 
     avatar: {
