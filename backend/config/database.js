@@ -10,6 +10,8 @@
 const mongoose = require('mongoose');
 const logger = require('../utils/logger');
 
+// DB_URI is the canonical env var for this project (issue #148).
+// MONGODB_URI is kept as a fallback for backward compatibility with older deployments.
 const DB_URI = process.env.DB_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/stacks_monetization';
 
 const MAX_RETRIES = parseInt(process.env.MONGO_CONNECT_RETRIES, 10) || 3;
