@@ -6,6 +6,7 @@ const { distributePurchaseRoyalties } = require('../services/royaltyService');
 const { verifyTransaction } = require('../services/stacksApiService');
 const { recordTransaction } = require('../services/transactionHistoryService');
 const { getCurrentSTXPrice } = require('../services/stxPriceService');
+const { txConfirmationGate } = require('../middleware/txConfirmationGate');
 const {
   validatePurchaseBody,
   validateAmountParam,
@@ -62,7 +63,7 @@ router.get('/check/:user/:contentId', async (req, res) => {
 });
 
 // Register a new purchase (usually called by indexer or frontend)
-router.post('/', validatePurchaseBody, async (req, res) => {
+router.post('/', validatePurchaseBody, txConfirmationGate, async (req, res) => {
   const { contentId, user, txId, amount, creator } = req.validatedBody;
 
   try {
