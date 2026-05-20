@@ -4,6 +4,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 require('dotenv').config();
+const logger = require('./utils/logger');
 
 // Import routes
 const contentRoutes = require('./routes/contentRoutes');
@@ -165,9 +166,9 @@ async function connectDB() {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
-    console.log('✅ Connected to MongoDB');
+    logger.info('Connected to MongoDB');
   } catch (error) {
-    console.error('❌ MongoDB connection error:', error);
+    logger.error('MongoDB connection error', { err: error });
     process.exit(1);
   }
 }
@@ -176,9 +177,9 @@ async function connectDB() {
 async function initializeServices() {
   try {
     await initializePinningService();
-    console.log('✅ Pinning service initialized');
+    logger.info('Pinning service initialized');
   } catch (error) {
-    console.error('❌ Failed to initialize pinning service:', error);
+    logger.error('Failed to initialize pinning service', { err: error });
   }
 }
 
@@ -189,25 +190,23 @@ async function startServer() {
     await initializeServices();
 
     app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📊 Health check: http://localhost:${PORT}/health`);
-      console.log(`📚 API Documentation: http://localhost:${PORT}/api`);
+      logger.info('Server started', { port: PORT });
     });
   } catch (error) {
-    console.error('❌ Failed to start server:', error);
+    logger.error('Failed to start server', { err: error });
     process.exit(1);
   }
 }
 
 // Graceful shutdown
 process.on('SIGTERM', async () => {
-  console.log('🛑 SIGTERM received, shutting down gracefully');
+  logger.info('SIGTERM received, shutting down gracefully');
   await mongoose.connection.close();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
-  console.log('🛑 SIGINT received, shutting down gracefully');
+  logger.info('SIGINT received, shutting down gracefully');
   await mongoose.connection.close();
   process.exit(0);
 });
