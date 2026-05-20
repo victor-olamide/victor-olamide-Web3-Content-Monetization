@@ -8,7 +8,8 @@
     "test:upgrade": "npm test -- --grep 'Contract Upgrade'",
     "test:migration": "npm test -- --grep 'Data Migration'",
     "test:security": "npm test -- --grep 'Upgrade Security'",
-    "test:compatibility": "npm test -- --grep 'Backward Compatibility'"
+    "test:compatibility": "npm test -- --grep 'Backward Compatibility'",
+    "deploy:testnet": "clarinet deployments apply -p ../deployments/testnet.plan.yaml"
   },
   "dependencies": {
     "chai": "^4.3.7",
