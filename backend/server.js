@@ -195,6 +195,18 @@ process.on('SIGINT', async () => {
   process.exit(0);
 });
 
+// Catch unhandled promise rejections — log and exit so the process manager restarts cleanly
+process.on('unhandledRejection', (reason) => {
+  logger.error('Unhandled promise rejection', { err: reason instanceof Error ? reason : new Error(String(reason)) });
+  process.exit(1);
+});
+
+// Catch uncaught exceptions — log and exit
+process.on('uncaughtException', (err) => {
+  logger.error('Uncaught exception', { err });
+  process.exit(1);
+});
+
 if (require.main === module) {
   startServer();
 }
