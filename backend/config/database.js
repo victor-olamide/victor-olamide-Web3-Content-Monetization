@@ -6,6 +6,27 @@
  * Reads DB_URI (primary) or MONGODB_URI (fallback) from environment.
  * Exposes connectDB(), disconnectDB(), getConnectionStatus(), and healthCheck().
  */
+const mongoose = require('mongoose');
+const logger = require('../utils/logger');
+
+// MongoDB connection options for replica set
+const mongoOptions = {
+  // Replica set configuration
+  replicaSet: process.env.MONGO_REPLICA_SET_NAME || 'rs0',
+
+  // Connection settings
+  maxPoolSize: parseInt(process.env.MONGO_MAX_POOL_SIZE) || 10,
+  minPoolSize: parseInt(process.env.MONGO_MIN_POOL_SIZE) || 5,
+  maxIdleTimeMS: parseInt(process.env.MONGO_MAX_IDLE_TIME_MS) || 30000,
+  serverSelectionTimeoutMS: parseInt(process.env.MONGO_SERVER_SELECTION_TIMEOUT_MS) || 5000,
+  socketTimeoutMS: parseInt(process.env.MONGO_SOCKET_TIMEOUT_MS) || 45000,
+  connectTimeoutMS: parseInt(process.env.MONGO_CONNECT_TIMEOUT_MS) || 10000,
+  bufferMaxEntries: 0, // Disable mongoose buffering
+  bufferCommands: false, // Disable mongoose buffering
+
+  // Retry configuration
+  retryWrites: true,
+  retryReads: true,
 
 const mongoose = require('mongoose');
 const logger = require('../utils/logger');
@@ -93,6 +114,16 @@ async function connectDB() {
   }
 
   logger.info('Connecting to MongoDB', { uri: _redactUri(DB_URI) });
+  // Connect to MongoDB replica set
+  async connect() {
+    try {
+      const mongoURI = process.env.MONGODB_URI || buildMongoURI();
+
+      logger.info('Connecting to MongoDB replica set', {
+        hosts: process.env.MONGO_HOSTS || 'mongodb-primary:27017,mongodb-secondary1:27017,mongodb-secondary2:27017',
+        replicaSet: mongoOptions.replicaSet,
+        database: process.env.MONGO_DATABASE || 'web3content',
+      });
 
   _registerEventHandlers();
 
@@ -108,6 +139,58 @@ async function connectDB() {
       if (attempt < MAX_RETRIES) {
         await _sleep(RETRY_DELAY_MS);
       }
+      this.isConnected = true;
+      logger.info('Connected to MongoDB replica set');
+
+      // Set up connection event handlers
+      this.setupEventHandlers();
+
+      return this.connection;
+    } catch (error) {
+      logger.error('Failed to connect to MongoDB replica set', { err: error });
+      throw error;
+    }
+  }
+
+  // Set up connection event handlers
+  setupEventHandlers() {
+    mongoose.connection.on('connected', () => {
+      logger.info('MongoDB connected');
+    });
+
+    mongoose.connection.on('error', (err) => {
+      logger.error('MongoDB connection error', { err });
+    });
+
+    mongoose.connection.on('disconnected', () => {
+      logger.warn('MongoDB disconnected');
+      this.isConnected = false;
+    });
+
+    mongoose.connection.on('reconnected', () => {
+      logger.info('MongoDB reconnected');
+      this.isConnected = true;
+    });
+
+    // Replica set events
+    mongoose.connection.on('replicaSetInitiated', () => {
+      logger.info('Replica set initiated');
+    });
+
+    mongoose.connection.on('replicaSetReconfigured', () => {
+      logger.info('Replica set reconfigured');
+    });
+  }
+
+  // Disconnect from MongoDB
+  async disconnect() {
+    try {
+      await mongoose.connection.close();
+      this.isConnected = false;
+      logger.info('Disconnected from MongoDB');
+    } catch (error) {
+      logger.error('Error disconnecting from MongoDB', { err: error });
+      throw error;
     }
   }
 
@@ -160,12 +243,16 @@ async function healthCheck() {
 process.on('SIGINT', async () => {
   logger.info('SIGINT received — closing MongoDB connection');
   await disconnectDB();
+  logger.info('SIGINT received, gracefully shutting down');
+  await dbConnection.disconnect();
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
   logger.info('SIGTERM received — closing MongoDB connection');
   await disconnectDB();
+  logger.info('SIGTERM received, gracefully shutting down');
+  await dbConnection.disconnect();
   process.exit(0);
 });
 

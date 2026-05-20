@@ -2,12 +2,13 @@ const express = require('express');
 const router = express.Router();
 const Purchase = require('../models/Purchase');
 const Subscription = require('../models/Subscription');
+const { validateAddressParam } = require('../middleware/inputValidation');
 
 /**
  * Get earnings summary for a creator
  * Aggregates revenue from both direct purchases and subscriptions
  */
-router.get('/earnings/:address', async (req, res) => {
+router.get('/earnings/:address', validateAddressParam, async (req, res) => {
   try {
     const { address } = req.params;
 
@@ -44,7 +45,7 @@ router.get('/earnings/:address', async (req, res) => {
 /**
  * Get active subscribers for a creator
  */
-router.get('/subscribers/:address', async (req, res) => {
+router.get('/subscribers/:address', validateAddressParam, async (req, res) => {
   try {
     const { address } = req.params;
     const now = new Date();
@@ -66,7 +67,7 @@ router.get('/subscribers/:address', async (req, res) => {
 /**
  * Get revenue history (combined stream of transactions)
  */
-router.get('/history/:address', async (req, res) => {
+router.get('/history/:address', validateAddressParam, async (req, res) => {
   try {
     const { address } = req.params;
 
@@ -103,7 +104,7 @@ router.get('/history/:address', async (req, res) => {
 /**
  * Get revenue analytics by time period
  */
-router.get('/analytics/:address', async (req, res) => {
+router.get('/analytics/:address', validateAddressParam, async (req, res) => {
   try {
     const { address } = req.params;
     const { period = '7d' } = req.query;
@@ -155,7 +156,7 @@ router.get('/analytics/:address', async (req, res) => {
 /**
  * Get subscriber growth metrics
  */
-router.get('/growth/:address', async (req, res) => {
+router.get('/growth/:address', validateAddressParam, async (req, res) => {
   try {
     const { address } = req.params;
     const now = new Date();
@@ -186,7 +187,7 @@ router.get('/growth/:address', async (req, res) => {
 /**
  * Get top performing content by revenue
  */
-router.get('/top-content/:address', async (req, res) => {
+router.get('/top-content/:address', validateAddressParam, async (req, res) => {
   try {
     const { address } = req.params;
     const { limit = 5 } = req.query;
@@ -211,7 +212,7 @@ router.get('/top-content/:address', async (req, res) => {
 /**
  * Export earnings data as CSV
  */
-router.get('/export/:address', async (req, res) => {
+router.get('/export/:address', validateAddressParam, async (req, res) => {
   try {
     const { address } = req.params;
     const { startDate, endDate } = req.query;

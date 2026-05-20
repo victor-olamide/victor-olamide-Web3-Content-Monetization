@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Check, X, User, FileText, Heart, MessageSquare, Shield } from 'lucide-react';
+import type { SocialLinks, UserPreferences, UserSettings } from '@/types/user';
+
+interface ProfileRating {
+  score?: number;
+  count?: number;
+}
 
 interface CompletionItem {
   id: string;
@@ -16,11 +22,11 @@ interface ProfileCompletionProps {
     avatar?: string;
     bio?: string;
     username?: string;
-    socialLinks?: any;
-    preferences?: any;
-    settings?: any;
+    socialLinks?: SocialLinks;
+    preferences?: UserPreferences;
+    settings?: UserSettings;
     totalPurchases?: number;
-    rating?: any;
+    rating?: ProfileRating;
   };
   onUpdate?: () => void;
 }
