@@ -7,6 +7,7 @@ const buildQuery = (params) => {
   const {
     q,
     contentType,
+    category,
     creator,
     minPrice,
     maxPrice,
@@ -21,8 +22,9 @@ const buildQuery = (params) => {
     query.isRemoved = false; // default: only active content
   }
 
-  if (contentType) {
-    query.contentType = contentType;
+  const contentCategory = contentType || category;
+  if (contentCategory) {
+    query.contentType = contentCategory;
   }
 
   if (creator) {
