@@ -19,7 +19,14 @@ const userProfileSchema = new mongoose.Schema(
 
     avatar: {
       type: String,
-      default: null
+      default: null,
+      validate: {
+        validator: function (v) {
+          if (!v) return true; // null/empty allowed
+          return /^https?:\/\/(\w[\w-]*\.)+[\w-]+(\/.*)?\.?$/i.test(v);
+        },
+        message: 'avatar must be a valid http/https URL',
+      },
     },
 
     username: {
