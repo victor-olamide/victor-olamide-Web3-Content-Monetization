@@ -318,3 +318,5 @@ export function ContentBrowser() {
     </div>
   );
 }
+
+export default ContentBrowser;
