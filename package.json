@@ -1,0 +1,13 @@
+{
+  "name": "victor-olamide-web3-content-monetization",
+  "version": "1.0.0",
+  "description": "Web3 Content Monetization platform on Stacks",
+  "author": "victor-olamide",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "@victor-olamide/content-cli": "^1.0.0",
+    "@victor-olamide/content-utils": "^1.0.0",
+    "@victor-olamide/stacks-sdk": "^1.0.0"
+  }
+}
