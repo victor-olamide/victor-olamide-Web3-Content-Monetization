@@ -35,8 +35,9 @@ const UploadContent: React.FC = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
-      if (selectedFile.size > 10 * 1024 * 1024) {
-        showWarning('File Too Large', 'File size exceeds the 10MB limit. Please choose a smaller file.');
+      const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+      if (selectedFile.size > MAX_SIZE) {
+        showWarning('File Too Large', `File size exceeds the 10MB limit. Your file is ${(selectedFile.size / 1024 / 1024).toFixed(1)}MB.`);
         e.target.value = '';
         return;
       }
