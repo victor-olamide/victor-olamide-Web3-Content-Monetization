@@ -172,6 +172,7 @@ module.exports = {
   disconnectDB,
   getConnectionStatus,
   healthCheck,
+  redactUri: _redactUri,
   // Expose for tests / legacy callers
   get isConnected() { return _isConnected; },
 };
