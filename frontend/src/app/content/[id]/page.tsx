@@ -39,6 +39,10 @@ export default function ContentView({ params }: { params: { id: string } }) {
         showError('Transaction Timeout', 'Could not confirm transaction after 5 minutes. Check the explorer for status.');
         return;
       }
+
+  const pollTransaction = async (id: string) => {
+    setTxStatus('pending');
+    const interval = setInterval(async () => {
       try {
         const response = await fetch(`${STACKS_API_BASE}/extended/v1/tx/${id}`);
         const data = await response.json();
@@ -58,6 +62,15 @@ export default function ContentView({ params }: { params: { id: string } }) {
       }
     }, 10000);
   }, [refreshAccess, refetchBalance, showSuccess, showError]);
+        } else if (data.tx_status === 'abort' || data.tx_status === 'failed') {
+          setTxStatus('failed');
+          clearInterval(interval);
+        }
+      } catch (err) {
+        console.error("Polling error:", err);
+      }
+    }, 10000);
+  };
 
   const handleVerifyAccess = async () => {
     setVerifying(true);
@@ -73,6 +86,9 @@ export default function ContentView({ params }: { params: { id: string } }) {
 
     if (balanceLoading) {
       setPurchaseError('Fetching wallet balance, please try again.');
+    // Real balance check against Stacks API
+    if (balanceLoading) {
+      setPurchaseError("Fetching wallet balance, please try again.");
       return;
     }
     if (balanceError) {
@@ -92,6 +108,19 @@ export default function ContentView({ params }: { params: { id: string } }) {
       const newTxId = result as string;
       setTxId(newTxId);
 
+    
+    setPurchasing(true);
+
+    try {
+      const result = await purchaseContent(
+        parseInt(params.id),
+        content.price,
+        content.creator
+      );
+      const newTxId = result as string;
+      setTxId(newTxId);
+
+      // Notify backend about the purchase — non-critical, failures are warned only.
       try {
         await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/purchases`, {
           method: 'POST',
@@ -114,6 +143,11 @@ export default function ContentView({ params }: { params: { id: string } }) {
       console.error(err);
       setTxId(null);
       const errMsg = err instanceof Error ? err.message : 'Purchase failed';
+      pollTransaction(result as string);
+    } catch (err: any) {
+      console.error(err);
+      setTxId(null);
+      const errMsg = err.message || "Purchase failed";
       setPurchaseError(errMsg);
       showError('Purchase Failed', errMsg);
     } finally {
@@ -159,6 +193,10 @@ export default function ContentView({ params }: { params: { id: string } }) {
     <DashboardShell>
       <div className="p-8 max-w-4xl mx-auto">
         <Link href="/dashboard" className="flex items-center gap-1 text-gray-500 hover:text-gray-700 mb-6 transition">
+        <Link
+          href="/dashboard"
+          className="flex items-center gap-1 text-gray-500 hover:text-gray-700 mb-6 transition"
+        >
           <ChevronLeft size={20} />
           Back to Dashboard
         </Link>
@@ -212,6 +250,7 @@ export default function ContentView({ params }: { params: { id: string } }) {
                     {purchasing ? 'Processing...' : 'Purchase Access'}
                   </button>
                   <button
+                  <button 
                     onClick={() => showInfo('Subscription', 'Subscription flow coming soon. Stay tuned!')}
                     disabled={purchasing}
                     className="bg-gray-800 text-white font-bold py-3 px-8 rounded-lg hover:bg-gray-900 transition disabled:opacity-50"
@@ -244,11 +283,16 @@ export default function ContentView({ params }: { params: { id: string } }) {
                     </p>
                     {txStatus === 'success' && (
                       <button onClick={() => window.location.reload()} className="text-xs font-bold text-green-800 underline mt-1">
+                      <button
+                        onClick={() => window.location.reload()}
+                        className="text-xs font-bold text-green-800 underline mt-1"
+                      >
                         Refresh Content
                       </button>
                     )}
                     <a
                       href={`${STACKS_EXPLORER_BASE}/txid/${txId}?chain=${STACKS_CHAIN}`}
+                      href={`${EXPLORER_BASE}/txid/${txId}?chain=${EXPLORER_CHAIN}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-xs flex items-center gap-1 hover:underline"
