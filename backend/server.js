@@ -53,6 +53,7 @@ const { databaseHealthCheck, databaseStatusCheck } = require('./middleware/datab
 
 // Import services
 const { initializePinningService } = require('./services/pinningManager');
+const { startCacheEvictionJob } = require('./services/verificationCacheEvictionJob');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -188,6 +189,7 @@ async function initializeServices() {
   } catch (error) {
     logger.error('Failed to initialize pinning service', { err: error });
   }
+  startCacheEvictionJob();
 }
 
 // Start server — validates env, connects to MongoDB, then binds HTTP port
