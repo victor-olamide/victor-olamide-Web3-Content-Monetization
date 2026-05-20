@@ -116,6 +116,8 @@ app.get('/metrics', async (req, res) => {
   res.end(await register.metrics());
 });
 
+// Note: duplicate /health route removed — single definition above is authoritative
+
 // API routes
 app.use('/api/content', contentRoutes);
 app.use('/api/creators', creatorRoutes);
