@@ -3,6 +3,7 @@ const { StacksMainnet, StacksTestnet } = require('@stacks/network');
 const { verifyTransaction, batchVerifyTransactions, getCurrentBlockHeight } = require('./stacksApiService');
 const Purchase = require('../models/Purchase');
 const Subscription = require('../models/Subscription');
+const TransactionVerification = require('../models/TransactionVerification');
 
 const network = process.env.STACKS_NETWORK === 'mainnet' ? new StacksMainnet() : new StacksTestnet();
 const contractAddress = process.env.CONTRACT_ADDRESS || 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM';
@@ -107,6 +108,13 @@ async function verifyTransactionStatus(txId, minConfirmations = 1) {
     } else {
       metrics.failedVerifications++;
     }
+
+    // Persist verification result asynchronously (non-blocking)
+    TransactionVerification.findOneAndUpdate(
+      { txId },
+      { ...result, updatedAt: new Date() },
+      { upsert: true, new: true }
+    ).catch(err => console.error('Failed to persist verification:', err.message));
 
     return result;
   } catch (error) {
