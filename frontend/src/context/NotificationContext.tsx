@@ -2,6 +2,7 @@
  * NotificationProvider & NotificationContext
  * Global notification state management
  */
+'use client';
 
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useNotification } from '../hooks/useNotification';
