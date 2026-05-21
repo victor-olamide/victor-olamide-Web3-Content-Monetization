@@ -31,6 +31,18 @@ const CONTRACTS = [
   { name: 'content-gate',  file: 'content-gate.clar',  fee: BigInt(3000) },
 ];
 
+function validateEnv() {
+  const missing = [];
+  if (!process.env.DEPLOYER_MNEMONIC) missing.push('DEPLOYER_MNEMONIC');
+  if (!process.env.DEPLOYER_ADDRESS)  missing.push('DEPLOYER_ADDRESS');
+  if (missing.length > 0) {
+    console.error('Missing required environment variables:');
+    missing.forEach(v => console.error(`  - ${v}`));
+    console.error('\nCreate a .env file or export them before running deploy.js');
+    process.exit(1);
+  }
+}
+
 function sleep(ms) {
   return new Promise(r => setTimeout(r, ms));
 }
