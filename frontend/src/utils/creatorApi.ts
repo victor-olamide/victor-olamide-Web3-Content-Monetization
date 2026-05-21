@@ -246,6 +246,7 @@ class CreatorApiClient {
     contentToEdit?: ContentItem | null
   ): Promise<ContentItem> {
     let uploadedUrl = values.existingUrl?.trim() || '';
+    const normalizedPrice = Number.isFinite(Number(values.price)) ? Number(values.price) : 0;
 
     if (values.file) {
       const uploadResult = await this.uploadContentFile(values.file);
@@ -257,7 +258,7 @@ class CreatorApiClient {
       title: values.title.trim(),
       description: values.description.trim(),
       contentType: values.contentType,
-      price: Number(values.price),
+      price: normalizedPrice,
       creator: creatorAddress,
       url: uploadedUrl || undefined,
     };
