@@ -41,6 +41,12 @@ function validateEnv() {
     console.error('\nCreate a .env file or export them before running deploy.js');
     process.exit(1);
   }
+
+  const wordCount = process.env.DEPLOYER_MNEMONIC.trim().split(/\s+/).length;
+  if (wordCount !== 24) {
+    console.error(`DEPLOYER_MNEMONIC must be a 24-word BIP-39 phrase (got ${wordCount} words)`);
+    process.exit(1);
+  }
 }
 
 function sleep(ms) {
