@@ -9,6 +9,30 @@ const User = require('../models/User');
 const Content = require('../models/Content');
 
 class AnalyticsService {
+  constructor() {
+    this.analyticsCache = new Map();
+    this.CACHE_TTL = 10 * 60 * 1000; // 10 minutes for analytics
+  }
+
+  /**
+   * Get cached analytics data
+   */
+  getCachedAnalytics(key) {
+    const cached = this.analyticsCache.get(key);
+    if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+      return cached.data;
+    }
+    this.analyticsCache.delete(key);
+    return null;
+  }
+
+  /**
+   * Set cached analytics data
+   */
+  setCachedAnalytics(key, data) {
+    this.analyticsCache.set(key, { data, timestamp: Date.now() });
+  }
+
   /**
    * Track analytics event
    */
@@ -251,19 +275,29 @@ class AnalyticsService {
     try {
       console.log(`Getting creator analytics for ${creatorId} from ${startDate} to ${endDate}`);
 
+      // Create cache key
+      const cacheKey = `creator_analytics_${creatorId}_${startDate.toISOString()}_${endDate.toISOString()}_${granularity}`;
+      const cached = this.getCachedAnalytics(cacheKey);
+      if (cached) {
+        console.log('Returning cached creator analytics');
+        return cached;
+      }
+
       // Get creator's content IDs
       const Content = require('../models/Content');
       const creatorContent = await Content.find({ creator: creatorId }, '_id').lean();
       const contentIds = creatorContent.map(c => c._id);
 
       if (contentIds.length === 0) {
-        return {
+        const result = {
           views: 0,
           revenue: 0,
           subscriberCount: 0,
           topContent: [],
           periodData: []
         };
+        this.setCachedAnalytics(cacheKey, result);
+        return result;
       }
 
       // Aggregate data from events
@@ -381,13 +415,18 @@ class AnalyticsService {
         cancelledAt: null
       });
 
-      return {
+      const result = {
         views: totalViews,
         revenue: totalRevenue,
         subscriberCount,
         topContent: topContent.slice(0, 10), // Top 10
         periodData
       };
+
+      // Cache the result
+      this.setCachedAnalytics(cacheKey, result);
+
+      return result;
     } catch (error) {
       console.error('Error getting creator analytics:', error);
       throw error;
