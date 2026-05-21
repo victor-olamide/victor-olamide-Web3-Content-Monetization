@@ -9,7 +9,7 @@ const fs    = require('fs');
 require('dotenv').config();
 
 // Use @stacks packages from the DEBY/stacks project which has wallet-sdk
-const STACKS_MODULES = '/Users/mac/Documents/DEBY/stacks/node_modules';
+const STACKS_MODULES = process.env.STACKS_MODULES_PATH || '/Users/mac/Documents/DEBY/stacks/node_modules';
 
 const {
   makeContractDeploy,
