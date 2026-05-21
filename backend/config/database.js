@@ -46,8 +46,12 @@ const mongoOptions = {
 // Fail fast if required database credentials are not set
 function validateDbCredentials() {
   const missing = [];
-  if (!process.env.MONGO_APP_USERNAME) missing.push('MONGO_APP_USERNAME');
-  if (!process.env.MONGO_APP_PASSWORD) missing.push('MONGO_APP_PASSWORD');
+  if (!process.env.MONGO_APP_USERNAME || process.env.MONGO_APP_USERNAME.trim() === '') {
+    missing.push('MONGO_APP_USERNAME');
+  }
+  if (!process.env.MONGO_APP_PASSWORD || process.env.MONGO_APP_PASSWORD.trim() === '') {
+    missing.push('MONGO_APP_PASSWORD');
+  }
   if (missing.length > 0) {
     throw new Error(
       `Missing required database environment variables: ${missing.join(', ')}. ` +
