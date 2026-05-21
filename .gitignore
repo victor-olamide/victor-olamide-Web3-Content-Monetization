@@ -4,10 +4,11 @@
 # Dependencies
 node_modules/
 
-# Environment files
+# Environment files — never commit secrets
 .env
 .env.local
 .env.*.local
+.env.deploy
 
 # Build outputs
 dist/
