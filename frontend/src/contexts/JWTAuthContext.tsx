@@ -37,8 +37,18 @@ export const JWTAuthProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (result.authenticated && result.user) {
         setUser(result.user);
         setError(null);
+        // Store auth state in sessionStorage for quick recovery
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('authVerified', 'true');
+          sessionStorage.setItem('userEmail', result.user.email || '');
+        }
       } else {
         setUser(null);
+        // Clear auth state from sessionStorage
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem('authVerified');
+          sessionStorage.removeItem('userEmail');
+        }
         // Only set error if there's a specific error message
         if (result.error && result.error !== 'Session verification failed') {
           setError(result.error);
@@ -47,6 +57,10 @@ export const JWTAuthProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } catch (err) {
       console.error('Auth verification error:', err);
       setUser(null);
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('authVerified');
+        sessionStorage.removeItem('userEmail');
+      }
     } finally {
       setIsCheckingAuth(false);
       setIsLoading(false);
