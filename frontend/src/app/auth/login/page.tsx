@@ -7,10 +7,12 @@ import { useJWTAuth } from '@/contexts/JWTAuthContext';
 import { validateLoginForm } from '@/utils/validationUtils';
 import { FormInput, FormSubmitButton, FormDivider } from '@/components/FormInput';
 import SocialLogin from '@/components/SocialLogin';
+import { useToast } from '@/contexts/ToastContext';
 
 export default function LoginPage() {
   const router = useRouter();
   const { login, isAuthenticated, isLoading, error: authError, clearError } = useJWTAuth();
+  const { addToast } = useToast();
 
   const [formData, setFormData] = useState({
     email: '',
@@ -68,6 +70,7 @@ export default function LoginPage() {
 
     if (success) {
       setSuccessMessage('Login successful! Redirecting...');
+      addToast('Login successful! Welcome back.', 'success');
       setTimeout(() => {
         router.push('/dashboard');
       }, 1500);

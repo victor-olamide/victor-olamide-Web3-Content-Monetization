@@ -7,10 +7,12 @@ import { useJWTAuth } from '@/contexts/JWTAuthContext';
 import { validateRegistrationForm } from '@/utils/validationUtils';
 import { FormInput, PasswordInput, FormSubmitButton, FormDivider } from '@/components/FormInput';
 import SocialLogin from '@/components/SocialLogin';
+import { useToast } from '@/contexts/ToastContext';
 
 export default function RegisterPage() {
   const router = useRouter();
   const { register, isAuthenticated, isLoading, error: authError, clearError } = useJWTAuth();
+  const { addToast } = useToast();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -69,6 +71,7 @@ export default function RegisterPage() {
 
     if (success) {
       setSuccessMessage('Registration successful! Redirecting...');
+      addToast('Account created successfully! Welcome!', 'success');
       setTimeout(() => {
         router.push('/dashboard');
       }, 1500);
