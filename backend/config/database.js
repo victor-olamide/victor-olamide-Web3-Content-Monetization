@@ -144,7 +144,8 @@ class DatabaseConnection {
       this.connection = await mongoose.connect(mongoURI, mongoOptions);
 
       this.isConnected = true;
-      logger.info('Connected to MongoDB replica set');
+      const safeURI = mongoURI.replace(/:\/\/[^@]+@/, '://***:***@');
+      logger.info('Connected to MongoDB replica set', { uri: safeURI });
 
       // Set up connection event handlers
       this.setupEventHandlers();
