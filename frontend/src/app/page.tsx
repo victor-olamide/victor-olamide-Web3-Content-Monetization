@@ -2,10 +2,30 @@
 
 import ConnectWallet from "@/components/ConnectWallet";
 import { useAuth } from "@/contexts/AuthContext";
+import { useJWTAuth } from "@/contexts/JWTAuthContext";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function Home() {
   const { isLoggedIn, userData } = useAuth();
+  const { isAuthenticated } = useJWTAuth();
+  const router = useRouter();
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/auth/login');
+    }
+  }, [isAuthenticated, router]);
+
+  if (!isAuthenticated) {
+    return (
+      <main className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-600"></div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-24 bg-gray-50">
