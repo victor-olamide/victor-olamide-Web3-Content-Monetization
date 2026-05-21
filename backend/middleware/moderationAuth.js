@@ -104,6 +104,7 @@ async function verifyAdmin(req, res, next) {
       isAuthorized: true
     };
 
+    logger.info('Admin access granted', { address: adminAddress.toLowerCase() });
     next();
   } catch (error) {
     logger.error('Admin verification error', { err: error });
