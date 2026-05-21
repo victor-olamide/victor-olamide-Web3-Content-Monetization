@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const RateLimitStore = require('../models/RateLimitStore');
 const { RATE_LIMIT_TIERS, ENDPOINT_OVERRIDES, DEFAULTS, TIER_LEVELS } = require('../config/rateLimitConfig');
 
@@ -244,7 +245,7 @@ async function releaseRequest(key) {
       { $inc: { activeRequests: -1 } }
     );
   } catch (error) {
-    console.error('Error releasing rate limit request:', error.message);
+    logger.error('Error releasing rate limit request:', error.message);
   }
 }
 

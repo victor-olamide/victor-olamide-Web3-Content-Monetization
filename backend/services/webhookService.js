@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const WebhookEvent = require('../models/WebhookEvent');
 const ContentPreview = require('../models/ContentPreview');
 
@@ -30,7 +31,7 @@ exports.processEvent = async (event) => {
     event.processedAt = new Date();
     await event.save();
   } catch (err) {
-    console.error('Error processing webhook event', err);
+    logger.error('Error processing webhook event', err);
     throw err;
   }
 };

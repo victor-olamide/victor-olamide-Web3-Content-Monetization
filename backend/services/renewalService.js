@@ -366,7 +366,7 @@ async function getExpiredSubscriptionsGraceEnded() {
 
     return subscriptions;
   } catch (error) {
-    console.error('Error fetching grace period ended subscriptions:', error);
+    logger.error('Error fetching grace period ended subscriptions', { err: error });
     return [];
   }
 }
@@ -417,7 +417,7 @@ async function getRenewalHistory(subscriptionId) {
 
     return renewals;
   } catch (error) {
-    console.error('Error fetching renewal history:', error);
+    logger.error('Error fetching renewal history', { err: error });
     return [];
   }
 }
@@ -474,7 +474,7 @@ async function getUserSubscriptionStatus(user) {
 
     return status;
   } catch (error) {
-    console.error('Error getting user subscription status:', error);
+    logger.error('Error getting user subscription status', { err: error });
     return { error: error.message };
   }
 }

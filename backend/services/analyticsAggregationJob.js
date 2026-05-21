@@ -113,7 +113,7 @@ class AnalyticsAggregationJob {
    */
   async runDailyAggregation() {
     try {
-      console.log('Starting daily analytics aggregation...');
+      logger.info('Starting daily analytics aggregation...');
 
       const now = new Date();
       const yesterday = new Date(now);
@@ -125,9 +125,9 @@ class AnalyticsAggregationJob {
 
       await analyticsService.aggregateData(yesterday, today, 'daily');
 
-      console.log('Daily analytics aggregation completed');
+      logger.info('Daily analytics aggregation completed');
     } catch (error) {
-      console.error('Error in daily analytics aggregation:', error);
+      logger.error('Error in daily analytics aggregation', { err: error });
     }
   }
 
@@ -136,7 +136,7 @@ class AnalyticsAggregationJob {
    */
   async runWeeklyAggregation() {
     try {
-      console.log('Starting weekly analytics aggregation...');
+      logger.info('Starting weekly analytics aggregation...');
 
       const now = new Date();
       const lastWeek = new Date(now);
@@ -148,9 +148,9 @@ class AnalyticsAggregationJob {
 
       await analyticsService.aggregateData(lastWeek, thisWeek, 'weekly');
 
-      console.log('Weekly analytics aggregation completed');
+      logger.info('Weekly analytics aggregation completed');
     } catch (error) {
-      console.error('Error in weekly analytics aggregation:', error);
+      logger.error('Error in weekly analytics aggregation', { err: error });
     }
   }
 
@@ -159,7 +159,7 @@ class AnalyticsAggregationJob {
    */
   async runMonthlyAggregation() {
     try {
-      console.log('Starting monthly analytics aggregation...');
+      logger.info('Starting monthly analytics aggregation...');
 
       const now = new Date();
       const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -167,9 +167,9 @@ class AnalyticsAggregationJob {
 
       await analyticsService.aggregateData(lastMonth, thisMonth, 'monthly');
 
-      console.log('Monthly analytics aggregation completed');
+      logger.info('Monthly analytics aggregation completed');
     } catch (error) {
-      console.error('Error in monthly analytics aggregation:', error);
+      logger.error('Error in monthly analytics aggregation', { err: error });
     }
   }
 
@@ -178,13 +178,13 @@ class AnalyticsAggregationJob {
    */
   async runDataCleanup() {
     try {
-      console.log('Starting analytics data cleanup...');
+      logger.info('Starting analytics data cleanup...');
 
       const deletedCount = await analyticsService.cleanupOldData();
 
       console.log(`Analytics data cleanup completed. Deleted ${deletedCount} old records.`);
     } catch (error) {
-      console.error('Error in analytics data cleanup:', error);
+      logger.error('Error in analytics data cleanup', { err: error });
     }
   }
 
@@ -211,7 +211,7 @@ class AnalyticsAggregationJob {
 
       console.log(`Manual ${granularity} analytics aggregation completed`);
     } catch (error) {
-      console.error('Error in manual analytics aggregation:', error);
+      logger.error('Error in manual analytics aggregation', { err: error });
       throw error;
     }
   }

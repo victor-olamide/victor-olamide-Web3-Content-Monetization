@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 /**
  * Preview Error Handling and Recovery Service
  * Manages errors, retries, and recovery for preview operations
@@ -40,7 +41,7 @@ class PreviewErrorService {
       this.errorLog.shift();
     }
 
-    console.error('[PreviewError]', errorEntry);
+    logger.error('[PreviewError]', errorEntry);
   }
 
   /**
