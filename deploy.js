@@ -81,6 +81,8 @@ async function checkTx(txId) {
 }
 
 async function main() {
+  validateEnv();
+
   console.log('════════════════════════════════════════════════════');
   console.log('  Web3 Content Monetization — Mainnet Deployment');
   console.log(`  Deployer: ${DEPLOYER}`);
