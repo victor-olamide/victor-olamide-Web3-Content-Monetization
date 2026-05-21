@@ -75,8 +75,7 @@ async function verifyAdmin(req, res, next) {
       });
     }
 
-    // TODO: Replace with actual admin verification
-    const authorizedAdmins = process.env.AUTHORIZED_ADMINS?.split(',') || [];
+    const authorizedAdmins = parseAddressList(process.env.AUTHORIZED_ADMINS);
     const isAuthorized = authorizedAdmins.some(
       addr => addr.toLowerCase() === adminAddress.toLowerCase()
     );
