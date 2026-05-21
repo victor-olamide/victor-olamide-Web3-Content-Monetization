@@ -52,7 +52,7 @@ async function verifyModerator(req, res, next) {
 
     next();
   } catch (error) {
-    console.error('Moderator verification error:', error);
+    logger.error('Moderator verification error', { err: error });
     res.status(500).json({
       success: false,
       error: 'Authorization verification failed'
