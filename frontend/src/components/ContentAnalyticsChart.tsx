@@ -1,211 +1,215 @@
 'use client';
 
-import React from 'react';
+import { ReactNode } from 'react';
 import {
-  LineChart,
-  Line,
-  BarChart,
+  Area,
+  AreaChart,
   Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  Area,
-  AreaChart
 } from 'recharts';
+import { ContentItem, RevenueSeriesPoint } from '@/utils/creatorApi';
 
-interface RevenueChartProps {
-  data: { date: string; amount: number }[];
-  loading?: boolean;
-  title?: string;
-  type?: 'line' | 'bar' | 'area';
+function formatTick(value: string) {
+  return new Date(value).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  });
 }
 
-/**
- * Component to display revenue over time
- */
-export function RevenueChart({
-  data,
+function ChartFrame({
+  title,
+  subtitle,
   loading = false,
-  title = 'Revenue Trend',
-  type = 'area'
-}: RevenueChartProps) {
+  children,
+}: {
+  title: string;
+  subtitle: string;
+  loading?: boolean;
+  children?: ReactNode;
+}) {
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 h-80 animate-pulse">
-        <div className="h-4 bg-gray-200 rounded w-1/3 mb-4"></div>
-        <div className="bg-gray-100 rounded h-full"></div>
+      <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="animate-pulse space-y-4">
+          <div className="h-5 w-40 rounded bg-slate-200" />
+          <div className="h-4 w-60 rounded bg-slate-100" />
+          <div className="h-[300px] rounded-[1.5rem] bg-slate-100" />
+        </div>
       </div>
     );
   }
-
-  if (!data || data.length === 0) {
-    return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 h-80 flex items-center justify-center text-gray-500">
-        <p>No revenue data available</p>
-      </div>
-    );
-  }
-
-  const formattedData = data.map(d => ({
-    ...d,
-    date: new Date(d.date).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric'
-    })
-  }));
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-6">{title}</h3>
-      <ResponsiveContainer width="100%" height={300}>
-        {type === 'line' && (
-          <LineChart data={formattedData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-            <XAxis dataKey="date" stroke="#6b7280" />
-            <YAxis stroke="#6b7280" />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: '#fff',
-                border: '1px solid #e5e7eb',
-                borderRadius: '8px'
-              }}
-            />
-            <Line
-              type="monotone"
-              dataKey="amount"
-              stroke="#3b82f6"
-              strokeWidth={2}
-              dot={{ fill: '#3b82f6', r: 4 }}
-              activeDot={{ r: 6 }}
-            />
-          </LineChart>
-        )}
-        {type === 'bar' && (
-          <BarChart data={formattedData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-            <XAxis dataKey="date" stroke="#6b7280" />
-            <YAxis stroke="#6b7280" />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: '#fff',
-                border: '1px solid #e5e7eb',
-                borderRadius: '8px'
-              }}
-            />
-            <Bar dataKey="amount" fill="#3b82f6" radius={[8, 8, 0, 0]} />
-          </BarChart>
-        )}
-        {type === 'area' && (
-          <AreaChart data={formattedData}>
-            <defs>
-              <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-            <XAxis dataKey="date" stroke="#6b7280" />
-            <YAxis stroke="#6b7280" />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: '#fff',
-                border: '1px solid #e5e7eb',
-                borderRadius: '8px'
-              }}
-            />
-            <Area
-              type="monotone"
-              dataKey="amount"
-              stroke="#3b82f6"
-              strokeWidth={2}
-              fillOpacity={1}
-              fill="url(#colorRevenue)"
-            />
-          </AreaChart>
-        )}
-      </ResponsiveContainer>
+    <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
+        <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
+      </div>
+      {children}
     </div>
   );
 }
 
-interface TopContentChartProps {
-  topContent: {
-    contentId: number;
-    title: string;
-    revenue: number;
-    views: number;
-    purchases: number;
-  }[];
+export function RevenueChart({
+  data,
+  loading = false,
+}: {
+  data: RevenueSeriesPoint[];
   loading?: boolean;
-  metric?: 'revenue' | 'views' | 'purchases';
+}) {
+  if (!loading && data.length === 0) {
+    return (
+      <ChartFrame
+        title="Revenue trend"
+        subtitle="Track pay-per-view and subscription earnings across the last 30 days."
+      >
+        <div className="flex h-[300px] items-center justify-center rounded-[1.5rem] border border-dashed border-slate-200 bg-slate-50 text-sm text-slate-500">
+          Revenue data will appear here once transactions start landing.
+        </div>
+      </ChartFrame>
+    );
+  }
+
+  return (
+    <ChartFrame
+      title="Revenue trend"
+      subtitle="Track pay-per-view and subscription earnings across the last 30 days."
+      loading={loading}
+    >
+      <ResponsiveContainer width="100%" height={300}>
+        <AreaChart data={data}>
+          <defs>
+            <linearGradient id="creatorRevenue" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#0891b2" stopOpacity={0.35} />
+              <stop offset="95%" stopColor="#0891b2" stopOpacity={0.02} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" />
+          <XAxis dataKey="date" tickFormatter={formatTick} stroke="#64748b" />
+          <YAxis stroke="#64748b" />
+          <Tooltip
+            labelFormatter={(value) => formatTick(String(value))}
+            contentStyle={{
+              borderRadius: '18px',
+              border: '1px solid #e2e8f0',
+              boxShadow: '0 20px 45px rgba(15, 23, 42, 0.08)',
+            }}
+          />
+          <Area
+            type="monotone"
+            dataKey="total"
+            stroke="#0891b2"
+            strokeWidth={3}
+            fill="url(#creatorRevenue)"
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    </ChartFrame>
+  );
 }
 
-/**
- * Component to display top performing content
- */
+export function RevenueMixChart({
+  data,
+  loading = false,
+}: {
+  data: RevenueSeriesPoint[];
+  loading?: boolean;
+}) {
+  if (!loading && data.length === 0) {
+    return (
+      <ChartFrame
+        title="Revenue mix"
+        subtitle="Compare direct purchase revenue against subscriptions."
+      >
+        <div className="flex h-[300px] items-center justify-center rounded-[1.5rem] border border-dashed border-slate-200 bg-slate-50 text-sm text-slate-500">
+          Mix data will appear after your first purchases or subscriptions.
+        </div>
+      </ChartFrame>
+    );
+  }
+
+  return (
+    <ChartFrame
+      title="Revenue mix"
+      subtitle="Compare direct purchase revenue against subscriptions."
+      loading={loading}
+    >
+      <ResponsiveContainer width="100%" height={300}>
+        <BarChart data={data}>
+          <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" />
+          <XAxis dataKey="date" tickFormatter={formatTick} stroke="#64748b" />
+          <YAxis stroke="#64748b" />
+          <Tooltip
+            labelFormatter={(value) => formatTick(String(value))}
+            contentStyle={{
+              borderRadius: '18px',
+              border: '1px solid #e2e8f0',
+              boxShadow: '0 20px 45px rgba(15, 23, 42, 0.08)',
+            }}
+          />
+          <Bar dataKey="ppv" stackId="revenue" fill="#0f172a" radius={[10, 10, 0, 0]} />
+          <Bar dataKey="subscription" stackId="revenue" fill="#22c55e" radius={[10, 10, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    </ChartFrame>
+  );
+}
+
 export function TopContentChart({
   topContent,
   loading = false,
-  metric = 'revenue'
-}: TopContentChartProps) {
-  if (loading) {
-    return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 h-80 animate-pulse">
-        <div className="h-4 bg-gray-200 rounded w-1/3 mb-4"></div>
-        <div className="bg-gray-100 rounded h-full"></div>
-      </div>
-    );
-  }
-
-  if (!topContent || topContent.length === 0) {
-    return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 h-80 flex items-center justify-center text-gray-500">
-        <p>No content data available</p>
-      </div>
-    );
-  }
-
-  const dataKey = metric === 'revenue' ? 'revenue' : metric === 'views' ? 'views' : 'purchases';
-  const label = metric === 'revenue' ? 'Revenue (STX)' : metric === 'views' ? 'Views' : 'Purchases';
-
-  const chartData = topContent.map(item => ({
-    name: item.title.length > 20 ? item.title.substring(0, 20) + '...' : item.title,
+}: {
+  topContent: ContentItem[];
+  loading?: boolean;
+}) {
+  const chartData = topContent.slice(0, 5).map((item) => ({
+    name: item.title.length > 18 ? `${item.title.slice(0, 18)}...` : item.title,
     fullTitle: item.title,
-    [dataKey]: item[dataKey as keyof typeof item]
+    revenue: item.revenue,
+    views: item.views,
   }));
 
+  if (!loading && chartData.length === 0) {
+    return (
+      <ChartFrame
+        title="Top content"
+        subtitle="Your best-performing uploads by revenue and audience reach."
+      >
+        <div className="flex h-[300px] items-center justify-center rounded-[1.5rem] border border-dashed border-slate-200 bg-slate-50 text-sm text-slate-500">
+          Uploads with audience activity will appear here.
+        </div>
+      </ChartFrame>
+    );
+  }
+
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-6">Top Content by {label}</h3>
+    <ChartFrame
+      title="Top content"
+      subtitle="Your best-performing uploads by revenue and audience reach."
+      loading={loading}
+    >
       <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={chartData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-          <XAxis dataKey="name" stroke="#6b7280" angle={-45} textAnchor="end" height={80} />
-          <YAxis stroke="#6b7280" />
+        <BarChart data={chartData} layout="vertical" margin={{ left: 16, right: 16 }}>
+          <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" />
+          <XAxis type="number" stroke="#64748b" />
+          <YAxis type="category" dataKey="name" stroke="#64748b" width={110} />
           <Tooltip
             contentStyle={{
-              backgroundColor: '#fff',
-              border: '1px solid #e5e7eb',
-              borderRadius: '8px'
+              borderRadius: '18px',
+              border: '1px solid #e2e8f0',
+              boxShadow: '0 20px 45px rgba(15, 23, 42, 0.08)',
             }}
-            content={({ active, payload }) => {
-              if (active && payload && payload[0]) {
-                return (
-                  <div className="bg-white p-3 border border-gray-200 rounded shadow-lg">
-                    <p className="text-sm font-medium">{payload[0].payload.fullTitle}</p>
-                    <p className="text-sm text-blue-600">{label}: {payload[0].value}</p>
-                  </div>
-                );
-              }
-              return null;
-            }}
+            formatter={(value: number) => [`${Number(value).toFixed(2)} STX`, 'Revenue']}
+            labelFormatter={(_, payload) => payload?.[0]?.payload?.fullTitle || ''}
           />
-          <Bar dataKey={dataKey} fill="#10b981" radius={[8, 8, 0, 0]} />
+          <Bar dataKey="revenue" fill="#f97316" radius={[0, 10, 10, 0]} />
         </BarChart>
       </ResponsiveContainer>
-    </div>
+    </ChartFrame>
   );
 }
