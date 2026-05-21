@@ -7,6 +7,13 @@ const CHALLENGE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 // In-memory store for pending wallet connection challenges: nonce → { timestamp, expiresAt }
 const pendingChallenges = new Map();
 
+let stacksTx;
+try {
+  stacksTx = require('@stacks/transactions');
+} catch {
+  stacksTx = null;
+}
+
 /**
  * Generate a unique nonce for wallet signature challenge
  */
