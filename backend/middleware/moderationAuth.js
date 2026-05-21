@@ -141,7 +141,7 @@ async function verifyQueueAccess(req, res, next) {
     req.queue = queue;
     next();
   } catch (error) {
-    console.error('Queue access verification error:', error);
+    logger.error('Queue access verification error', { err: error });
     res.status(500).json({
       success: false,
       error: 'Access verification failed'
