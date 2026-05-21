@@ -1,10 +1,11 @@
-// MongoDB Replica Set Configuration
-// Production-ready database configuration for MongoDB cluster
-//
-// Required env vars: MONGO_APP_USERNAME, MONGO_APP_PASSWORD, MONGO_DATABASE
-// Optional env vars: MONGODB_URI (overrides per-host config), MONGO_HOSTS, MONGO_REPLICA_SET_NAME,
-//                    MONGO_AUTH_SOURCE, MONGO_SSL_ENABLED, STACKS_NODE_URL
+'use strict';
 
+/**
+ * MongoDB connection configuration using Mongoose.
+ *
+ * Reads DB_URI (primary) or MONGODB_URI (fallback) from environment.
+ * Exposes connectDB(), disconnectDB(), getConnectionStatus(), and healthCheck().
+ */
 const mongoose = require('mongoose');
 const logger = require('../utils/logger');
 
@@ -27,123 +28,92 @@ const mongoOptions = {
   retryWrites: true,
   retryReads: true,
 
-  // Read preference for load distribution
-  readPreference: process.env.MONGO_READ_PREFERENCE || 'secondaryPreferred',
+const mongoose = require('mongoose');
+const logger = require('../utils/logger');
 
-  // Authentication
-  authSource: process.env.MONGO_AUTH_SOURCE || 'admin',
-  user: process.env.MONGO_APP_USERNAME,
-  pass: process.env.MONGO_APP_PASSWORD,
+// DB_URI is the canonical env var for this project (issue #148).
+// MONGODB_URI is kept as a fallback for backward compatibility with older deployments.
+const DB_URI = process.env.DB_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/stacks_monetization';
 
-  // SSL/TLS configuration
-  ssl: process.env.MONGO_SSL_ENABLED === 'true',
-  sslValidate: process.env.MONGO_SSL_VALIDATE !== 'false',
-  sslCA: process.env.MONGO_SSL_CA_FILE,
-  sslCert: process.env.MONGO_SSL_CERT_FILE,
-  sslKey: process.env.MONGO_SSL_KEY_FILE,
+const MAX_RETRIES = parseInt(process.env.MONGO_CONNECT_RETRIES, 10) || 3;
+const RETRY_DELAY_MS = parseInt(process.env.MONGO_CONNECT_RETRY_DELAY_MS, 10) || 3000;
 
-  // Monitoring and logging
-  loggerLevel: process.env.MONGO_LOG_LEVEL || 'error',
-  monitorCommands: process.env.MONGO_MONITOR_COMMANDS === 'true',
+const MONGOOSE_OPTIONS = {
+  maxPoolSize: parseInt(process.env.MONGO_MAX_POOL_SIZE, 10) || 10,
+  minPoolSize: parseInt(process.env.MONGO_MIN_POOL_SIZE, 10) || 2,
+  serverSelectionTimeoutMS: parseInt(process.env.MONGO_SERVER_SELECTION_TIMEOUT_MS, 10) || 5000,
+  socketTimeoutMS: parseInt(process.env.MONGO_SOCKET_TIMEOUT_MS, 10) || 45000,
+  connectTimeoutMS: parseInt(process.env.MONGO_CONNECT_TIMEOUT_MS, 10) || 10000,
+  retryWrites: true,
+  retryReads: true,
 };
 
-// Fail fast if required database credentials are not set
-function validateDbCredentials() {
-  const missing = [];
-  if (!process.env.MONGO_APP_USERNAME || process.env.MONGO_APP_USERNAME.trim() === '') {
-    missing.push('MONGO_APP_USERNAME');
-  }
-  if (!process.env.MONGO_APP_PASSWORD || process.env.MONGO_APP_PASSWORD.trim() === '') {
-    missing.push('MONGO_APP_PASSWORD');
-  }
-  if (!process.env.MONGO_DATABASE || process.env.MONGO_DATABASE.trim() === '') {
-    missing.push('MONGO_DATABASE');
-  }
-  if (missing.length > 0) {
-    throw new Error(
-      `Missing required database environment variables: ${missing.join(', ')}. ` +
-      'Set them in your .env file or deployment secrets.'
-    );
-  }
+let _isConnected = false;
 
-  const password = process.env.MONGO_APP_PASSWORD;
-  if (password) {
-    if (password.length < 12) {
-      logger.warn('MONGO_APP_PASSWORD is shorter than 12 characters — use a stronger password in production');
-    }
-    const hasComplexity = /[A-Z]/.test(password) && /[0-9]/.test(password) && /[^A-Za-z0-9]/.test(password);
-    if (!hasComplexity && process.env.NODE_ENV === 'production') {
-      logger.warn('MONGO_APP_PASSWORD lacks uppercase, digit, or special character — strengthen it for production');
-    }
-  }
+/**
+ * Register Mongoose connection lifecycle event handlers.
+ */
+function _registerEventHandlers() {
+  mongoose.connection.on('connected', () => {
+    _isConnected = true;
+    logger.info('MongoDB connected', { uri: _redactUri(DB_URI) });
+  });
 
-  logger.debug('Database credentials validated', {
-    user: process.env.MONGO_APP_USERNAME,
-    database: process.env.MONGO_DATABASE,
-    authSource: process.env.MONGO_AUTH_SOURCE || 'admin',
+  mongoose.connection.on('error', (err) => {
+    logger.error('MongoDB connection error', { err });
+  });
+
+  mongoose.connection.on('disconnected', () => {
+    _isConnected = false;
+    logger.warn('MongoDB disconnected');
+  });
+
+  mongoose.connection.on('reconnected', () => {
+    _isConnected = true;
+    logger.info('MongoDB reconnected');
+  });
+
+  mongoose.connection.on('close', () => {
+    _isConnected = false;
+    logger.info('MongoDB connection closed');
   });
 }
 
-// Build MongoDB connection URI for replica set
-function buildMongoURI() {
-  const protocol = mongoOptions.ssl ? 'mongodb+srv' : 'mongodb';
-  const hosts = process.env.MONGO_HOSTS || 'mongodb-primary:27017,mongodb-secondary1:27017,mongodb-secondary2:27017';
-  const database = process.env.MONGO_DATABASE;
-  const replicaSet = process.env.MONGO_REPLICA_SET_NAME || 'rs0';
-
-  // For replica set, use multiple hosts
-  const hostArray = hosts.split(',');
-  const connectionString = `${protocol}://${hostArray.join(',')}/${database}?replicaSet=${replicaSet}`;
-
-  // Add additional options
-  const options = [];
-
-  if (mongoOptions.readPreference) {
-    options.push(`readPreference=${mongoOptions.readPreference}`);
+/**
+ * Redact credentials from a MongoDB URI for safe logging.
+ * @param {string} uri
+ * @returns {string}
+ */
+function _redactUri(uri) {
+  try {
+    const u = new URL(uri);
+    if (u.password) u.password = '***';
+    if (u.username) u.username = '***';
+    return u.toString();
+  } catch {
+    return '<invalid-uri>';
   }
-
-  if (mongoOptions.retryWrites) {
-    options.push('retryWrites=true');
-  }
-
-  if (mongoOptions.retryReads) {
-    options.push('retryReads=true');
-  }
-
-  if (mongoOptions.maxPoolSize) {
-    options.push(`maxPoolSize=${mongoOptions.maxPoolSize}`);
-  }
-
-  if (mongoOptions.minPoolSize) {
-    options.push(`minPoolSize=${mongoOptions.minPoolSize}`);
-  }
-
-  if (mongoOptions.serverSelectionTimeoutMS) {
-    options.push(`serverSelectionTimeoutMS=${mongoOptions.serverSelectionTimeoutMS}`);
-  }
-
-  if (mongoOptions.socketTimeoutMS) {
-    options.push(`socketTimeoutMS=${mongoOptions.socketTimeoutMS}`);
-  }
-
-  if (mongoOptions.connectTimeoutMS) {
-    options.push(`connectTimeoutMS=${mongoOptions.connectTimeoutMS}`);
-  }
-
-  if (options.length > 0) {
-    return `${connectionString}&${options.join('&')}`;
-  }
-
-  return connectionString;
 }
 
-// Database connection class
-class DatabaseConnection {
-  constructor() {
-    this.isConnected = false;
-    this.connection = null;
+/**
+ * Sleep helper for retry delays.
+ * @param {number} ms
+ */
+function _sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Connect to MongoDB using Mongoose.
+ * Retries up to MAX_RETRIES times before throwing.
+ */
+async function connectDB() {
+  if (_isConnected) {
+    logger.debug('MongoDB already connected, reusing existing connection');
+    return;
   }
 
+  logger.info('Connecting to MongoDB', { uri: _redactUri(DB_URI) });
   // Connect to MongoDB replica set
   async connect() {
     try {
@@ -165,8 +135,20 @@ class DatabaseConnection {
         user: process.env.MONGODB_URI ? '[from MONGODB_URI]' : (process.env.MONGO_APP_USERNAME || '[not set]'),
       });
 
-      this.connection = await mongoose.connect(mongoURI, mongoOptions);
+  _registerEventHandlers();
 
+  let lastError;
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      await mongoose.connect(DB_URI, MONGOOSE_OPTIONS);
+      _isConnected = true;
+      return;
+    } catch (err) {
+      lastError = err;
+      logger.warn(`MongoDB connection attempt ${attempt}/${MAX_RETRIES} failed`, { err });
+      if (attempt < MAX_RETRIES) {
+        await _sleep(RETRY_DELAY_MS);
+      }
       this.isConnected = true;
       const safeURI = mongoURI.replace(/:\/\/[^@]+@/, '://***:***@');
       logger.info('Connected to MongoDB replica set', { uri: safeURI });
@@ -223,72 +205,74 @@ class DatabaseConnection {
     }
   }
 
-  // Get connection status
-  getStatus() {
-    return {
-      isConnected: this.isConnected,
-      readyState: mongoose.connection.readyState,
-      name: mongoose.connection.name,
-      host: mongoose.connection.host,
-      port: mongoose.connection.port,
-      database: mongoose.connection.db ? mongoose.connection.db.databaseName : null,
-    };
-  }
+  logger.error('All MongoDB connection attempts failed', { err: lastError });
+  throw lastError;
+}
 
-  // Health check
-  async healthCheck() {
-    try {
-      if (!this.isConnected) {
-        return { status: 'disconnected', message: 'Not connected to MongoDB' };
-      }
+/**
+ * Gracefully close the MongoDB connection.
+ */
+async function disconnectDB() {
+  if (!_isConnected) return;
+  await mongoose.connection.close();
+  _isConnected = false;
+  logger.info('MongoDB connection closed gracefully');
+}
 
-      // Perform a simple database operation
-      await mongoose.connection.db.admin().ping();
+/**
+ * Return a snapshot of the current connection state.
+ * @returns {{ isConnected: boolean, readyState: number, host: string|null, name: string|null }}
+ */
+function getConnectionStatus() {
+  const conn = mongoose.connection;
+  return {
+    isConnected: _isConnected,
+    readyState: conn.readyState,
+    host: conn.host || null,
+    port: conn.port || null,
+    name: conn.name || null,
+  };
+}
 
-      // Get replica set status
-      const rsStatus = await mongoose.connection.db.admin().command({ replSetGetStatus: 1 });
-
-      return {
-        status: 'healthy',
-        message: 'MongoDB replica set is healthy',
-        user: process.env.MONGO_APP_USERNAME || '[from MONGODB_URI]',
-        replicaSet: {
-          set: rsStatus.set,
-          myState: rsStatus.myState,
-          members: rsStatus.members.length,
-          primary: rsStatus.members.find(m => m.state === 1)?.name,
-        },
-      };
-    } catch (error) {
-      return {
-        status: 'unhealthy',
-        message: `MongoDB health check failed: ${error.message}`,
-        error: error.message,
-      };
+/**
+ * Lightweight health check — pings the database.
+ * @returns {Promise<{ status: 'healthy'|'unhealthy', message: string }>}
+ */
+async function healthCheck() {
+  try {
+    if (!_isConnected) {
+      return { status: 'unhealthy', message: 'Not connected to MongoDB' };
     }
+    await mongoose.connection.db.admin().ping();
+    return { status: 'healthy', message: 'MongoDB is reachable' };
+  } catch (err) {
+    return { status: 'unhealthy', message: err.message };
   }
 }
 
-// Create singleton instance
-const dbConnection = new DatabaseConnection();
-
-// Graceful shutdown
+// Graceful shutdown on process signals
 process.on('SIGINT', async () => {
+  logger.info('SIGINT received — closing MongoDB connection');
+  await disconnectDB();
   logger.info('SIGINT received, gracefully shutting down');
   await dbConnection.disconnect();
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
+  logger.info('SIGTERM received — closing MongoDB connection');
+  await disconnectDB();
   logger.info('SIGTERM received, gracefully shutting down');
   await dbConnection.disconnect();
   process.exit(0);
 });
 
 module.exports = {
-  DatabaseConnection,
-  dbConnection,
-  mongoOptions,
-  buildMongoURI,
-  validateDbCredentials,
+  connectDB,
+  disconnectDB,
+  getConnectionStatus,
+  healthCheck,
+  redactUri: _redactUri,
+  // Expose for tests / legacy callers
+  get isConnected() { return _isConnected; },
 };
