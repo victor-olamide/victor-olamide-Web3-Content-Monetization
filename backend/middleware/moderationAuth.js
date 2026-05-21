@@ -154,6 +154,7 @@ async function verifyQueueAccess(req, res, next) {
     }
 
     req.queue = queue;
+    logger.info('Queue access granted', { queueId, moderatorAddress: moderatorAddress || 'admin' });
     next();
   } catch (error) {
     logger.error('Queue access verification error', { err: error });
