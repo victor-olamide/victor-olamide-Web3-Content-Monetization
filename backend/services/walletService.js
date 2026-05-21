@@ -125,6 +125,10 @@ async function connectWallet(address, walletType, publicKey, signature, nonce, n
     if (!challenge) {
       throw new Error('Invalid or unknown nonce — request a new connection challenge');
     }
+    if (Date.now() > challenge.expiresAt) {
+      pendingChallenges.delete(nonce);
+      throw new Error('Challenge expired — request a new connection challenge');
+    }
 
     // Check if wallet already connected
     let walletConnection = await WalletConnection.findOne({
