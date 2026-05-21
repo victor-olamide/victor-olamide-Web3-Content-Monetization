@@ -19,8 +19,13 @@ setInterval(() => {
 let stacksTx;
 try {
   stacksTx = require('@stacks/transactions');
-} catch {
+  if (!stacksTx.publicKeyFromSignatureVrs) {
+    throw new Error('publicKeyFromSignatureVrs not found — upgrade @stacks/transactions to v6+');
+  }
+} catch (err) {
   stacksTx = null;
+  // Signature verification will be unavailable — connectWallet will throw on every call
+  console.error('WARNING: @stacks/transactions failed to load, wallet signature verification is disabled:', err.message);
 }
 
 /**
