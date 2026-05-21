@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Subscription = require('../models/Subscription');
 const SubscriptionRenewal = require('../models/SubscriptionRenewal');
+const { txConfirmationGate } = require('../middleware/txConfirmationGate');
 const {
   initiateRenewal,
   completeRenewal,
@@ -80,8 +81,8 @@ router.post('/:id/renew', async (req, res) => {
   }
 });
 
-// Complete renewal with transaction
-router.post('/renewal/:renewalId/complete', async (req, res) => {
+// Complete renewal with transaction — gate on on-chain confirmation
+router.post('/renewal/:renewalId/complete', txConfirmationGate, async (req, res) => {
   try {
     const { renewalId } = req.params;
     const { txId } = req.body;
