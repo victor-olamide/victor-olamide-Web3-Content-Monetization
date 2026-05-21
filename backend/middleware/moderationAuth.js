@@ -184,7 +184,7 @@ async function verifyContentCreator(req, res, next) {
     req.content = content;
     next();
   } catch (error) {
-    console.error('Content creator verification error:', error);
+    logger.error('Content creator verification error', { err: error });
     res.status(500).json({
       success: false,
       error: 'Creator verification failed'
