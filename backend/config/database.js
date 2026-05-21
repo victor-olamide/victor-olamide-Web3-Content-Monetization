@@ -245,6 +245,7 @@ class DatabaseConnection {
       return {
         status: 'healthy',
         message: 'MongoDB replica set is healthy',
+        user: process.env.MONGO_APP_USERNAME || '[from MONGODB_URI]',
         replicaSet: {
           set: rsStatus.set,
           myState: rsStatus.myState,
