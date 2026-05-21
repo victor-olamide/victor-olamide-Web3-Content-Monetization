@@ -9,7 +9,8 @@ const {
   detectTransactionType,
   getCacheStats,
   getVerificationMetrics,
-  evictExpiredCache
+  evictExpiredCache,
+  getTransactionDetails
 } = require('../services/blockchainVerification');
 const TransactionVerification = require('../models/TransactionVerification');
 
@@ -33,6 +34,26 @@ router.get('/tx/:txId', async (req, res) => {
   } catch (err) {
     console.error('TX status error:', err);
     res.status(500).json({ success: false, message: 'Failed to verify transaction' });
+  }
+});
+
+/**
+ * GET /api/blockchain/tx/:txId/details
+ * Get detailed transaction information
+ */
+router.get('/tx/:txId/details', async (req, res) => {
+  try {
+    const { txId } = req.params;
+
+    if (!txId || typeof txId !== 'string') {
+      return res.status(400).json({ success: false, message: 'Invalid transaction ID' });
+    }
+
+    const result = await getTransactionDetails(txId);
+    res.json({ success: true, data: result });
+  } catch (err) {
+    console.error('TX details error:', err);
+    res.status(500).json({ success: false, message: 'Failed to get transaction details' });
   }
 });
 
