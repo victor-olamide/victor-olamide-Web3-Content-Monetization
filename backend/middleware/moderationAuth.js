@@ -33,8 +33,7 @@ async function verifyModerator(req, res, next) {
       });
     }
 
-    // TODO: Replace with actual moderator verification from config/database
-    const authorizedModerators = process.env.AUTHORIZED_MODERATORS?.split(',') || [];
+    const authorizedModerators = parseAddressList(process.env.AUTHORIZED_MODERATORS);
     const isAuthorized = authorizedModerators.some(
       addr => addr.toLowerCase() === moderatorAddress.toLowerCase()
     );
