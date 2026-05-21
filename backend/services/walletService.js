@@ -148,6 +148,7 @@ async function connectWallet(address, walletType, publicKey, signature, nonce, n
 
     // Consume nonce: each challenge may only be used once
     pendingChallenges.delete(nonce);
+    logger.info('Wallet signature verified', { address, walletType, network });
 
     // Check if wallet already connected
     let walletConnection = await WalletConnection.findOne({
