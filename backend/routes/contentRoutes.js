@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
@@ -55,7 +56,7 @@ router.get('/search', async (req, res) => {
     const results = await searchService.searchContent(req.query);
     res.json(results);
   } catch (err) {
-    console.error('Content search error:', err);
+    logger.error('Content search error', { err });
     res.status(500).json({ message: 'Failed to perform search', error: err.message });
   }
 });
@@ -130,7 +131,7 @@ router.post('/upload-ipfs', (req, res) => {
         contentType: req.file.mimetype
       });
     } catch (err) {
-      console.error('[IPFS Upload] Error:', err);
+      logger.error('[IPFS Upload] Error', { err });
       res.status(500).json({
         success: false,
         message: 'Failed to upload to IPFS',
@@ -262,7 +263,7 @@ router.post('/:contentId/remove', verifyCreatorOwnership, async (req, res) => {
       const txResult = await removeContentFromContract(parseInt(contentId), creatorKey);
       txId = txResult.txid;
     } catch (contractErr) {
-      console.error('Contract removal error:', contractErr);
+      logger.error('Contract removal error:', contractErr);
       return res.status(500).json({ 
         message: 'Failed to remove content from blockchain', 
         error: contractErr.message 
@@ -316,7 +317,7 @@ router.post('/:contentId/remove', verifyCreatorOwnership, async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('Content removal error:', err);
+    logger.error('Content removal error', { err });
     res.status(500).json({ message: 'Failed to remove content', error: err.message });
   }
 });
@@ -357,7 +358,7 @@ router.patch('/:contentId', verifyCreatorOwnership, async (req, res) => {
         const { updateContentPrice } = require('../services/contractService');
         txResult = await updateContentPrice(parseInt(contentId), newPrice, creatorKey);
       } catch (err) {
-        console.error('Failed to update price on-chain:', err);
+        logger.error('Failed to update price on-chain', { err });
         return res.status(500).json({ message: 'Failed to update price on-chain', error: err.message });
       }
     }
@@ -375,7 +376,7 @@ router.patch('/:contentId', verifyCreatorOwnership, async (req, res) => {
       transactionId: txResult ? txResult.txid : null
     });
   } catch (err) {
-    console.error('Content update error:', err);
+    logger.error('Content update error', { err });
     res.status(500).json({ message: 'Failed to update content', error: err.message });
   }
 });

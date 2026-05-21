@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 /**
  * STX Price Service
  * Manages real-time STX/USD price fetching and caching
@@ -61,11 +62,11 @@ async function getCurrentSTXPrice() {
 
     return priceData;
   } catch (error) {
-    console.error('Error fetching STX price:', error.message);
+    logger.error('Error fetching STX price:', error.message);
 
     // If cache exists, return stale data
     if (CACHE.price) {
-      console.warn('Returning cached STX price due to API error');
+      logger.warn('Returning cached STX price due to API error');
       return CACHE.price;
     }
 

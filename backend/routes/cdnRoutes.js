@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const express = require('express');
 const router = express.Router();
 const cdnService = require('../services/cdnService');
@@ -49,7 +50,7 @@ router.get('/status', requireAdminAccess, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Failed to get CDN status:', error);
+    logger.error('Failed to get CDN status', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to get CDN status'
@@ -81,7 +82,7 @@ router.post('/cache/:contentId', requireAdminAccess, async (req, res) => {
       data: result
     });
   } catch (error) {
-    console.error('Failed to add content to CDN cache:', error);
+    logger.error('Failed to add content to CDN cache', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to add content to CDN cache'
@@ -104,7 +105,7 @@ router.delete('/cache/:contentId', requireAdminAccess, async (req, res) => {
       data: result
     });
   } catch (error) {
-    console.error('Failed to purge CDN cache:', error);
+    logger.error('Failed to purge CDN cache', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to purge CDN cache'
@@ -135,7 +136,7 @@ router.post('/purge', requireAdminAccess, async (req, res) => {
       data: result
     });
   } catch (error) {
-    console.error('Failed to purge CDN content:', error);
+    logger.error('Failed to purge CDN content', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to purge CDN content'
@@ -176,7 +177,7 @@ router.post('/warmup', requireAdminAccess, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Failed to warmup CDN cache:', error);
+    logger.error('Failed to warmup CDN cache', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to warmup CDN cache'
@@ -221,7 +222,7 @@ router.get('/cache', requireAdminAccess, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Failed to get CDN cache entries:', error);
+    logger.error('Failed to get CDN cache entries', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to get CDN cache entries'
@@ -263,7 +264,7 @@ router.get('/purges', requireAdminAccess, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Failed to get CDN purge requests:', error);
+    logger.error('Failed to get CDN purge requests', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to get CDN purge requests'
@@ -298,7 +299,7 @@ router.get('/analytics', requireAdminAccess, async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Failed to get CDN analytics:', error);
+    logger.error('Failed to get CDN analytics', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to get CDN analytics'
@@ -330,7 +331,7 @@ router.get('/health', requireAdminAccess, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Failed to get CDN health:', error);
+    logger.error('Failed to get CDN health', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to get CDN health'
@@ -352,7 +353,7 @@ router.post('/health/check', requireAdminAccess, async (req, res) => {
       data: result
     });
   } catch (error) {
-    console.error('Failed to perform CDN health check:', error);
+    logger.error('Failed to perform CDN health check', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to perform CDN health check'
@@ -383,7 +384,7 @@ router.get('/config', requireAdminAccess, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Failed to get CDN config:', error);
+    logger.error('Failed to get CDN config', { err: error });
     res.status(500).json({
       success: false,
       error: 'Failed to get CDN config'

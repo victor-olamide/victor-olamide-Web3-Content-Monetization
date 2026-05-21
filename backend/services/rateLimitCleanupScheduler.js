@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { cleanupExpiredRecords, getGlobalStats } = require('./rateLimitService');
 const { DEFAULTS } = require('../config/rateLimitConfig');
 
@@ -23,13 +24,13 @@ let isRunning = false;
  */
 async function runCleanup() {
   if (isRunning) {
-    console.log('[RateLimitCleanup] Cleanup already in progress, skipping');
+    logger.info('[RateLimitCleanup] Cleanup already in progress, skipping');
     return 0;
   }
 
   isRunning = true;
   try {
-    console.log('[RateLimitCleanup] Starting cleanup cycle...');
+    logger.info('[RateLimitCleanup] Starting cleanup cycle...');
     const deletedCount = await cleanupExpiredRecords();
     lastCleanupAt = new Date();
     lastCleanupCount = deletedCount;
@@ -37,7 +38,7 @@ async function runCleanup() {
     console.log(`[RateLimitCleanup] Cleaned up ${deletedCount} expired records`);
     return deletedCount;
   } catch (error) {
-    console.error('[RateLimitCleanup] Error during cleanup:', error.message);
+    logger.error('[RateLimitCleanup] Error during cleanup:', error.message);
     return 0;
   } finally {
     isRunning = false;
@@ -77,7 +78,7 @@ function stopCleanupScheduler() {
     clearTimeout(cleanupTimeout);
     cleanupTimeout = null;
   }
-  console.log('[RateLimitCleanup] Scheduler stopped');
+  logger.info('[RateLimitCleanup] Scheduler stopped');
 }
 
 /**

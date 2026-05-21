@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const {
   getSubscriptionsDueForRenewal,
   getExpiredSubscriptionsGraceEnded,
@@ -20,7 +21,7 @@ let isRunning = false;
  */
 function initializeRenewalScheduler(intervalMs = 3600000) {
   if (schedulerInstance) {
-    console.warn('Renewal scheduler already initialized');
+    logger.warn('Renewal scheduler already initialized');
     return;
   }
 
@@ -38,7 +39,7 @@ function initializeRenewalScheduler(intervalMs = 3600000) {
   }, intervalMs);
 
   isRunning = true;
-  console.log('Renewal scheduler initialized');
+  logger.info('Renewal scheduler initialized');
 }
 
 /**
@@ -60,7 +61,7 @@ async function processRenewals() {
 
     console.log(`[${timestamp}] Renewal processing complete`);
   } catch (error) {
-    console.error('Renewal processing error:', error);
+    logger.error('Renewal processing error', { err: error });
   }
 }
 
@@ -88,7 +89,7 @@ async function handleGracePeriodsEnded() {
       }
     }
   } catch (error) {
-    console.error('Error handling grace period expirations:', error);
+    logger.error('Error handling grace period expirations', { err: error });
   }
 }
 
@@ -145,7 +146,7 @@ async function processSubscriptionRenewals() {
 
     console.log(`Renewal processing results: ${results.initiated} initiated, ${results.failed} failed`);
   } catch (error) {
-    console.error('Error processing renewal subscriptions:', error);
+    logger.error('Error processing renewal subscriptions', { err: error });
   }
 }
 
@@ -187,7 +188,7 @@ async function applyGracePeriods() {
       }
     }
   } catch (error) {
-    console.error('Error applying grace periods:', error);
+    logger.error('Error applying grace periods', { err: error });
   }
 }
 
@@ -204,7 +205,7 @@ function stopRenewalScheduler() {
     initialTimeout = null;
   }
   isRunning = false;
-  console.log('Renewal scheduler stopped');
+  logger.info('Renewal scheduler stopped');
 }
 
 /**
@@ -224,7 +225,7 @@ function getRenewalSchedulerStatus() {
  * Manually trigger renewal processing
  */
 async function triggerRenewalProcessing() {
-  console.log('Manually triggering renewal processing...');
+  logger.info('Manually triggering renewal processing...');
   return await processRenewals();
 }
 
@@ -252,7 +253,7 @@ async function getRenewalStats() {
       stats
     };
   } catch (error) {
-    console.error('Error getting renewal stats:', error);
+    logger.error('Error getting renewal stats', { err: error });
     return { error: error.message };
   }
 }

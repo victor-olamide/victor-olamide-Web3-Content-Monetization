@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 /**
  * Moderation Metrics Service
  * Tracks and reports on moderation system performance
@@ -37,7 +38,7 @@ class ModerationMetricsService {
 
       return metrics;
     } catch (error) {
-      console.error('Error calculating metrics:', error);
+      logger.error('Error calculating metrics', { err: error });
       throw error;
     }
   }
@@ -108,7 +109,7 @@ class ModerationMetricsService {
         averageFlags: avgFlags[0]?.avgFlags || 0
       };
     } catch (error) {
-      console.error('Error getting queue metrics:', error);
+      logger.error('Error getting queue metrics', { err: error });
       throw error;
     }
   }
@@ -187,7 +188,7 @@ class ModerationMetricsService {
         averagePerDay: (total / Math.max(1, Math.floor((new Date() - startDate) / (24 * 60 * 60 * 1000)))).toFixed(2)
       };
     } catch (error) {
-      console.error('Error getting flag metrics:', error);
+      logger.error('Error getting flag metrics', { err: error });
       throw error;
     }
   }
@@ -275,7 +276,7 @@ class ModerationMetricsService {
         }
       };
     } catch (error) {
-      console.error('Error getting review metrics:', error);
+      logger.error('Error getting review metrics', { err: error });
       throw error;
     }
   }
@@ -351,7 +352,7 @@ class ModerationMetricsService {
         backlogSize: pending + aged
       };
     } catch (error) {
-      console.error('Error getting efficiency metrics:', error);
+      logger.error('Error getting efficiency metrics', { err: error });
       throw error;
     }
   }
@@ -431,7 +432,7 @@ class ModerationMetricsService {
 
       return metrics;
     } catch (error) {
-      console.error('Error getting moderator metrics:', error);
+      logger.error('Error getting moderator metrics', { err: error });
       throw error;
     }
   }
@@ -476,7 +477,7 @@ class ModerationMetricsService {
         data: trends
       };
     } catch (error) {
-      console.error('Error getting trend metrics:', error);
+      logger.error('Error getting trend metrics', { err: error });
       throw error;
     }
   }
@@ -509,7 +510,7 @@ class ModerationMetricsService {
 
       return risky;
     } catch (error) {
-      console.error('Error getting risk assessment:', error);
+      logger.error('Error getting risk assessment', { err: error });
       throw error;
     }
   }

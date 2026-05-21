@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 /**
  * Rate Limit Adjustment Routes
  * 
@@ -52,7 +53,7 @@ router.get('/user-tier', async (req, res) => {
       rateLimitTier: tier
     });
   } catch (error) {
-    console.error('Error getting user tier:', error.message);
+    logger.error('Error getting user tier:', error.message);
     res.status(500).json({
       success: false,
       error: 'Failed to get user tier'
@@ -92,7 +93,7 @@ router.get('/status', async (req, res) => {
       status
     });
   } catch (error) {
-    console.error('Error getting rate limit status:', error.message);
+    logger.error('Error getting rate limit status:', error.message);
     res.status(500).json({
       success: false,
       error: 'Failed to get rate limit status'
@@ -131,7 +132,7 @@ router.post('/reset', async (req, res) => {
       key: resetKey
     });
   } catch (error) {
-    console.error('Error resetting rate limits:', error.message);
+    logger.error('Error resetting rate limits:', error.message);
     res.status(500).json({
       success: false,
       error: 'Failed to reset rate limits'
@@ -205,7 +206,7 @@ router.post('/tier-change', async (req, res) => {
       isDowngrade: result.isDowngrade
     });
   } catch (error) {
-    console.error('Error handling tier change:', error.message);
+    logger.error('Error handling tier change:', error.message);
     res.status(500).json({
       success: false,
       error: 'Failed to record tier change'
@@ -241,7 +242,7 @@ router.get('/tier-history', async (req, res) => {
       history
     });
   } catch (error) {
-    console.error('Error getting tier history:', error.message);
+    logger.error('Error getting tier history:', error.message);
     res.status(500).json({
       success: false,
       error: 'Failed to get tier history'
@@ -267,7 +268,7 @@ router.get('/tier-statistics', async (req, res) => {
       statistics: stats
     });
   } catch (error) {
-    console.error('Error getting statistics:', error.message);
+    logger.error('Error getting statistics:', error.message);
     res.status(500).json({
       success: false,
       error: 'Failed to get statistics'
@@ -297,7 +298,7 @@ router.get('/tier-comparison', async (req, res) => {
       comparison
     });
   } catch (error) {
-    console.error('Error comparing tiers:', error.message);
+    logger.error('Error comparing tiers:', error.message);
     res.status(500).json({
       success: false,
       error: 'Failed to compare tiers'
@@ -331,7 +332,7 @@ router.get('/check-tier', async (req, res) => {
       meetsRequirement: hasTier
     });
   } catch (error) {
-    console.error('Error checking tier:', error.message);
+    logger.error('Error checking tier:', error.message);
     res.status(500).json({
       success: false,
       error: 'Failed to check tier'
@@ -353,7 +354,7 @@ router.get('/available-tiers', (req, res) => {
       count: tiers.length
     });
   } catch (error) {
-    console.error('Error getting available tiers:', error.message);
+    logger.error('Error getting available tiers:', error.message);
     res.status(500).json({
       success: false,
       error: 'Failed to get available tiers'

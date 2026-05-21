@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const axios = require('axios');
 const Purchase = require('../models/Purchase');
 const Content = require('../models/Content');
@@ -18,7 +19,7 @@ class Indexer {
   }
 
   async start() {
-    console.log('Starting Stacks event indexer...');
+    logger.info('Starting Stacks event indexer...');
     this.status = 'running';
     // Initial fetch
     await this.pollEvents();
@@ -35,7 +36,7 @@ class Indexer {
       clearInterval(this.pollingIntervalId);
       this.pollingIntervalId = null;
       this.status = 'stopped';
-      console.log('Stacks event indexer stopped');
+      logger.info('Stacks event indexer stopped');
     }
   }
 
@@ -51,7 +52,7 @@ class Indexer {
 
   async pollEvents() {
     if (!this.contractAddress) {
-      console.warn('CONTRACT_ADDRESS not set, skipping indexing. Please set it in .env');
+      logger.warn('CONTRACT_ADDRESS not set, skipping indexing. Please set it in .env');
       return;
     }
 
@@ -66,7 +67,7 @@ class Indexer {
         }
       }
     } catch (err) {
-      console.error('Indexer error:', err.message);
+      logger.error('Indexer error:', err.message);
     }
   }
 
@@ -86,7 +87,7 @@ class Indexer {
   async handleContractEvent(payload, tx) {
     // Check if it's a purchase-content event
     if (payload.includes('purchase-content')) {
-      console.log('New purchase detected:', tx.tx_id);
+      logger.info('New purchase detected:', tx.tx_id);
       
       const purchaseData = {
         contentId: 1, 
@@ -102,12 +103,12 @@ class Indexer {
           purchaseData,
           { upsert: true, new: true }
         );
-        console.log('Purchase saved to database');
+        logger.info('Purchase saved to database');
       } catch (err) {
-        console.error('Error saving purchase:', err.message);
+        logger.error('Error saving purchase:', err.message);
       }
     } else if (payload.includes('subscribe')) {
-      console.log('New subscription detected:', tx.tx_id);
+      logger.info('New subscription detected:', tx.tx_id);
       
       const subData = {
         user: tx.sender_address,
@@ -124,12 +125,12 @@ class Indexer {
           subData,
           { upsert: true, new: true }
         );
-        console.log('Subscription saved to database');
+        logger.info('Subscription saved to database');
       } catch (err) {
-        console.error('Error saving subscription:', err.message);
+        logger.error('Error saving subscription:', err.message);
       }
     } else if (payload.includes('set-gating-rule')) {
-      console.log('New gating rule detected:', tx.tx_id);
+      logger.info('New gating rule detected:', tx.tx_id);
       
       const gatingData = {
         contentId: 1, // Extracted from payload
@@ -146,21 +147,21 @@ class Indexer {
           gatingData,
           { upsert: true, new: true }
         );
-        console.log('Gating rule saved to database');
+        logger.info('Gating rule saved to database');
       } catch (err) {
-        console.error('Error saving gating rule:', err.message);
+        logger.error('Error saving gating rule:', err.message);
       }
     } else if (payload.includes('delete-gating-rule')) {
-      console.log('Gating rule deletion detected:', tx.tx_id);
+      logger.info('Gating rule deletion detected:', tx.tx_id);
       // Logic to delete gating rule from DB
       try {
         await GatingRule.deleteOne({ contentId: 1 }); // Extracted
-        console.log('Gating rule deleted from database');
+        logger.info('Gating rule deleted from database');
       } catch (err) {
-        console.error('Error deleting gating rule:', err.message);
+        logger.error('Error deleting gating rule:', err.message);
       }
     } else if (payload.includes('verify-access-success')) {
-      console.log('Access verification success detected:', tx.tx_id);
+      logger.info('Access verification success detected:', tx.tx_id);
       // In a real app, we might update a local cache of authorized users
     }
   }

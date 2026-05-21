@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 /**
  * Audit Log Service
  * Manages creation and querying of moderation audit logs
@@ -22,7 +23,7 @@ class AuditLogService {
       await log.save();
       return log;
     } catch (error) {
-      console.error('Error creating audit log:', error);
+      logger.error('Error creating audit log', { err: error });
       throw error;
     }
   }
@@ -54,7 +55,7 @@ class AuditLogService {
         hasMore: skip + logs.length < total
       };
     } catch (error) {
-      console.error('Error fetching content logs:', error);
+      logger.error('Error fetching content logs', { err: error });
       throw error;
     }
   }
@@ -86,7 +87,7 @@ class AuditLogService {
         hasMore: skip + logs.length < total
       };
     } catch (error) {
-      console.error('Error fetching queue logs:', error);
+      logger.error('Error fetching queue logs', { err: error });
       throw error;
     }
   }
@@ -144,7 +145,7 @@ class AuditLogService {
         hasMore: skip + logs.length < total
       };
     } catch (error) {
-      console.error('Error fetching moderator logs:', error);
+      logger.error('Error fetching moderator logs', { err: error });
       throw error;
     }
   }
@@ -181,7 +182,7 @@ class AuditLogService {
         lastAction: trail[0]?.timestamp
       };
     } catch (error) {
-      console.error('Error fetching audit trail:', error);
+      logger.error('Error fetching audit trail', { err: error });
       throw error;
     }
   }
@@ -258,7 +259,7 @@ class AuditLogService {
         totalActions: total
       };
     } catch (error) {
-      console.error('Error fetching system stats:', error);
+      logger.error('Error fetching system stats', { err: error });
       throw error;
     }
   }
@@ -301,7 +302,7 @@ class AuditLogService {
         hasMore: skip + logs.length < total
       };
     } catch (error) {
-      console.error('Error searching audit logs:', error);
+      logger.error('Error searching audit logs', { err: error });
       throw error;
     }
   }
@@ -327,7 +328,7 @@ class AuditLogService {
         data: logs
       };
     } catch (error) {
-      console.error('Error exporting logs:', error);
+      logger.error('Error exporting logs', { err: error });
       throw error;
     }
   }

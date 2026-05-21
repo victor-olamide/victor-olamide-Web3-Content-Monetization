@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const fs = require('fs').promises;
 const path = require('path');
 const crypto = require('crypto');
@@ -165,7 +166,7 @@ class ContentBackupService {
 
       return contentItems;
     } catch (error) {
-      console.error('Failed to get content for backup:', error);
+      logger.error('Failed to get content for backup', { err: error });
       return [];
     }
   }
@@ -404,7 +405,7 @@ class ContentBackupService {
 
       return backupFiles;
     } catch (error) {
-      console.error('Failed to list content backups:', error);
+      logger.error('Failed to list content backups', { err: error });
       return [];
     }
   }
