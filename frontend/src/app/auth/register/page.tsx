@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useJWTAuth } from '@/contexts/JWTAuthContext';
 import { validateRegistrationForm } from '@/utils/validationUtils';
 import { FormInput, PasswordInput, FormSubmitButton, FormDivider } from '@/components/FormInput';
+import SocialLogin from '@/components/SocialLogin';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -188,7 +189,14 @@ export default function RegisterPage() {
           />
         </form>
 
-        <FormDivider />
+        {/* Social Login Options */}
+        <div className="mt-6 mb-6">
+          <SocialLogin 
+            showDivider={true} 
+            dividerText="or sign up with"
+            showEmailLink={false}
+          />
+        </div>
 
         {/* Sign In Link */}
         <p className="text-center text-gray-600">
