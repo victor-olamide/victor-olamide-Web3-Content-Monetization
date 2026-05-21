@@ -1,5 +1,6 @@
 const { verifyAccess } = require('../services/accessService');
 const { logAccess } = require('../services/accessLogger');
+const logger = require('../utils/logger');
 
 /**
  * Middleware to verify access before serving content
@@ -41,7 +42,7 @@ async function verifyContentAccess(req, res, next) {
     req.userAddress = userAddress;
     next();
   } catch (err) {
-    console.error('Access verification middleware error:', err);
+    logger.error('Access verification middleware error', { err });
     res.status(500).json({ 
       message: 'Failed to verify access',
       error: err.message 
