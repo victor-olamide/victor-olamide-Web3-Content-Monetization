@@ -559,6 +559,74 @@ class AnalyticsService {
       throw error;
     }
   }
+
+  /**
+   * Calculate metrics for a previous period for comparison
+   */
+  async calculatePreviousPeriodMetrics(creatorId, startDate, endDate, granularity) {
+    try {
+      // Calculate the period duration
+      const periodDuration = endDate - startDate;
+      const previousEndDate = new Date(startDate);
+      const previousStartDate = new Date(startDate - periodDuration);
+
+      // Calculate metrics for previous period
+      const previousMetrics = await this.getCreatorAnalytics(
+        creatorId,
+        previousStartDate,
+        previousEndDate,
+        granularity
+      );
+
+      return previousMetrics;
+    } catch (error) {
+      console.error('Error calculating previous period metrics:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Calculate growth rates for key metrics
+   */
+  calculateGrowthRate(currentValue, previousValue) {
+    if (previousValue === 0) {
+      return currentValue > 0 ? 100 : 0; // 100% growth if previous was 0
+    }
+    return ((currentValue - previousValue) / previousValue) * 100;
+  }
+
+  /**
+   * Calculate engagement rate based on views and interactions
+   */
+  calculateEngagementMetrics(contentStats) {
+    const metrics = {
+      totalEngagements: 0,
+      conversionRate: 0,
+      avgViewsPerContent: 0,
+      avgRevenuePerContent: 0,
+    };
+
+    if (contentStats.length === 0) {
+      return metrics;
+    }
+
+    let totalViews = 0;
+    let totalRevenue = 0;
+    let totalPurchases = 0;
+
+    for (const content of contentStats) {
+      totalViews += content.views || 0;
+      totalRevenue += content.revenue || 0;
+      totalPurchases += content.purchases || 0;
+    }
+
+    metrics.totalEngagements = totalPurchases;
+    metrics.conversionRate = totalViews > 0 ? (totalPurchases / totalViews) * 100 : 0;
+    metrics.avgViewsPerContent = totalViews / contentStats.length;
+    metrics.avgRevenuePerContent = totalRevenue / contentStats.length;
+
+    return metrics;
+  }
 }
 
 module.exports = new AnalyticsService();
