@@ -72,6 +72,7 @@ function requireRole(...allowedRoles) {
 
 /**
  * Middleware to require admin role
+ * Only allows users with 'admin' role to proceed
  */
 function requireAdmin(req, res, next) {
   if (!req.user) {
