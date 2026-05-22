@@ -548,6 +548,7 @@ module.exports = {
   validateRefundEligibility,
   initiateRefund,
   initiateSubscriptionRefund,
+  triggerOnChainRefund,
   approveRefund,
   completeRefund,
   rejectRefund,
