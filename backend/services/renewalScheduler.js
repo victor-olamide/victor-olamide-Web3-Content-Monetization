@@ -3,7 +3,7 @@ const {
   getSubscriptionsDueForRenewal,
   getExpiredSubscriptionsGraceEnded,
   applyGracePeriod,
-  initiateRenewal
+  processAutomaticRenewal
 } = require('./renewalService');
 const Subscription = require('../models/Subscription');
 
@@ -19,13 +19,14 @@ let isRunning = false;
  * Initialize the renewal scheduler
  * @param {number} intervalMs - Interval in milliseconds (default: 3600000 = 1 hour)
  */
-function initializeRenewalScheduler(intervalMs = 3600000) {
+function initializeRenewalScheduler(intervalMs = null) {
   if (schedulerInstance) {
     logger.warn('Renewal scheduler already initialized');
     return;
   }
 
-  console.log(`Initializing renewal scheduler with interval: ${intervalMs}ms`);
+  const effectiveIntervalMs = intervalMs || parseInt(process.env.RENEWAL_SCHEDULER_INTERVAL_MS, 10) || 86400000;
+  logger.info('Initializing renewal scheduler', { intervalMs: effectiveIntervalMs });
   
   // Run immediately on startup (with delay to ensure DB connection)
   const timeoutId = setTimeout(async () => {
@@ -33,10 +34,10 @@ function initializeRenewalScheduler(intervalMs = 3600000) {
   }, 5000);
   initialTimeout = timeoutId;
 
-  // Schedule recurring processing
+  // Schedule recurring processing daily by default
   schedulerInstance = setInterval(async () => {
     await processRenewals();
-  }, intervalMs);
+  }, effectiveIntervalMs);
 
   isRunning = true;
   logger.info('Renewal scheduler initialized');
@@ -108,7 +109,7 @@ async function processSubscriptionRenewals() {
     console.log(`Processing ${subscriptions.length} subscriptions due for renewal`);
 
     const results = {
-      initiated: 0,
+      processed: 0,
       failed: 0,
       errors: []
     };
@@ -120,19 +121,17 @@ async function processSubscriptionRenewals() {
           continue;
         }
 
-        // Initiate renewal
-        const result = await initiateRenewal(subscription._id, 'automatic');
-        
+        const result = await processAutomaticRenewal(subscription);
         if (result.success) {
-          results.initiated++;
-          console.log(`Initiated renewal for subscription ${subscription._id}`);
+          results.processed++;
+          console.log(`Automatically renewed subscription ${subscription._id} with tx ${result.transactionId}`);
         } else {
           results.failed++;
           results.errors.push({
             subscriptionId: subscription._id,
             error: result.message
           });
-          console.error(`Failed to initiate renewal for subscription ${subscription._id}:`, result.message);
+          console.error(`Failed to automatically renew subscription ${subscription._id}:`, result.message);
         }
       } catch (error) {
         results.failed++;
@@ -144,7 +143,7 @@ async function processSubscriptionRenewals() {
       }
     }
 
-    console.log(`Renewal processing results: ${results.initiated} initiated, ${results.failed} failed`);
+    console.log(`Automatic renewal processing results: ${results.processed} processed, ${results.failed} failed`);
   } catch (error) {
     logger.error('Error processing renewal subscriptions', { err: error });
   }
