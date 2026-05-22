@@ -3,6 +3,152 @@ const { logAccess } = require('../services/accessLogger');
 const logger = require('../utils/logger');
 
 /**
+ * Middleware to enforce role-based access control
+ * Requires user to be authenticated (req.user must exist)
+ */
+function requireRole(...allowedRoles) {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+    }
+
+    if (!allowedRoles.includes(req.user.role)) {
+      logger.warn('Access denied: Insufficient role', {
+        userId: req.user._id,
+        userRole: req.user.role,
+        requiredRoles: allowedRoles
+      });
+      return res.status(403).json({
+        success: false,
+        message: `Access denied. Required role: ${allowedRoles.join(' or ')}`
+      });
+    }
+
+    logger.info('Role-based access granted', {
+      userId: req.user._id,
+      role: req.user.role,
+      allowedRoles
+    });
+    next();
+  };
+}
+
+/**
+ * Middleware to enforce role-based access control
+ * Requires user to be authenticated (req.user must exist)
+ */
+function requireRole(...allowedRoles) {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+    }
+
+    if (!allowedRoles.includes(req.user.role)) {
+      logger.warn('Access denied: Insufficient role', {
+        userId: req.user._id,
+        userRole: req.user.role,
+        requiredRoles: allowedRoles
+      });
+      return res.status(403).json({
+        success: false,
+        message: `Access denied. Required role: ${allowedRoles.join(' or ')}`
+      });
+    }
+
+    logger.info('Role-based access granted', {
+      userId: req.user._id,
+      role: req.user.role,
+      allowedRoles
+    });
+    next();
+  };
+}
+
+/**
+ * Middleware to require admin role
+ */
+function requireAdmin(req, res, next) {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: 'Authentication required'
+    });
+  }
+
+  if (req.user.role !== 'admin') {
+    logger.warn('Admin access denied', {
+      userId: req.user._id,
+      role: req.user.role
+    });
+    return res.status(403).json({
+      success: false,
+      message: 'Admin access required'
+    });
+  }
+
+  logger.info('Admin access granted', { userId: req.user._id });
+  next();
+}
+
+/**
+ * Middleware to require creator role
+ */
+function requireCreator(req, res, next) {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: 'Authentication required'
+    });
+  }
+
+  if (req.user.role !== 'creator') {
+    logger.warn('Creator access denied', {
+      userId: req.user._id,
+      role: req.user.role
+    });
+    return res.status(403).json({
+      success: false,
+      message: 'Creator access required'
+    });
+  }
+
+  logger.info('Creator access granted', { userId: req.user._id });
+  next();
+}
+
+/**
+ * Middleware to require subscriber role
+ */
+function requireSubscriber(req, res, next) {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: 'Authentication required'
+    });
+  }
+
+  if (req.user.role !== 'subscriber') {
+    logger.warn('Subscriber access denied', {
+      userId: req.user._id,
+      role: req.user.role
+    });
+    return res.status(403).json({
+      success: false,
+      message: 'Subscriber access required'
+    });
+  }
+
+  logger.info('Subscriber access granted', { userId: req.user._id });
+  next();
+}
+
+/**
  * Middleware to verify access before serving content
  */
 async function verifyContentAccess(req, res, next) {
@@ -79,5 +225,9 @@ function rateLimitMiddleware(req, res, next) {
 
 module.exports = {
   verifyContentAccess,
-  rateLimitMiddleware
+  rateLimitMiddleware,
+  requireRole,
+  requireAdmin,
+  requireCreator,
+  requireSubscriber
 };
