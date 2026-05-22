@@ -1,0 +1,129 @@
+{
+  "timestamp": "2026-04-24T03:01:49.758Z",
+  "testType": "concurrent-users-load-test",
+  "results": {
+    "artillery": {
+      "timestamp": "2026-04-24T03:01:49.764Z",
+      "duration": 780000,
+      "scenariosCreated": 1500,
+      "scenariosCompleted": 1475,
+      "requestsCompleted": 8850,
+      "latency": {
+        "min": 45.2,
+        "max": 2340.8,
+        "median": 156.7,
+        "p95": 892.3,
+        "p99": 1456.9
+      },
+      "rps": {
+        "mean": 18.95,
+        "count": 14750
+      },
+      "codes": {
+        "200": 8234,
+        "201": 412,
+        "400": 156,
+        "401": 23,
+        "500": 25
+      },
+      "errors": [
+        {
+          "name": "ECONNRESET",
+          "count": 12
+        },
+        {
+          "name": "ETIMEDOUT",
+          "count": 8
+        }
+      ]
+    },
+    "locust": {
+      "timestamp": "2026-04-24T03:01:49.768Z",
+      "metrics": {
+        "totalRequests": 0,
+        "totalFailures": 0,
+        "avgResponseTime": 0,
+        "minResponseTime": 0,
+        "maxResponseTime": 0,
+        "requestsPerSecond": 0
+      },
+      "rawData": [
+        {
+          "# Locust Load Test Results": "# Test: Concurrent Users Test"
+        },
+        {
+          "# Locust Load Test Results": "# Users: 50"
+        },
+        {
+          "# Locust Load Test Results": "# Timestamp: 2026-04-24T03:01:49.741Z"
+        },
+        {
+          "# Locust Load Test Results": "Type"
+        },
+        {
+          "# Locust Load Test Results": "GET"
+        },
+        {
+          "# Locust Load Test Results": "GET"
+        },
+        {
+          "# Locust Load Test Results": "GET"
+        },
+        {
+          "# Locust Load Test Results": "POST"
+        },
+        {
+          "# Locust Load Test Results": "GET"
+        },
+        {
+          "# Locust Load Test Results": "POST"
+        },
+        {
+          "# Locust Load Test Results": "# Summary"
+        },
+        {
+          "# Locust Load Test Results": "# Total Requests: 355"
+        },
+        {
+          "# Locust Load Test Results": "# Total Failures: 3"
+        },
+        {
+          "# Locust Load Test Results": "# Average Response Time: 267ms"
+        },
+        {
+          "# Locust Load Test Results": "# Requests per Second: 32.1"
+        },
+        {
+          "# Locust Load Test Results": "# Error Rate: 0.94%"
+        }
+      ]
+    }
+  },
+  "baselines": {
+    "created": "2026-04-24T03:01:49.748Z",
+    "metrics": {
+      "avgLatency": 0,
+      "p95Latency": 892.3,
+      "p99Latency": 1456.9,
+      "maxLatency": 2340.8,
+      "errorRate": 3.050847457627119,
+      "throughput": 18.95
+    },
+    "history": []
+  },
+  "analysis": {
+    "overall": "failed",
+    "recommendations": [
+      "Performance regressions detected. Review and optimize."
+    ],
+    "regressions": [
+      {
+        "metric": "errors",
+        "current": 2,
+        "baseline": 0,
+        "change": "2 errors detected"
+      }
+    ],
+    "improvements": []
+  }
+}
