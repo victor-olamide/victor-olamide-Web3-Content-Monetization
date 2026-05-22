@@ -135,6 +135,8 @@ rateLimitStoreSchema.index({ key: 1, tier: 1 });
 rateLimitStoreSchema.index({ blockedUntil: 1 }, { expireAfterSeconds: 0 });
 rateLimitStoreSchema.index({ lastRequestAt: 1 });
 rateLimitStoreSchema.index({ createdAt: 1 }, { expireAfterSeconds: 86400 }); // Auto-cleanup after 24 hours
+rateLimitStoreSchema.index({ walletAddress: 1, tier: 1 }); // Role-based tier lookup by wallet
+rateLimitStoreSchema.index({ ipAddress: 1, tier: 1 }); // Role-based tier lookup by IP
 
 /**
  * Check if the current window has expired
