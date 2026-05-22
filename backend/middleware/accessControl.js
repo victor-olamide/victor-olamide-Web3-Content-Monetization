@@ -113,6 +113,7 @@ function requireSubscriber(req, res, next) {
 
   // Check if user has subscriber role
   if (req.user.role !== 'subscriber') {
+    // Log subscriber access denial
     logger.warn('Subscriber access denied', {
       userId: req.user._id,
       role: req.user.role
@@ -123,6 +124,7 @@ function requireSubscriber(req, res, next) {
     });
   }
 
+  // Log subscriber access grant
   logger.info('Subscriber access granted', { userId: req.user._id });
   next();
 }
