@@ -2,13 +2,15 @@ const express = require('express');
 const router = express.Router();
 const Refund = require('../models/Refund');
 const Purchase = require('../models/Purchase');
+const ProRataRefund = require('../models/ProRataRefund');
 const { 
   approveRefund, 
   completeRefund, 
   rejectRefund, 
   getRefundHistory,
   autoProcessRefundsForRemovedContent,
-  initiateSubscriptionRefund
+  initiateSubscriptionRefund,
+  triggerOnChainRefund
 } = require('../services/refundService');
 
 /**
