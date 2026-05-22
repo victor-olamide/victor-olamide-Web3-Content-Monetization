@@ -276,16 +276,24 @@ async function processAutomaticRenewal(subscription) {
       throw new Error(completionResult.message);
     }
 
-    notificationService.sendSubscriptionEmail(subscription.user, {
-      planName: subscription.tierName || `Tier ${subscription.tierId}`,
-      subscriptionId: subscription._id.toString(),
-      email: subscription.email
-    }).catch((emailError) => {
-      logger.warn('Failed to send subscription confirmation email', {
-        err: emailError.message,
-        subscriptionId: subscription._id
+    // Send confirmation email (non-blocking)
+    if (subscription.email) {
+      notificationService.sendSubscriptionEmail(subscription.user, {
+        planName: subscription.tierName || `Tier ${subscription.tierId}`,
+        subscriptionId: subscription._id.toString(),
+        email: subscription.email
+      }).catch((emailError) => {
+        logger.warn('Failed to send subscription confirmation email', {
+          err: emailError.message,
+          subscriptionId: subscription._id
+        });
       });
-    });
+    } else {
+      logger.warn('No email address found for subscription confirmation', {
+        subscriptionId: subscription._id,
+        userId: subscription.user
+      });
+    }
 
     return {
       success: true,
