@@ -180,6 +180,18 @@ function getRateLimitMessage(reason, tier) {
       daily_limit_exceeded: 'You have reached your daily limit. Please upgrade to increase your limit.',
       concurrent_limit_exceeded: 'Too many concurrent requests for free tier. Please wait.'
     },
+    subscriber: {
+      window_limit_exceeded: 'You have exceeded the subscriber tier request limit. Consider upgrading to creator for higher limits.',
+      burst_limit_exceeded: 'Requests are too frequent for subscriber tier. Please slow down.',
+      daily_limit_exceeded: 'You have reached your daily subscriber limit. Consider upgrading.',
+      concurrent_limit_exceeded: 'Too many concurrent requests for subscriber tier. Please wait.'
+    },
+    creator: {
+      window_limit_exceeded: 'You have exceeded the creator tier request limit. Contact support for higher limits.',
+      burst_limit_exceeded: 'Requests are too frequent for creator tier. Please optimize your request pattern.',
+      daily_limit_exceeded: 'You have reached your daily creator limit. Contact support if you need more.',
+      concurrent_limit_exceeded: 'Too many concurrent requests for creator tier. Please wait.'
+    },
     basic: {
       window_limit_exceeded: 'You have exceeded your basic tier request limit. Consider upgrading to premium.',
       burst_limit_exceeded: 'Requests are too frequent. Please slow down.',
