@@ -14,6 +14,44 @@ const {
 } = require('../services/refundService');
 
 /**
+ * GET /api/refunds/pro-rata/:id
+ * Get a specific ProRataRefund record by ID
+ */
+router.get('/pro-rata/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const refund = await ProRataRefund.findById(id);
+
+    if (!refund) {
+      return res.status(404).json({ message: 'ProRataRefund not found' });
+    }
+
+    res.json(refund);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch pro-rata refund', error: err.message });
+  }
+});
+
+/**
+ * GET /api/refunds/pro-rata/subscription/:subscriptionId
+ * Get ProRataRefund for a specific subscription
+ */
+router.get('/pro-rata/subscription/:subscriptionId', async (req, res) => {
+  try {
+    const { subscriptionId } = req.params;
+    const refund = await ProRataRefund.findOne({ subscriptionId });
+
+    if (!refund) {
+      return res.status(404).json({ message: 'No pro-rata refund found for this subscription' });
+    }
+
+    res.json(refund);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch pro-rata refund', error: err.message });
+  }
+});
+
+/**
  * GET /api/refunds/user/:address
  * Get refund history for a specific user
  */
