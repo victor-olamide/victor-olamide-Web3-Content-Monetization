@@ -501,6 +501,34 @@ const getRefundStatistics = async (filters = {}) => {
   }
 };
 
+/**
+ * Mark a pro-rata refund as processing
+ * @param {string} refundId - Pro-rata refund ID
+ * @returns {Promise<Object>} Result
+ */
+const markRefundProcessing = async (refundId) => {
+  try {
+    const refund = await ProRataRefund.findById(refundId);
+    if (!refund) {
+      return { success: false, message: 'Refund not found' };
+    }
+
+    if (!['approved', 'pending'].includes(refund.refundStatus)) {
+      return {
+        success: false,
+        message: `Refund cannot be set to processing. Current status: ${refund.refundStatus}`
+      };
+    }
+
+    refund.refundStatus = 'processing';
+    await refund.save();
+
+    return { success: true, message: 'Refund marked as processing', refund };
+  } catch (error) {
+    return { success: false, message: 'Failed to update refund status', error: error.message };
+  }
+};
+
 module.exports = {
   calculateProRataRefund,
   checkRefundEligibility,
@@ -509,6 +537,7 @@ module.exports = {
   approveProRataRefund,
   completeProRataRefund,
   rejectProRataRefund,
+  markRefundProcessing,
   getPendingRefundsForCreator,
   getUserRefunds,
   getRefundStatistics
