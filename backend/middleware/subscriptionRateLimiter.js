@@ -80,6 +80,10 @@ function createSubscriptionRateLimiter(options = {}) {
       if (!result.allowed) {
         await releaseRequest(key);
 
+        // Always set Retry-After header on 429 per RFC 6585
+        const retryAfter = result.retryAfter || 60;
+        res.set('Retry-After', String(retryAfter));
+
         return res.status(DEFAULTS.statusCode).json({
           error: 'Rate limit exceeded',
           message: getRateLimitMessage(result.reason, tier),
@@ -90,7 +94,7 @@ function createSubscriptionRateLimiter(options = {}) {
             expiryDate: req.subscription.expiryDate,
             renewalStatus: req.subscription.renewalStatus
           } : undefined,
-          retryAfter: result.retryAfter,
+          retryAfter,
           limits: {
             maxRequests: result.limits.maxRequests,
             windowMs: result.limits.windowMs,
