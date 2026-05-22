@@ -3,6 +3,7 @@ const router = express.Router();
 const Refund = require('../models/Refund');
 const Purchase = require('../models/Purchase');
 const ProRataRefund = require('../models/ProRataRefund');
+const { validateRefundRequest, validateOnChainTrigger } = require('../middleware/refundValidation');
 const { 
   approveRefund, 
   completeRefund, 
@@ -151,7 +152,7 @@ router.get('/:id', async (req, res) => {
  * Triggers on-chain refund automatically when refundMethod is 'blockchain'
  * and PLATFORM_PRIVATE_KEY env var is set.
  */
-router.post('/', async (req, res) => {
+router.post('/', validateRefundRequest, async (req, res) => {
   try {
     const {
       subscriptionId,
@@ -213,7 +214,7 @@ router.post('/', async (req, res) => {
  * POST /api/refunds/:id/trigger-onchain
  * Manually trigger on-chain refund for an approved ProRataRefund
  */
-router.post('/:id/trigger-onchain', async (req, res) => {
+router.post('/:id/trigger-onchain', validateOnChainTrigger, async (req, res) => {
   try {
     const { id } = req.params;
     const { subscriberPrincipal, creatorPrincipal, tierId } = req.body;
