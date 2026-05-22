@@ -214,7 +214,7 @@ router.post('/upload-and-register', (req, res) => {
 
         const contentEncryptionRecord = new ContentEncryption({
           contentId: parseInt(contentId),
-          userId: user._id,
+          // userId: user._id, // Global record, not per user
           contentType: contentType || 'file',
           encryptedUrl: wrappedKey.encryptedKey,
           encryptionIv: wrappedKey.iv,
