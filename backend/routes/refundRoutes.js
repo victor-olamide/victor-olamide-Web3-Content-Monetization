@@ -109,7 +109,9 @@ router.get('/:id', async (req, res) => {
 
 /**
  * POST /api/refunds
- * Cancel subscription and initiate pro-rata refund processing
+ * Cancel subscription and initiate pro-rata refund processing.
+ * Triggers on-chain refund automatically when refundMethod is 'blockchain'
+ * and PLATFORM_PRIVATE_KEY env var is set.
  */
 router.post('/', async (req, res) => {
   try {
@@ -118,7 +120,10 @@ router.post('/', async (req, res) => {
       reason = 'User requested cancellation',
       cancellationDate,
       refundMethod = 'blockchain',
-      initiatedBy = 'user'
+      initiatedBy = 'user',
+      subscriberPrincipal,
+      creatorPrincipal,
+      tierId
     } = req.body;
 
     if (!subscriptionId) {
@@ -136,7 +141,31 @@ router.post('/', async (req, res) => {
       return res.status(400).json(result);
     }
 
-    res.status(201).json(result);
+    // Trigger on-chain refund when applicable
+    let onChainResult = null;
+    const proRataRefund = result.refund && result.refund._id ? result.refund : null;
+    const senderKey = process.env.PLATFORM_PRIVATE_KEY;
+
+    if (
+      proRataRefund &&
+      refundMethod === 'blockchain' &&
+      senderKey &&
+      subscriberPrincipal &&
+      creatorPrincipal &&
+      tierId !== undefined
+    ) {
+      onChainResult = await triggerOnChainRefund(proRataRefund._id.toString(), {
+        subscriberPrincipal,
+        creatorPrincipal,
+        tierId: Number(tierId),
+        senderKey
+      });
+    }
+
+    res.status(201).json({
+      ...result,
+      onChain: onChainResult
+    });
   } catch (err) {
     res.status(500).json({ message: 'Failed to initiate subscription refund', error: err.message });
   }
