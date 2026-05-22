@@ -162,6 +162,27 @@ function createLenientRateLimiter() {
 }
 
 /**
+ * Free-tier rate limiter - forces free tier limits regardless of user role
+ */
+function createFreeTierRateLimiter() {
+  return createTieredRateLimiter({ tierOverride: 'free' });
+}
+
+/**
+ * Subscriber-tier rate limiter - forces subscriber tier limits
+ */
+function createSubscriberRateLimiter() {
+  return createTieredRateLimiter({ tierOverride: 'subscriber' });
+}
+
+/**
+ * Creator-tier rate limiter - forces creator tier limits
+ */
+function createCreatorRateLimiter() {
+  return createTieredRateLimiter({ tierOverride: 'creator' });
+}
+
+/**
  * API key rate limiter - uses API key for identification
  * @param {Object} options - Options
  * @returns {Function} Express middleware
@@ -208,6 +229,9 @@ module.exports = {
   createTieredRateLimiter,
   createStrictRateLimiter,
   createLenientRateLimiter,
+  createFreeTierRateLimiter,
+  createSubscriberRateLimiter,
+  createCreatorRateLimiter,
   createApiKeyRateLimiter,
   setRateLimitHeaders,
   getRateLimitMessage
