@@ -172,6 +172,43 @@ router.post('/', async (req, res) => {
 });
 
 /**
+ * POST /api/refunds/:id/trigger-onchain
+ * Manually trigger on-chain refund for an approved ProRataRefund
+ */
+router.post('/:id/trigger-onchain', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { subscriberPrincipal, creatorPrincipal, tierId } = req.body;
+    const senderKey = process.env.PLATFORM_PRIVATE_KEY;
+
+    if (!subscriberPrincipal || !creatorPrincipal || tierId === undefined) {
+      return res.status(400).json({
+        message: 'subscriberPrincipal, creatorPrincipal, and tierId are required'
+      });
+    }
+
+    if (!senderKey) {
+      return res.status(500).json({ message: 'Platform private key not configured' });
+    }
+
+    const result = await triggerOnChainRefund(id, {
+      subscriberPrincipal,
+      creatorPrincipal,
+      tierId: Number(tierId),
+      senderKey
+    });
+
+    if (!result.success) {
+      return res.status(400).json({ message: result.message });
+    }
+
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to trigger on-chain refund', error: err.message });
+  }
+});
+
+/**
  * POST /api/refunds/:id/approve
  * Approve a pending refund (creator or admin only)
  */
