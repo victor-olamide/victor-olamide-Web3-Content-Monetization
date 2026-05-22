@@ -8,9 +8,12 @@ const ContentPreview = require('../models/ContentPreview');
 const UserPreference = require('../models/UserPreference');
 const ViewingHistory = require('../models/ViewingHistory');
 const { scoreContentAgainstPrefs } = require('../utils/scoring');
+const logger = require('../utils/logger');
 
 async function recommendForUser(userId, limit = 10) {
   try {
+    logger.info(`Generating recommendations for user ${userId}, limit: ${limit}`);
+
     // Get user preferences
     const prefs = await UserPreference.findOne({ userId }).lean() || {};
 
@@ -19,6 +22,8 @@ async function recommendForUser(userId, limit = 10) {
       .sort({ viewedAt: -1 })
       .limit(100)
       .lean();
+
+    logger.debug(`Found ${viewingHistory.length} viewing history items for user ${userId}`);
 
     // Fetch a pool of candidate content (most recent, limit multiplier)
     const poolSize = Math.max(limit * 5, 50);
@@ -37,12 +42,15 @@ async function recommendForUser(userId, limit = 10) {
     scored.sort((a, b) => b.score - a.score);
 
     // Return top recommendations
-    return scored.slice(0, limit).map(s => ({
+    const recommendations = scored.slice(0, limit).map(s => ({
       ...s.content,
       recommendationScore: s.score
     }));
+
+    logger.info(`Generated ${recommendations.length} recommendations for user ${userId}`);
+    return recommendations;
   } catch (error) {
-    console.error('Error generating recommendations:', error);
+    logger.error(`Error generating recommendations for user ${userId}:`, error);
     // Fallback to basic recommendations
     return await getFallbackRecommendations(limit);
   }
