@@ -1,4 +1,5 @@
 const encryptionService = require('../services/encryptionService');
+const { shouldEncryptContent } = require('../utils/contentUtils');
 
 describe('Encryption Service', () => {
   test('encryptBuffer and decryptBuffer should round-trip correctly', () => {
@@ -37,5 +38,12 @@ describe('Encryption Service', () => {
     );
 
     expect(unwrapped.toString('hex')).toBe(contentKey.toString('hex'));
+  });
+
+  test('shouldEncryptContent should return true for premium content', () => {
+    expect(shouldEncryptContent(10)).toBe(true); // price > 0
+    expect(shouldEncryptContent(0)).toBe(false); // price = 0
+    expect(shouldEncryptContent(5, true)).toBe(true); // explicit encrypt
+    expect(shouldEncryptContent(0, true)).toBe(true); // explicit encrypt
   });
 });
