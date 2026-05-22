@@ -64,11 +64,15 @@ function createTieredRateLimiter(options = {}) {
         // Release the concurrent request counter since we're rejecting
         await releaseRequest(key);
 
+        // Always set Retry-After header on 429 per RFC 6585
+        const retryAfter = result.retryAfter || 60;
+        res.set(RATE_LIMIT_HEADERS.RETRY_AFTER, String(retryAfter));
+
         return res.status(DEFAULTS.statusCode).json({
           error: 'Rate limit exceeded',
           message: getRateLimitMessage(result.reason),
           tier,
-          retryAfter: result.retryAfter,
+          retryAfter,
           limits: {
             maxRequests: result.limits.maxRequests,
             windowMs: result.limits.windowMs,
