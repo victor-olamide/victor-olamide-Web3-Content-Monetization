@@ -1,6 +1,6 @@
 # Frontend - Stacks Content Monetization
 
-This is the Next.js frontend for the Stacks Content Monetization platform.
+This is the Next.js frontend for the Stacks Content Monetization platform, deployed on Vercel.
 
 ## Deployment
 
@@ -35,3 +35,11 @@ npm run start
 ```bash
 npm run deploy
 ```
+
+## Verification
+
+After deployment, verify all pages load correctly:
+- Home page
+- Dashboard
+- Auth pages
+- Content pages
