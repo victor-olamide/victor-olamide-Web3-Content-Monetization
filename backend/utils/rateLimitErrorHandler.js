@@ -107,6 +107,20 @@ function getErrorMessage(reason, tier) {
       'concurrent_limit_exceeded': 'Too many concurrent requests for free tier. Please wait for current requests to complete.',
       'blocked': 'Your access has been temporarily blocked due to rate limit violations. Please wait before trying again.'
     },
+    subscriber: {
+      'window_limit_exceeded': 'You have exceeded the subscriber tier request limit. Consider upgrading to creator for higher limits.',
+      'burst_limit_exceeded': 'Your requests are too frequent for subscriber tier. Please slow down.',
+      'daily_limit_exceeded': 'You have reached your daily subscriber limit. Consider upgrading your subscription.',
+      'concurrent_limit_exceeded': 'Too many concurrent requests for subscriber tier. Please wait.',
+      'blocked': 'Your access has been temporarily blocked. Please wait before trying again.'
+    },
+    creator: {
+      'window_limit_exceeded': 'You have exceeded the creator tier request limit. Contact support if you need higher limits.',
+      'burst_limit_exceeded': 'Your requests are too frequent for creator tier. Please optimize your request pattern.',
+      'daily_limit_exceeded': 'You have reached your daily creator limit. Contact support if you need more.',
+      'concurrent_limit_exceeded': 'Too many concurrent requests for creator tier. Please wait or contact support.',
+      'blocked': 'Your access has been temporarily blocked. Please contact support.'
+    },
     basic: {
       'window_limit_exceeded': 'You have exceeded your basic tier request limit. Consider upgrading to premium for higher limits.',
       'burst_limit_exceeded': 'Your requests are too frequent. Please slow down and try again.',
