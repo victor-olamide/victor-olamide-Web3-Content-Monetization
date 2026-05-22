@@ -8,7 +8,7 @@ const mongoose = require('mongoose');
 const contentEncryptionSchema = new mongoose.Schema({
   // References
   contentId: { type: Number, required: true, indexed: true },
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, indexed: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // Optional for global content encryption
 
   // Content metadata
   contentType: { type: String, enum: ['video', 'article', 'image', 'music', 'file'], required: true },
