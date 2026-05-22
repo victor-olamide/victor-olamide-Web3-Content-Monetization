@@ -1,3 +1,9 @@
+/**
+ * Recommendation Service
+ * Provides personalized content recommendations based on user preferences and viewing history
+ * Uses collaborative filtering and content-based scoring
+ */
+
 const ContentPreview = require('../models/ContentPreview');
 const UserPreference = require('../models/UserPreference');
 const ViewingHistory = require('../models/ViewingHistory');
