@@ -46,6 +46,7 @@ exports.protect = async (req, res, next) => {
     next();
   } catch (err) {
     // Handle JWT verification errors
+    logger.warn('Authentication failed: Invalid token', { error: err.message });
     return res.status(401).json({
       success: false,
       message: 'Not authorized to access this route'
