@@ -30,6 +30,8 @@ const { TIER_LEVELS } = require('../config/rateLimitConfig');
 describe('Subscription Tier Mapping', () => {
   it('should map subscription tier names to rate limit tiers', () => {
     assert.strictEqual(mapSubscriptionToRateLimit('free'), TIER_LEVELS.FREE);
+    assert.strictEqual(mapSubscriptionToRateLimit('subscriber'), TIER_LEVELS.SUBSCRIBER);
+    assert.strictEqual(mapSubscriptionToRateLimit('creator'), TIER_LEVELS.CREATOR);
     assert.strictEqual(mapSubscriptionToRateLimit('basic'), TIER_LEVELS.BASIC);
     assert.strictEqual(mapSubscriptionToRateLimit('premium'), TIER_LEVELS.PREMIUM);
     assert.strictEqual(mapSubscriptionToRateLimit('enterprise'), TIER_LEVELS.ENTERPRISE);
@@ -47,8 +49,10 @@ describe('Subscription Tier Mapping', () => {
     assert.strictEqual(mapSubscriptionToRateLimit(null), TIER_LEVELS.FREE);
   });
 
-  it('should validate subscription tier names', () => {
+  it('should validate subscription tier names including subscriber and creator', () => {
     assert.ok(isValidSubscriptionTierName('free'));
+    assert.ok(isValidSubscriptionTierName('subscriber'));
+    assert.ok(isValidSubscriptionTierName('creator'));
     assert.ok(isValidSubscriptionTierName('basic'));
     assert.ok(isValidSubscriptionTierName('premium'));
     assert.ok(!isValidSubscriptionTierName('invalid'));
@@ -195,14 +199,12 @@ describe('Error Handling', () => {
 
 describe('Integration Tests', () => {
   it('should handle complete tier upgrade flow', () => {
-    // Simulate upgrade from free to premium
     const oldTier = mapSubscriptionToRateLimit('free');
     const newTier = mapSubscriptionToRateLimit('premium');
     
     const comparison = compareTierLevels(oldTier, newTier);
     assert.ok(comparison.isUpgrade);
 
-    // Validate tier change
     const tierChangeData = {
       userId: 'user123',
       oldSubscriptionTier: 'free',
@@ -217,7 +219,6 @@ describe('Integration Tests', () => {
   });
 
   it('should handle complete tier downgrade flow', () => {
-    // Simulate downgrade from premium to basic
     const oldTier = mapSubscriptionToRateLimit('premium');
     const newTier = mapSubscriptionToRateLimit('basic');
     
@@ -225,7 +226,6 @@ describe('Integration Tests', () => {
     assert.ok(comparison.isDowngrade);
     assert.strictEqual(comparison.tierDifference, 1);
 
-    // Validate tier change
     const tierChangeData = {
       userId: 'user456',
       oldSubscriptionTier: 'premium',
@@ -237,6 +237,59 @@ describe('Integration Tests', () => {
 
     const validation = validateTierChangeData(tierChangeData);
     assert.ok(validation.valid);
+  });
+
+  it('should handle subscriber role tier assignment', () => {
+    const tier = mapSubscriptionToRateLimit('subscriber');
+    assert.strictEqual(tier, TIER_LEVELS.SUBSCRIBER);
+    const comparison = compareTierLevels(TIER_LEVELS.FREE, tier);
+    assert.ok(comparison.isUpgrade);
+  });
+
+  it('should handle creator role tier assignment', () => {
+    const tier = mapSubscriptionToRateLimit('creator');
+    assert.strictEqual(tier, TIER_LEVELS.CREATOR);
+    const comparison = compareTierLevels(TIER_LEVELS.SUBSCRIBER, tier);
+    assert.ok(comparison.isUpgrade);
+  });
+
+  it('creator tier should have higher limits than subscriber tier', () => {
+    const { RATE_LIMIT_TIERS } = require('../config/rateLimitConfig');
+    const creatorLimits = RATE_LIMIT_TIERS[TIER_LEVELS.CREATOR];
+    const subscriberLimits = RATE_LIMIT_TIERS[TIER_LEVELS.SUBSCRIBER];
+    assert.ok(creatorLimits.maxRequests > subscriberLimits.maxRequests);
+    assert.ok(creatorLimits.dailyLimit > subscriberLimits.dailyLimit);
+    assert.ok(creatorLimits.concurrentLimit > subscriberLimits.concurrentLimit);
+  });
+
+  it('subscriber tier should have higher limits than free tier', () => {
+    const { RATE_LIMIT_TIERS } = require('../config/rateLimitConfig');
+    const subscriberLimits = RATE_LIMIT_TIERS[TIER_LEVELS.SUBSCRIBER];
+    const freeLimits = RATE_LIMIT_TIERS[TIER_LEVELS.FREE];
+    assert.ok(subscriberLimits.maxRequests > freeLimits.maxRequests);
+    assert.ok(subscriberLimits.dailyLimit > freeLimits.dailyLimit);
+  });
+
+  it('createRateLimitedResponse should include retryAfter in response', () => {
+    const response = createRateLimitedResponse({
+      reason: 'window_limit_exceeded',
+      tier: 'subscriber',
+      retryAfter: 120,
+      limits: { maxRequests: 300, windowMs: 900000, dailyLimit: 3000 }
+    });
+    assert.strictEqual(response.statusCode, 429);
+    assert.strictEqual(response.details.retryAfter, 120);
+    assert.ok(response.details.reason === 'window_limit_exceeded');
+  });
+
+  it('createRateLimitedResponse should use creator tier message', () => {
+    const response = createRateLimitedResponse({
+      reason: 'daily_limit_exceeded',
+      tier: 'creator',
+      retryAfter: 3600,
+      limits: { maxRequests: 1000, windowMs: 900000, dailyLimit: 10000 }
+    });
+    assert.ok(response.message.toLowerCase().includes('creator') || response.message.toLowerCase().includes('support'));
   });
 });
 
