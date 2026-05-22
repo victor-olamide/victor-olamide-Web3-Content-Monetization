@@ -99,11 +99,11 @@ const RATE_LIMIT_TIERS = {
  */
 const ENDPOINT_OVERRIDES = {
   '/api/content': {
-    multiplier: 1.5, // 50% more requests for content endpoints
+    multiplier: 1.5,
     description: 'Content endpoints get higher limits'
   },
   '/api/purchases': {
-    multiplier: 0.5, // 50% fewer requests for purchase endpoints (more expensive operations)
+    multiplier: 0.5,
     description: 'Purchase endpoints have stricter limits'
   },
   '/api/subscriptions': {
@@ -121,6 +121,14 @@ const ENDPOINT_OVERRIDES = {
   '/api/preview': {
     multiplier: 2.0,
     description: 'Preview endpoints get higher limits'
+  },
+  '/api/creators': {
+    multiplier: 1.5,
+    description: 'Creator management endpoints get higher limits'
+  },
+  '/api/refunds': {
+    multiplier: 0.5,
+    description: 'Refund endpoints have stricter limits'
   }
 };
 
