@@ -217,6 +217,9 @@ async function runAllTests() {
     // Calculate and store performance baselines
     await calculateBaselines();
     
+    // Store results as CI artifacts
+    storeArtifacts();
+    
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
     console.log(`\n${'='.repeat(80)}`);
     console.log('ALL TESTS COMPLETED SUCCESSFULLY');
