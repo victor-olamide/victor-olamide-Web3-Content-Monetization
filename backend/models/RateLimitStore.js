@@ -21,7 +21,7 @@ const rateLimitStoreSchema = new mongoose.Schema({
   tier: {
     type: String,
     required: true,
-    enum: ['free', 'basic', 'premium', 'enterprise', 'admin'],
+    enum: ['free', 'subscriber', 'creator', 'basic', 'premium', 'enterprise', 'admin'],
     default: 'free',
     description: 'User subscription tier'
   },
