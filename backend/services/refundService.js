@@ -5,6 +5,7 @@ const Content = require('../models/Content');
 const Subscription = require('../models/Subscription');
 const ProRataRefund = require('../models/ProRataRefund');
 const { calculateProRataRefund, checkRefundEligibility: checkSubscriptionRefundEligibility } = require('./proRataRefundService');
+const { triggerSubscriptionRefund } = require('./contractService');
 
 /**
  * Validate refund eligibility parameters
