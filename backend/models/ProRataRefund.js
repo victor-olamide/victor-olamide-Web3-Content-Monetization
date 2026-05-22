@@ -30,6 +30,9 @@ const proRataRefundSchema = new mongoose.Schema({
   transactionId: { type: String, default: null }, // Blockchain tx ID for refund
   blockHeight: { type: Number, default: null }, // Block where transaction was confirmed
   blockTimestamp: { type: Date, default: null }, // Timestamp of block
+  onChainTriggered: { type: Boolean, default: false }, // Whether on-chain refund was triggered
+  onChainTriggerAttempts: { type: Number, default: 0 }, // Number of trigger attempts
+  onChainTriggerError: { type: String, default: null }, // Last trigger error if any
   
   // Processing details
   processedBy: { type: String, default: null }, // Admin ID who approved/processed
