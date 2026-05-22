@@ -9,6 +9,8 @@
 
 const TIER_LEVELS = {
   FREE: 'free',
+  SUBSCRIBER: 'subscriber',
+  CREATOR: 'creator',
   BASIC: 'basic',
   PREMIUM: 'premium',
   ENTERPRISE: 'enterprise',
@@ -34,6 +36,24 @@ const RATE_LIMIT_TIERS = {
     dailyLimit: 1000,
     concurrentLimit: 5,
     description: 'Free tier - basic rate limits'
+  },
+  [TIER_LEVELS.SUBSCRIBER]: {
+    maxRequests: 300,
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    burstLimit: 40,
+    burstWindowMs: 60 * 1000, // 1 minute
+    dailyLimit: 3000,
+    concurrentLimit: 8,
+    description: 'Subscriber tier - elevated limits for paying subscribers'
+  },
+  [TIER_LEVELS.CREATOR]: {
+    maxRequests: 1000,
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    burstLimit: 100,
+    burstWindowMs: 60 * 1000, // 1 minute
+    dailyLimit: 10000,
+    concurrentLimit: 20,
+    description: 'Creator tier - high limits for content creators'
   },
   [TIER_LEVELS.BASIC]: {
     maxRequests: 500,
