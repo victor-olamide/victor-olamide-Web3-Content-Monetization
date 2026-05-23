@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { ethers } = require('ethers');
 const WalletConnection = require('../models/WalletConnection');
 const WalletSession = require('../models/WalletSession');
 const logger = require('../utils/logger');
@@ -71,6 +72,20 @@ function verifyStacksSignature(message, signature, claimedPublicKey) {
 }
 
 /**
+ * Verify an EVM wallet signature.
+ * Returns true if the signature is valid for the given message and address.
+ */
+function verifyEVMSignature(message, signature, claimedAddress) {
+  try {
+    const msgHash = ethers.hashMessage(message);
+    const recoveredAddress = ethers.recoverAddress(msgHash, signature);
+    return recoveredAddress.toLowerCase() === claimedAddress.toLowerCase();
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Reconstruct the exact message that was presented to the user for signing
  */
 function buildSignMessage(nonce, timestamp) {
@@ -115,15 +130,19 @@ async function createConnectionRequest(network = 'mainnet') {
  * @param {string} nonce     - The nonce from createConnectionRequest (consumed after use)
  * Throws if the signature is invalid, the nonce is unknown, or the challenge is expired.
  */
-async function connectWallet(address, walletType, publicKey, signature, nonce, network = 'mainnet', metadata = {}) {
+async function connectWallet(userId, address, walletType, blockchain, publicKey, signature, nonce, network = 'mainnet', metadata = {}) {
   try {
     // Validate inputs
-    if (!address || !walletType || !publicKey) {
-      throw new Error('Missing required fields: address, walletType, publicKey');
+    if (!userId || !address || !walletType || !blockchain || !publicKey) {
+      throw new Error('Missing required fields: userId, address, walletType, blockchain, publicKey');
     }
 
-    if (!['hiro', 'xverse'].includes(walletType)) {
-      throw new Error('Invalid walletType. Must be "hiro" or "xverse"');
+    if (!['hiro', 'xverse', 'metamask', 'walletconnect', 'coinbase', 'trust'].includes(walletType)) {
+      throw new Error('Invalid walletType. Must be one of: hiro, xverse, metamask, walletconnect, coinbase, trust');
+    }
+
+    if (!['stacks', 'evm'].includes(blockchain)) {
+      throw new Error('Invalid blockchain. Must be "stacks" or "evm"');
     }
 
     if (!['mainnet', 'testnet', 'devnet'].includes(network)) {
@@ -156,10 +175,17 @@ async function connectWallet(address, walletType, publicKey, signature, nonce, n
     }
 
     const signedMessage = buildSignMessage(nonce, challenge.timestamp);
-    const isValid = verifyStacksSignature(signedMessage, signature, publicKey);
+    let isValid;
+    if (blockchain === 'stacks') {
+      isValid = verifyStacksSignature(signedMessage, signature, publicKey);
+    } else if (blockchain === 'evm') {
+      isValid = verifyEVMSignature(signedMessage, signature, address);
+    } else {
+      throw new Error('Unsupported blockchain for signature verification');
+    }
     if (!isValid) {
-      logger.warn('Wallet signature verification failed', { address, walletType, network });
-      throw new Error('Signature verification failed — signature does not match the provided public key');
+      logger.warn('Wallet signature verification failed', { address, walletType, blockchain, network });
+      throw new Error('Signature verification failed — signature does not match the provided address');
     }
 
     // Consume nonce: each challenge may only be used once
@@ -168,6 +194,7 @@ async function connectWallet(address, walletType, publicKey, signature, nonce, n
 
     // Check if wallet already connected
     let walletConnection = await WalletConnection.findOne({
+      userId,
       address: address.toLowerCase(),
       walletType
     });
@@ -189,8 +216,10 @@ async function connectWallet(address, walletType, publicKey, signature, nonce, n
     } else {
       // Create new wallet connection
       walletConnection = new WalletConnection({
+        userId,
         address: address.toLowerCase(),
         walletType,
+        blockchain,
         publicKey,
         isConnected: true,
         connectedAt: new Date(),
@@ -302,11 +331,14 @@ async function verifySession(sessionId) {
 /**
  * Get wallet connection details
  */
-async function getWalletConnection(address, walletType = null) {
+async function getWalletConnection(address, walletType = null, userId = null) {
   try {
     let query = { address: address.toLowerCase() };
     if (walletType) {
       query.walletType = walletType;
+    }
+    if (userId) {
+      query.userId = userId;
     }
 
     const connection = await WalletConnection.findOne(query);
@@ -334,10 +366,10 @@ async function getWalletConnection(address, walletType = null) {
 /**
  * Get all wallets connected by an address
  */
-async function getConnectedWallets(address) {
+async function getConnectedWallets(userId) {
   try {
     const wallets = await WalletConnection.find({
-      address: address.toLowerCase(),
+      userId,
       isConnected: true
     });
 
@@ -356,9 +388,10 @@ async function getConnectedWallets(address) {
 /**
  * Disconnect a wallet
  */
-async function disconnectWallet(address, walletType, reason = 'User initiated disconnect') {
+async function disconnectWallet(userId, address, walletType, reason = 'User initiated disconnect') {
   try {
     const walletConnection = await WalletConnection.findOne({
+      userId,
       address: address.toLowerCase(),
       walletType
     });
@@ -503,6 +536,7 @@ module.exports = {
   cleanupExpiredSessions,
   updateWalletProfile,
   verifyStacksSignature,
+  verifyEVMSignature,
   buildSignMessage,
   hashSignMessage,
   getPendingChallengeCount,

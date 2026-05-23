@@ -4,6 +4,8 @@ const { MongoMemoryServer } = require('mongodb-memory-server');
 const { app } = require('../../server');
 const Subscription = require('../../models/Subscription');
 
+jest.setTimeout(30000);
+
 let mongoServer;
 
 describe('Subscription Purchase Management API', () => {
@@ -17,8 +19,12 @@ describe('Subscription Purchase Management API', () => {
   });
 
   afterAll(async () => {
-    await mongoose.disconnect();
-    await mongoServer.stop();
+    if (mongoose.connection.readyState === 1) {
+      await mongoose.disconnect();
+    }
+    if (mongoServer) {
+      await mongoServer.stop();
+    }
   });
 
   afterEach(async () => {

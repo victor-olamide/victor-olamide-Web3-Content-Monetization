@@ -105,7 +105,7 @@ const tierChangeLogSchema = new mongoose.Schema({
     dailyLimitAfter: { type: Number, default: null },
     concurrentLimitBefore: { type: Number, default: null },
     concurrentLimitAfter: { type: Number, default: null },
-    description: 'Specific rate limit changes'
+    notes: { type: String, default: 'Specific rate limit changes' }
   },
   
   // Timestamp
