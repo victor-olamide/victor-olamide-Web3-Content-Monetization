@@ -102,17 +102,19 @@ async function checkContentAccess(contentId, userAddress) {
       senderAddress: userAddress,
     });
 
-    const hasAccess = cvToJSON(result).value === true;
-    setCachedResult(cacheKey, hasAccess);
-    return hasAccess;
-  } catch (error) {
-    console.error(`Error checking access for content ${contentId}:`, error.message);
-    throw new Error(`Failed to verify content access: ${error.message}`);
-  }
-}
+    const decoded = cvToJSON(result);
+    let hasAccess = false;
 
-/**
- * Verify a purchase was made on-chain
+    if (typeof decoded === 'boolean') {
+      hasAccess = decoded;
+    } else if (decoded && typeof decoded === 'object') {
+      if (decoded.type === 'bool') {
+        hasAccess = decoded.value === true;
+      } else if (decoded.value === true || decoded.ok === true) {
+        hasAccess = true;
+      }
+    }
+
  * @param {string} contentId - Content ID
  * @param {string} userAddress - User's STX address
  * @param {string} txId - Transaction ID to verify
