@@ -76,6 +76,10 @@ async function hasAccess(content, userAddress) {
  * @returns {Promise<Object>}
  */
 async function verifyAccess(contentId, userAddress) {
+  const cacheKey = `access:${contentId}:${userAddress}`;
+  const cachedResult = accessCache.get(cacheKey);
+  if (cachedResult) return cachedResult;
+
   const Content = require('../models/Content');
   const content = await Content.findOne({ contentId });
 
@@ -83,7 +87,11 @@ async function verifyAccess(contentId, userAddress) {
     return { allowed: false, reason: 'content-not-found' };
   }
 
-  return await hasAccess(content, userAddress);
+  const result = await hasAccess(content, userAddress);
+  if (result.allowed) {
+    accessCache.set(cacheKey, result);
+  }
+  return result;
 }
 
 /**
