@@ -4,6 +4,10 @@ const WalletConnection = require('../models/WalletConnection');
 const GatingRule = require('../models/GatingRule');
 const { verifyFTBalance, verifyNFTOwnership } = require('./tokenService');
 const { verifyPurchase, verifySubscription } = require('./blockchainVerification');
+const NodeCache = require('node-cache');
+
+// Cache access results for 5 minutes
+const accessCache = new NodeCache({ stdTTL: 300, checkperiod: 60 });
 
 /**
  * Verify if a user has access to content (either creator, purchased, or token-gated)
