@@ -12,6 +12,15 @@ const {
   validateAmountParam,
   validateAddressParam,
 } = require('../middleware/inputValidation');
+const {
+  verifyOnChainPurchase,
+  verifyAccessBeforeDelivery,
+  checkPurchaseStatus,
+} = require('../middleware/ppvVerificationMiddleware');
+const {
+  checkContentAccess,
+  verifyPurchase,
+} = require('../services/payPerViewService');
 
 // Get platform fee information
 router.get('/platform-fee', async (req, res) => {
@@ -189,6 +198,98 @@ router.post('/purchases', async (req, res) => {
   } catch (err) {
     console.error('Purchase processing error:', err);
     res.status(500).json({ message: 'Failed to process purchase', error: err.message });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PAY-PER-VIEW CONTRACT INTEGRATION ROUTES
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Verify on-chain purchase before granting access
+// POST /purchases/verify-ppv
+// Body: { contentId, userAddress, txId }
+router.post('/verify-ppv', verifyOnChainPurchase, async (req, res) => {
+  try {
+    const { contentId, userAddress } = req.body;
+
+    // Verification is already done by middleware
+    const verificationResult = req.ppvVerification;
+
+    // Create or update purchase record in DB
+    const purchase = await Purchase.findOne({
+      contentId,
+      user: userAddress,
+    });
+
+    if (!purchase) {
+      // Create new purchase record
+      const newPurchase = new Purchase({
+        contentId,
+        user: userAddress,
+        txId: verificationResult.txId,
+        verified: true,
+        verifiedAt: new Date(),
+        blockHeight: verificationResult.blockHeight,
+        confirmations: verificationResult.confirmations,
+      });
+      await newPurchase.save();
+    }
+
+    res.json({
+      success: true,
+      message: 'Purchase verified on-chain',
+      verification: verificationResult,
+    });
+  } catch (err) {
+    console.error('Error in PPV verification route:', err);
+    res.status(500).json({ message: 'Failed to process verification', error: err.message });
+  }
+});
+
+// Grant access after verification
+// POST /purchases/grant-access
+// Body: { contentId, userAddress }
+router.post('/grant-access', verifyAccessBeforeDelivery, async (req, res) => {
+  try {
+    const { contentId, userAddress } = req.body;
+    const accessVerified = req.accessVerified;
+
+    if (!accessVerified.verified) {
+      return res.status(403).json({
+        error: 'Access verification failed',
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Access granted',
+      contentId,
+      userAddress,
+      grantedAt: new Date(),
+    });
+  } catch (err) {
+    console.error('Error granting access:', err);
+    res.status(500).json({ message: 'Failed to grant access', error: err.message });
+  }
+});
+
+// Check purchase status on-chain
+// GET /purchases/status?contentId=X&userAddress=Y
+router.get('/status', checkPurchaseStatus);
+
+// Get PPV contract metrics
+// GET /purchases/ppv-metrics
+router.get('/ppv-metrics', async (req, res) => {
+  try {
+    const { getMetrics } = require('../services/payPerViewService');
+    const metrics = getMetrics();
+
+    res.json({
+      metrics,
+      timestamp: new Date(),
+    });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch metrics', error: err.message });
   }
 });
 
