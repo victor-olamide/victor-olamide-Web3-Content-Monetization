@@ -506,41 +506,6 @@ const verifySubscription = async (userAddress, creatorAddress, tierId) => {
   }
 };
 
-/**
- * Trigger on-chain refund for a cancelled subscription
- * @param {string} subscriberPrincipal - Subscriber principal address
- * @param {string} creatorPrincipal - Creator principal address
- * @param {number} tierId - Tier ID
- * @param {number} refundAmount - Refund amount in uSTX
- * @param {string} senderKey - Admin/platform private key
- * @returns {Promise<Object>} Broadcast response
- */
-const triggerSubscriptionRefund = async (subscriberPrincipal, creatorPrincipal, tierId, refundAmount, senderKey) => {
-  try {
-    const txOptions = {
-      contractAddress: process.env.CONTRACT_ADDRESS,
-      contractName: 'subscription',
-      functionName: 'process-refund',
-      functionArgs: [
-        principalCV(subscriberPrincipal),
-        principalCV(creatorPrincipal),
-        uintCV(tierId),
-        uintCV(refundAmount)
-      ],
-      senderKey,
-      validateWithAbi: true,
-      network,
-      anchorMode: AnchorMode.Any,
-      postConditionMode: PostConditionMode.Allow,
-    };
-
-    const transaction = await makeContractCall(txOptions);
-    return await broadcastTransaction(transaction, network);
-  } catch (error) {
-    throw new Error(`Failed to trigger on-chain refund: ${error.message}`);
-  }
-};
-
 module.exports = {
   addContentToContract,
   removeContentFromContract,
@@ -561,6 +526,5 @@ module.exports = {
   setSubscriptionPlatformFee,
   getSubscriptionTierInfo,
   verifySubscription,
-  triggerSubscriptionRefund,
 };
 

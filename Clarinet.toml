@@ -1,0 +1,31 @@
+[project]
+name = "web3-content-monetization"
+description = "Web3 Content Monetization Platform on Stacks"
+authors = ["SPG2T28R84NNF0AB8PFQRSGY16CD76KV72YHPADH"]
+telemetry = false
+cache_dir = ".cache"
+
+[contracts.sip-009-trait]
+path = "contracts/sip-009-trait.clar"
+clarity_version = 2
+epoch = "2.5"
+
+[contracts.sip-010-trait]
+path = "contracts/sip-010-trait.clar"
+clarity_version = 2
+epoch = "2.5"
+
+[contracts.pay-per-view]
+path = "contracts/pay-per-view.clar"
+clarity_version = 2
+epoch = "2.5"
+
+[contracts.subscription]
+path = "contracts/subscription.clar"
+clarity_version = 2
+epoch = "2.5"
+
+[contracts.content-gate]
+path = "contracts/content-gate.clar"
+clarity_version = 2
+epoch = "2.5"

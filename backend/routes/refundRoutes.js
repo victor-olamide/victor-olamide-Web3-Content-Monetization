@@ -2,55 +2,14 @@ const express = require('express');
 const router = express.Router();
 const Refund = require('../models/Refund');
 const Purchase = require('../models/Purchase');
-const ProRataRefund = require('../models/ProRataRefund');
-const { validateRefundRequest, validateOnChainTrigger } = require('../middleware/refundValidation');
 const { 
   approveRefund, 
   completeRefund, 
   rejectRefund, 
   getRefundHistory,
   autoProcessRefundsForRemovedContent,
-  initiateSubscriptionRefund,
-  triggerOnChainRefund
+  initiateSubscriptionRefund
 } = require('../services/refundService');
-
-/**
- * GET /api/refunds/pro-rata/:id
- * Get a specific ProRataRefund record by ID
- */
-router.get('/pro-rata/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const refund = await ProRataRefund.findById(id);
-
-    if (!refund) {
-      return res.status(404).json({ message: 'ProRataRefund not found' });
-    }
-
-    res.json(refund);
-  } catch (err) {
-    res.status(500).json({ message: 'Failed to fetch pro-rata refund', error: err.message });
-  }
-});
-
-/**
- * GET /api/refunds/pro-rata/subscription/:subscriptionId
- * Get ProRataRefund for a specific subscription
- */
-router.get('/pro-rata/subscription/:subscriptionId', async (req, res) => {
-  try {
-    const { subscriptionId } = req.params;
-    const refund = await ProRataRefund.findOne({ subscriptionId });
-
-    if (!refund) {
-      return res.status(404).json({ message: 'No pro-rata refund found for this subscription' });
-    }
-
-    res.json(refund);
-  } catch (err) {
-    res.status(500).json({ message: 'Failed to fetch pro-rata refund', error: err.message });
-  }
-});
 
 /**
  * GET /api/refunds/user/:address
@@ -148,21 +107,16 @@ router.get('/:id', async (req, res) => {
 
 /**
  * POST /api/refunds
- * Cancel subscription and initiate pro-rata refund processing.
- * Triggers on-chain refund automatically when refundMethod is 'blockchain'
- * and PLATFORM_PRIVATE_KEY env var is set.
+ * Cancel subscription and initiate pro-rata refund processing
  */
-router.post('/', validateRefundRequest, async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const {
       subscriptionId,
       reason = 'User requested cancellation',
       cancellationDate,
       refundMethod = 'blockchain',
-      initiatedBy = 'user',
-      subscriberPrincipal,
-      creatorPrincipal,
-      tierId
+      initiatedBy = 'user'
     } = req.body;
 
     if (!subscriptionId) {
@@ -180,70 +134,9 @@ router.post('/', validateRefundRequest, async (req, res) => {
       return res.status(400).json(result);
     }
 
-    // Trigger on-chain refund when applicable
-    let onChainResult = null;
-    const proRataRefund = result.refund && result.refund._id ? result.refund : null;
-    const senderKey = process.env.PLATFORM_PRIVATE_KEY;
-
-    if (
-      proRataRefund &&
-      refundMethod === 'blockchain' &&
-      senderKey &&
-      subscriberPrincipal &&
-      creatorPrincipal &&
-      tierId !== undefined
-    ) {
-      onChainResult = await triggerOnChainRefund(proRataRefund._id.toString(), {
-        subscriberPrincipal,
-        creatorPrincipal,
-        tierId: Number(tierId),
-        senderKey
-      });
-    }
-
-    res.status(201).json({
-      ...result,
-      onChain: onChainResult
-    });
+    res.status(201).json(result);
   } catch (err) {
     res.status(500).json({ message: 'Failed to initiate subscription refund', error: err.message });
-  }
-});
-
-/**
- * POST /api/refunds/:id/trigger-onchain
- * Manually trigger on-chain refund for an approved ProRataRefund
- */
-router.post('/:id/trigger-onchain', validateOnChainTrigger, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { subscriberPrincipal, creatorPrincipal, tierId } = req.body;
-    const senderKey = process.env.PLATFORM_PRIVATE_KEY;
-
-    if (!subscriberPrincipal || !creatorPrincipal || tierId === undefined) {
-      return res.status(400).json({
-        message: 'subscriberPrincipal, creatorPrincipal, and tierId are required'
-      });
-    }
-
-    if (!senderKey) {
-      return res.status(500).json({ message: 'Platform private key not configured' });
-    }
-
-    const result = await triggerOnChainRefund(id, {
-      subscriberPrincipal,
-      creatorPrincipal,
-      tierId: Number(tierId),
-      senderKey
-    });
-
-    if (!result.success) {
-      return res.status(400).json({ message: result.message });
-    }
-
-    res.json(result);
-  } catch (err) {
-    res.status(500).json({ message: 'Failed to trigger on-chain refund', error: err.message });
   }
 });
 

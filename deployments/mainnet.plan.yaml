@@ -2,7 +2,7 @@
 id: 0
 name: Mainnet deployment
 network: mainnet
-stacks-node: "https://stacks-node-api.mainnet.stacks.co"
+stacks-node: "https://api.mainnet.hiro.so"
 bitcoin-node: "http://blockstack:blockstacksystem@bitcoind.mainnet.stacks.co:8332"
 plan:
   batches:
@@ -10,13 +10,13 @@ plan:
       transactions:
         - contract-publish:
             contract-name: sip-009-trait
-            expected-sender: SP000000000000000000002Q6VF78
+            expected-sender: SPG2T28R84NNF0AB8PFQRSGY16CD76KV72YHPADH
             cost: 5000
             path: contracts/sip-009-trait.clar
             anchor-block-only: true
         - contract-publish:
             contract-name: sip-010-trait
-            expected-sender: SP000000000000000000002Q6VF78
+            expected-sender: SPG2T28R84NNF0AB8PFQRSGY16CD76KV72YHPADH
             cost: 5000
             path: contracts/sip-010-trait.clar
             anchor-block-only: true
@@ -24,13 +24,13 @@ plan:
       transactions:
         - contract-publish:
             contract-name: pay-per-view
-            expected-sender: SP000000000000000000002Q6VF78
+            expected-sender: SPG2T28R84NNF0AB8PFQRSGY16CD76KV72YHPADH
             cost: 15000
             path: contracts/pay-per-view.clar
             anchor-block-only: true
         - contract-publish:
             contract-name: subscription
-            expected-sender: SP000000000000000000002Q6VF78
+            expected-sender: SPG2T28R84NNF0AB8PFQRSGY16CD76KV72YHPADH
             cost: 15000
             path: contracts/subscription.clar
             anchor-block-only: true
@@ -38,7 +38,7 @@ plan:
       transactions:
         - contract-publish:
             contract-name: content-gate
-            expected-sender: SP000000000000000000002Q6VF78
+            expected-sender: SPG2T28R84NNF0AB8PFQRSGY16CD76KV72YHPADH
             cost: 20000
             path: contracts/content-gate.clar
             anchor-block-only: true
