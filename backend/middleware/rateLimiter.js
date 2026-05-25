@@ -64,15 +64,11 @@ function createTieredRateLimiter(options = {}) {
         // Release the concurrent request counter since we're rejecting
         await releaseRequest(key);
 
-        // Always set Retry-After header on 429 per RFC 6585
-        const retryAfter = result.retryAfter || 60;
-        res.set(RATE_LIMIT_HEADERS.RETRY_AFTER, String(retryAfter));
-
         return res.status(DEFAULTS.statusCode).json({
           error: 'Rate limit exceeded',
           message: getRateLimitMessage(result.reason),
           tier,
-          retryAfter,
+          retryAfter: result.retryAfter,
           limits: {
             maxRequests: result.limits.maxRequests,
             windowMs: result.limits.windowMs,
@@ -162,27 +158,6 @@ function createLenientRateLimiter() {
 }
 
 /**
- * Free-tier rate limiter - forces free tier limits regardless of user role
- */
-function createFreeTierRateLimiter() {
-  return createTieredRateLimiter({ tierOverride: 'free' });
-}
-
-/**
- * Subscriber-tier rate limiter - forces subscriber tier limits
- */
-function createSubscriberRateLimiter() {
-  return createTieredRateLimiter({ tierOverride: 'subscriber' });
-}
-
-/**
- * Creator-tier rate limiter - forces creator tier limits
- */
-function createCreatorRateLimiter() {
-  return createTieredRateLimiter({ tierOverride: 'creator' });
-}
-
-/**
  * API key rate limiter - uses API key for identification
  * @param {Object} options - Options
  * @returns {Function} Express middleware
@@ -229,9 +204,6 @@ module.exports = {
   createTieredRateLimiter,
   createStrictRateLimiter,
   createLenientRateLimiter,
-  createFreeTierRateLimiter,
-  createSubscriberRateLimiter,
-  createCreatorRateLimiter,
   createApiKeyRateLimiter,
   setRateLimitHeaders,
   getRateLimitMessage

@@ -80,10 +80,6 @@ function createSubscriptionRateLimiter(options = {}) {
       if (!result.allowed) {
         await releaseRequest(key);
 
-        // Always set Retry-After header on 429 per RFC 6585
-        const retryAfter = result.retryAfter || 60;
-        res.set('Retry-After', String(retryAfter));
-
         return res.status(DEFAULTS.statusCode).json({
           error: 'Rate limit exceeded',
           message: getRateLimitMessage(result.reason, tier),
@@ -94,7 +90,7 @@ function createSubscriptionRateLimiter(options = {}) {
             expiryDate: req.subscription.expiryDate,
             renewalStatus: req.subscription.renewalStatus
           } : undefined,
-          retryAfter,
+          retryAfter: result.retryAfter,
           limits: {
             maxRequests: result.limits.maxRequests,
             windowMs: result.limits.windowMs,
@@ -179,18 +175,6 @@ function getRateLimitMessage(reason, tier) {
       burst_limit_exceeded: 'Your requests are too frequent for the free tier. Please slow down.',
       daily_limit_exceeded: 'You have reached your daily limit. Please upgrade to increase your limit.',
       concurrent_limit_exceeded: 'Too many concurrent requests for free tier. Please wait.'
-    },
-    subscriber: {
-      window_limit_exceeded: 'You have exceeded the subscriber tier request limit. Consider upgrading to creator for higher limits.',
-      burst_limit_exceeded: 'Requests are too frequent for subscriber tier. Please slow down.',
-      daily_limit_exceeded: 'You have reached your daily subscriber limit. Consider upgrading.',
-      concurrent_limit_exceeded: 'Too many concurrent requests for subscriber tier. Please wait.'
-    },
-    creator: {
-      window_limit_exceeded: 'You have exceeded the creator tier request limit. Contact support for higher limits.',
-      burst_limit_exceeded: 'Requests are too frequent for creator tier. Please optimize your request pattern.',
-      daily_limit_exceeded: 'You have reached your daily creator limit. Contact support if you need more.',
-      concurrent_limit_exceeded: 'Too many concurrent requests for creator tier. Please wait.'
     },
     basic: {
       window_limit_exceeded: 'You have exceeded your basic tier request limit. Consider upgrading to premium.',

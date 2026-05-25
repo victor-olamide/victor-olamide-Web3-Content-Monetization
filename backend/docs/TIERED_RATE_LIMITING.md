@@ -51,26 +51,13 @@ This document describes the implementation of tiered rate limiting based on user
 
 ### Default Configuration
 
-Rate limits are configured per user role: `free`, `subscriber`, `creator`, `basic`, `premium`, `enterprise`, `admin`.
-
+```javascript
+FREE:      100 req/15min,  20 burst/min,   1000/day,    5 concurrent
+BASIC:     500 req/15min,  50 burst/min,   5000/day,   10 concurrent
+PREMIUM:  2000 req/15min, 200 burst/min,  20000/day,   25 concurrent
+ENTERPRISE: 10k req/15min, 1k burst/min, 100k/day,     50 concurrent
+ADMIN:    50k req/15min,  5k burst/min, 500k/day,    100 concurrent
 ```
-FREE:        100 req/15min,   20 burst/min,    1000/day,    5 concurrent
-SUBSCRIBER:  300 req/15min,   40 burst/min,    3000/day,    8 concurrent
-CREATOR:    1000 req/15min,  100 burst/min,   10000/day,   20 concurrent
-BASIC:       500 req/15min,   50 burst/min,    5000/day,   10 concurrent
-PREMIUM:    2000 req/15min,  200 burst/min,   20000/day,   25 concurrent
-ENTERPRISE: 10k  req/15min,   1k burst/min,  100k/day,    50 concurrent
-ADMIN:      50k  req/15min,   5k burst/min,  500k/day,   100 concurrent
-```
-
-### Role-to-Tier Mapping
-
-| User Role | Rate Limit Tier |
-|-----------|----------------|
-| `free` | `free` |
-| `subscriber` | `subscriber` |
-| `creator` | `creator` |
-| `admin` | `admin` |
 
 ### Endpoint Overrides
 
@@ -78,8 +65,6 @@ ADMIN:      50k  req/15min,   5k burst/min,  500k/day,   100 concurrent
 - `/api/purchases`: 0.5x multiplier (stricter limits)
 - `/api/wallet`: 0.5x multiplier (security-focused)
 - `/api/analytics`: 2.0x multiplier (read-heavy)
-- `/api/creators`: 1.5x multiplier (creator management)
-- `/api/refunds`: 0.5x multiplier (stricter limits)
 
 ## Usage
 

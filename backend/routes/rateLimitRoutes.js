@@ -51,32 +51,6 @@ router.get('/status', async (req, res) => {
 });
 
 /**
- * GET /api/rate-limit/tiers/:tier
- * Get configuration for a specific tier
- */
-router.get('/tiers/:tier', (req, res) => {
-  try {
-    const { tier } = req.params;
-
-    if (!isValidTier(tier)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid tier',
-        validTiers: Object.values(TIER_LEVELS)
-      });
-    }
-
-    const tiers = getAllTiers();
-    const config = tiers.find(t => t.name === tier);
-
-    res.json({ success: true, data: config });
-  } catch (error) {
-    logger.error('Error getting tier config', { err: error });
-    res.status(500).json({ success: false, error: 'Failed to get tier configuration', message: error.message });
-  }
-});
-
-/**
  * GET /api/rate-limit/tiers
  * Get all available rate limit tiers and their configurations
  */

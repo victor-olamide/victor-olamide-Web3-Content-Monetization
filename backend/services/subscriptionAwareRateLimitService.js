@@ -24,18 +24,6 @@ async function resolveUserTierFromSubscription(req) {
     if (req.user?.tier) return req.user.tier;
     if (req.wallet?.tier) return req.wallet.tier;
 
-    // Map user role directly to rate limit tier
-    const role = req.user?.role || req.session?.role;
-    if (role) {
-      const roleToTier = {
-        admin: TIER_LEVELS.ADMIN,
-        creator: TIER_LEVELS.CREATOR,
-        subscriber: TIER_LEVELS.SUBSCRIBER,
-        free: TIER_LEVELS.FREE
-      };
-      if (roleToTier[role]) return roleToTier[role];
-    }
-
     // Check if we have a user ID to look up subscription
     const userId = req.userId || req.user?._id || req.session?.userId || req.headers['x-user-id'];
     

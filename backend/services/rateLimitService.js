@@ -12,29 +12,16 @@ const { RATE_LIMIT_TIERS, ENDPOINT_OVERRIDES, DEFAULTS, TIER_LEVELS } = require(
  */
 
 /**
- * Resolve the user's subscription tier from role or explicit tier fields
- * Maps user roles (free, subscriber, creator) to rate limit tiers.
+ * Resolve the user's subscription tier
  * @param {Object} req - Express request object
  * @returns {string} The user's tier level
  */
 function resolveUserTier(req) {
-  // Explicit tier overrides take priority
+  // Check if tier is set by authentication middleware
   if (req.userTier) return req.userTier;
   if (req.session?.tier) return req.session.tier;
   if (req.user?.tier) return req.user.tier;
   if (req.wallet?.tier) return req.wallet.tier;
-
-  // Map user role directly to rate limit tier
-  const role = req.user?.role || req.session?.role;
-  if (role) {
-    const roleToTier = {
-      admin: TIER_LEVELS.ADMIN,
-      creator: TIER_LEVELS.CREATOR,
-      subscriber: TIER_LEVELS.SUBSCRIBER,
-      free: TIER_LEVELS.FREE
-    };
-    if (roleToTier[role]) return roleToTier[role];
-  }
 
   // Check subscription data attached by wallet auth
   if (req.subscription?.tier) return req.subscription.tier;

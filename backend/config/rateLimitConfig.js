@@ -9,8 +9,6 @@
 
 const TIER_LEVELS = {
   FREE: 'free',
-  SUBSCRIBER: 'subscriber',
-  CREATOR: 'creator',
   BASIC: 'basic',
   PREMIUM: 'premium',
   ENTERPRISE: 'enterprise',
@@ -36,24 +34,6 @@ const RATE_LIMIT_TIERS = {
     dailyLimit: 1000,
     concurrentLimit: 5,
     description: 'Free tier - basic rate limits'
-  },
-  [TIER_LEVELS.SUBSCRIBER]: {
-    maxRequests: 300,
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    burstLimit: 40,
-    burstWindowMs: 60 * 1000, // 1 minute
-    dailyLimit: 3000,
-    concurrentLimit: 8,
-    description: 'Subscriber tier - elevated limits for paying subscribers'
-  },
-  [TIER_LEVELS.CREATOR]: {
-    maxRequests: 1000,
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    burstLimit: 100,
-    burstWindowMs: 60 * 1000, // 1 minute
-    dailyLimit: 10000,
-    concurrentLimit: 20,
-    description: 'Creator tier - high limits for content creators'
   },
   [TIER_LEVELS.BASIC]: {
     maxRequests: 500,
@@ -99,11 +79,11 @@ const RATE_LIMIT_TIERS = {
  */
 const ENDPOINT_OVERRIDES = {
   '/api/content': {
-    multiplier: 1.5,
+    multiplier: 1.5, // 50% more requests for content endpoints
     description: 'Content endpoints get higher limits'
   },
   '/api/purchases': {
-    multiplier: 0.5,
+    multiplier: 0.5, // 50% fewer requests for purchase endpoints (more expensive operations)
     description: 'Purchase endpoints have stricter limits'
   },
   '/api/subscriptions': {
@@ -121,14 +101,6 @@ const ENDPOINT_OVERRIDES = {
   '/api/preview': {
     multiplier: 2.0,
     description: 'Preview endpoints get higher limits'
-  },
-  '/api/creators': {
-    multiplier: 1.5,
-    description: 'Creator management endpoints get higher limits'
-  },
-  '/api/refunds': {
-    multiplier: 0.5,
-    description: 'Refund endpoints have stricter limits'
   }
 };
 

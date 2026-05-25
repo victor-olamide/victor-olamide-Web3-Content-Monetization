@@ -24,8 +24,6 @@ function mapSubscriptionToRateLimit(subscriptionTier) {
   // Direct mapping for common subscription tier names
   const tierMapping = {
     'free': TIER_LEVELS.FREE,
-    'subscriber': TIER_LEVELS.SUBSCRIBER,
-    'creator': TIER_LEVELS.CREATOR,
     'basic': TIER_LEVELS.BASIC,
     'standard': TIER_LEVELS.BASIC,
     'starter': TIER_LEVELS.BASIC,
@@ -175,8 +173,7 @@ async function hasMinimumTier(userId, requiredTier) {
 function isValidSubscriptionTierName(tierName) {
   if (!tierName) return false;
   const validNames = Object.keys({
-    'free': true, 'subscriber': true, 'creator': true,
-    'basic': true, 'standard': true, 'starter': true,
+    'free': true, 'basic': true, 'standard': true, 'starter': true,
     'premium': true, 'pro': true, 'expert': true,
     'enterprise': true, 'business': true, 'unlimited': true,
     'admin': true, 'superadmin': true, 'staff': true

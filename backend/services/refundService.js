@@ -5,7 +5,6 @@ const Content = require('../models/Content');
 const Subscription = require('../models/Subscription');
 const ProRataRefund = require('../models/ProRataRefund');
 const { calculateProRataRefund, checkRefundEligibility: checkSubscriptionRefundEligibility } = require('./proRataRefundService');
-const { triggerSubscriptionRefund } = require('./contractService');
 
 /**
  * Validate refund eligibility parameters
@@ -243,66 +242,6 @@ async function initiateSubscriptionRefund(subscriptionId, options = {}) {
       success: false,
       message: error.message
     };
-  }
-}
-
-/**
- * Trigger on-chain refund for an approved ProRataRefund record
- * @param {string} proRataRefundId - ProRataRefund document ID
- * @param {Object} options - { subscriberPrincipal, creatorPrincipal, tierId, senderKey }
- * @returns {Promise<Object>}
- */
-async function triggerOnChainRefund(proRataRefundId, options = {}) {
-  try {
-    if (!proRataRefundId) throw new Error('ProRataRefund ID is required');
-
-    const { subscriberPrincipal, creatorPrincipal, tierId, senderKey } = options;
-    if (!subscriberPrincipal || !creatorPrincipal || tierId === undefined || !senderKey) {
-      throw new Error('subscriberPrincipal, creatorPrincipal, tierId, and senderKey are required');
-    }
-
-    const refund = await ProRataRefund.findById(proRataRefundId);
-    if (!refund) throw new Error('ProRataRefund not found');
-
-    if (!['approved', 'processing'].includes(refund.refundStatus)) {
-      throw new Error(`Cannot trigger on-chain refund with status: ${refund.refundStatus}`);
-    }
-
-    refund.refundStatus = 'processing';
-    refund.onChainTriggerAttempts = (refund.onChainTriggerAttempts || 0) + 1;
-    await refund.save();
-
-    const refundAmountUSTX = Math.round(refund.refundAmount * 1_000_000);
-    const broadcastResponse = await triggerSubscriptionRefund(
-      subscriberPrincipal,
-      creatorPrincipal,
-      tierId,
-      refundAmountUSTX,
-      senderKey
-    );
-
-    refund.onChainTriggered = true;
-    refund.transactionId = broadcastResponse.txid || broadcastResponse.txId || null;
-    refund.onChainTriggerError = null;
-    await refund.save();
-
-    return {
-      success: true,
-      message: 'On-chain refund triggered successfully',
-      transactionId: refund.transactionId,
-      refund
-    };
-  } catch (error) {
-    // Record the error on the refund document if it exists
-    try {
-      const refund = await ProRataRefund.findById(proRataRefundId);
-      if (refund) {
-        refund.onChainTriggerError = error.message;
-        await refund.save();
-      }
-    } catch (_) { /* ignore secondary error */ }
-
-    return { success: false, message: error.message };
   }
 }
 
@@ -548,7 +487,6 @@ module.exports = {
   validateRefundEligibility,
   initiateRefund,
   initiateSubscriptionRefund,
-  triggerOnChainRefund,
   approveRefund,
   completeRefund,
   rejectRefund,
