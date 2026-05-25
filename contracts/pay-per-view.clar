@@ -112,7 +112,7 @@
     (begin
         (asserts! (is-eq tx-sender creator) ERR-NOT-AUTHORIZED)
         (asserts! (is-eligible-for-refund content-id user) ERR-REFUND-FAILED)
-        (try! (as-contract (stx-transfer? price tx-sender user)))
+        (try! (stx-transfer? price tx-sender user))
         (map-delete content-access { content-id: content-id, user: user })
         (map-delete purchase-blocks { content-id: content-id, user: user })
         (print { event: "refund-user", content-id: content-id, user: user, amount: price })
@@ -195,10 +195,7 @@
 )
 
 (define-read-only (get-content-pricing (content-id uint))
-    (match (map-get? content-pricing content-id)
-        content content
-        false
-    )
+    (map-get? content-pricing content-id)
 )
 
 (define-read-only (get-platform-fee)
@@ -217,24 +214,12 @@
     (- amount (calculate-platform-fee amount))
 )
 
-(define-read-only (has-access (content-id uint) (user principal))
-    (default-to false (map-get? content-access { content-id: content-id, user: user }))
-)
-
 (define-read-only (get-content-info (content-id uint))
     (map-get? content-pricing content-id)
 )
 
 (define-read-only (is-owner (user principal))
     (is-eq user contract-owner)
-)
-
-(define-read-only (get-platform-fee)
-    (var-get platform-fee)
-)
-
-(define-read-only (get-platform-wallet)
-    (var-get platform-wallet)
 )
 
 (define-read-only (get-refund-window)
