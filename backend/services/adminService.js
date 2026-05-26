@@ -255,8 +255,13 @@ async function getRevenueByDay(days = 30) {
   ]);
 }
 
+async function getDashboardStats() {
+  return getPlatformStats();
+}
+
 module.exports = {
   getPlatformStats,
+  getDashboardStats,
   getLatestStats,
   getStatsByDateRange,
   getMetrics,
