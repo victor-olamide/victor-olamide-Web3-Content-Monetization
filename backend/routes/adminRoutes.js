@@ -60,6 +60,37 @@ router.get('/revenue/stats', getRevenueStatistics);
 router.get('/health', getSystemHealth);
 
 // ---------------------------------------------------------------------------
+// Audit logs
+// GET /api/admin/audit-logs?page=&limit=&action=&resourceType=
+// ---------------------------------------------------------------------------
+router.get('/audit-logs', async (req, res) => {
+  try {
+    const AdminAuditLog = require('../models/AdminAuditLog');
+    const { page = 1, limit = 20, action, resourceType } = req.query;
+    const query = {};
+    if (action) query.action = action;
+    if (resourceType) query.resourceType = resourceType;
+
+    const [logs, total] = await Promise.all([
+      AdminAuditLog.find(query)
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(parseInt(limit)),
+      AdminAuditLog.countDocuments(query),
+    ]);
+
+    res.json({
+      success: true,
+      data: logs,
+      pagination: { page: parseInt(page), limit: parseInt(limit), total, pages: Math.ceil(total / limit) },
+    });
+  } catch (error) {
+    logger.error('Failed to get audit logs', { err: error });
+    res.status(500).json({ success: false, error: 'Failed to get audit logs' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // Platform status (lightweight)
 // GET /api/admin/status
 // ---------------------------------------------------------------------------
