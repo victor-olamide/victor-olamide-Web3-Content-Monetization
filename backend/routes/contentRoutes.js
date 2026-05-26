@@ -20,6 +20,8 @@ const searchService = require('../services/searchService');
 const { validateContentBody } = require('../middleware/inputValidation');
 const { shouldEncryptContent } = require('../utils/contentUtils');
 
+const { validateCidParam } = require('../middleware/cidValidation');
+
 const getTokenFromRequest = (req) => {
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
     return req.headers.authorization.split(' ')[1];
@@ -284,7 +286,7 @@ router.post('/upload-and-register', protect, requireCreator, (req, res) => {
 });
 
 // Get content by IPFS CID
-router.get('/cid/:cid', async (req, res) => {
+router.get('/cid/:cid', validateCidParam, async (req, res) => {
   try {
     const content = await Content.findOne({ cid: req.params.cid });
     if (!content) return res.status(404).json({ message: 'Content not found for this CID' });
