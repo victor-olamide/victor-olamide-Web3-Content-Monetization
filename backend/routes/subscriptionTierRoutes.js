@@ -58,13 +58,6 @@ router.post('/tiers', validateTierCreation, verifyToken, isCreator, async (req, 
     });
   }
 });
-    res.status(500).json({
-      success: false,
-      message: 'Error creating subscription tier',
-      error: error.message
-    });
-  }
-});
 
 /**
  * GET /creators/:creatorId/tiers
