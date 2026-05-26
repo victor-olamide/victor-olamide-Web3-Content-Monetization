@@ -91,6 +91,21 @@ router.get('/audit-logs', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// Top creators by revenue
+// GET /api/admin/creators/top?limit=10
+// ---------------------------------------------------------------------------
+router.get('/creators/top', async (req, res) => {
+  try {
+    const { limit = 10 } = req.query;
+    const creators = await adminService.getTopCreators(limit);
+    res.json({ success: true, data: creators });
+  } catch (error) {
+    logger.error('Failed to get top creators', { err: error });
+    res.status(500).json({ success: false, error: 'Failed to get top creators' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // Platform status (lightweight)
 // GET /api/admin/status
 // ---------------------------------------------------------------------------
