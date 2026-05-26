@@ -94,4 +94,13 @@ describe('Admin Service', () => {
       activeSubscriptions: cached.activeSubscriptions,
     }));
   });
+
+  test('getDashboardStats alias returns the same platform stats payload', async () => {
+    const payload = await adminService.getDashboardStats();
+
+    expect(payload).toHaveProperty('totalUsers');
+    expect(payload).toHaveProperty('totalRevenue');
+    expect(payload).toHaveProperty('totalContent');
+    expect(payload).toHaveProperty('activeSubscriptions');
+  });
 });
