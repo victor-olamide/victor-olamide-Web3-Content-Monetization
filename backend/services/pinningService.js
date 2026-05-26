@@ -117,9 +117,9 @@ class PinningService {
     }
 
     // Web3.Storage
-    if (process.env.WEB3_STORAGE_API_KEY) {
+    if (process.env.WEB3_STORAGE_API_KEY || process.env.WEB3_STORAGE_TOKEN) {
       providers[PROVIDERS.WEB3_STORAGE] = {
-        apiKey: process.env.WEB3_STORAGE_API_KEY,
+        apiKey: process.env.WEB3_STORAGE_API_KEY || process.env.WEB3_STORAGE_TOKEN,
         enabled: true
       };
     }
