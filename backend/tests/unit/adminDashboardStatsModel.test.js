@@ -78,4 +78,28 @@ describe('AdminDashboardStats model', () => {
     expect(results).toHaveLength(1);
     expect(results[0].totalRevenue).toBe(20);
   });
+
+  test('formatForResponse shapes persisted snapshots correctly', async () => {
+    const snapshot = await AdminDashboardStats.updateStats({
+      totalUsers: 4,
+      totalContent: 4,
+      activeSubscriptions: 1,
+      totalRevenue: 40,
+      date: new Date('2026-05-27T00:00:00.000Z'),
+    });
+
+    const formatted = AdminDashboardStats.formatForResponse(snapshot);
+    expect(formatted).toMatchObject({
+      totalUsers: 4,
+      totalContent: 4,
+      activeSubscriptions: 1,
+      totalRevenue: 40,
+      users: {
+        total: 4,
+      },
+      content: {
+        total: 4,
+      },
+    });
+  });
 });
