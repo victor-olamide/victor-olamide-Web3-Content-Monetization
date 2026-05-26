@@ -745,6 +745,73 @@ async function notifyUserRegistration(userId, userData) {
   }
 }
 
+/**
+ * Notify user of subscription confirmation with email
+ * @param {string} userId - User ID
+ * @param {Object} subscriptionData - Subscription data (email, userName, planName, subscriptionId, amount, currency, startDate, renewalDate)
+ * @returns {Promise<Object>} Created notification with email status
+ * @throws {Error} When userId or subscriptionData is invalid
+ */
+async function notifySubscriptionConfirmation(userId, subscriptionData) {
+  // Input validation
+  if (!userId || typeof userId !== 'string') {
+    throw new Error('Invalid userId: expected non-empty string');
+  }
+  if (!subscriptionData || typeof subscriptionData !== 'object') {
+    throw new Error('Invalid subscriptionData: expected object');
+  }
+  if (!subscriptionData.email || typeof subscriptionData.email !== 'string') {
+    throw new Error('Invalid subscriptionData.email: expected non-empty string');
+  }
+  if (!subscriptionData.planName || typeof subscriptionData.planName !== 'string') {
+    throw new Error('Invalid subscriptionData.planName: expected non-empty string');
+  }
+  if (!subscriptionData.subscriptionId || typeof subscriptionData.subscriptionId !== 'string') {
+    throw new Error('Invalid subscriptionData.subscriptionId: expected non-empty string');
+  }
+
+  try {
+    // Create in-app notification
+    const notification = await createNotification({
+      userId,
+      type: 'subscription_confirmation',
+      title: 'Subscription Activated!',
+      message: `Your subscription to ${subscriptionData.planName} is now active.`,
+      icon: 'success',
+      metadata: {
+        planName: subscriptionData.planName,
+        subscriptionId: subscriptionData.subscriptionId,
+        amount: subscriptionData.amount
+      }
+    });
+
+    // Send subscription confirmation email
+    let emailResult = { success: false, error: 'Email disabled' };
+    try {
+      emailResult = await sendSubscriptionConfirmationEmail(subscriptionData.email, {
+        userName: subscriptionData.userName || 'User',
+        planName: subscriptionData.planName,
+        subscriptionId: subscriptionData.subscriptionId,
+        amount: subscriptionData.amount,
+        currency: subscriptionData.currency,
+        startDate: subscriptionData.startDate,
+        renewalDate: subscriptionData.renewalDate
+      });
+    } catch (emailErr) {
+      logger.error('Error sending subscription confirmation email:', emailErr);
+      emailResult = { success: false, error: emailErr.message };
+    }
+
+    return {
+      notification,
+      email: emailResult
+    };
+  } catch (error) {
+    logger.error('Error notifying subscription confirmation:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   createNotification,
   getUserNotifications,
@@ -762,5 +829,6 @@ module.exports = {
   notifySystem,
   clearOldNotifications,
   getUserNotificationStats,
-  notifyUserRegistration
+  notifyUserRegistration,
+  notifySubscriptionConfirmation
 };
