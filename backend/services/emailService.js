@@ -74,4 +74,50 @@ async function sendRegistrationEmail(email, userData = {}) {
   }
 }
 
-module.exports = { sendEmail, getTransporter, sendRegistrationEmail };
+/**
+ * Send subscription confirmation email
+ * @param {string} email - User email address
+ * @param {Object} subscriptionData - Subscription data (planName, subscriptionId, amount, currency, startDate, renewalDate)
+ * @returns {Promise<Object>} Email send result
+ */
+async function sendSubscriptionConfirmationEmail(email, subscriptionData = {}) {
+  if (!email) {
+    throw new Error('Email address is required');
+  }
+  if (!subscriptionData.planName) {
+    throw new Error('Plan name is required in subscription data');
+  }
+  if (!subscriptionData.subscriptionId) {
+    throw new Error('Subscription ID is required in subscription data');
+  }
+
+  const template = emailConfig.templates.subscriptionConfirmation;
+  const context = {
+    userName: subscriptionData.userName || 'User',
+    planName: subscriptionData.planName,
+    subscriptionId: subscriptionData.subscriptionId,
+    amount: subscriptionData.amount || 'N/A',
+    currency: subscriptionData.currency || 'STX',
+    startDate: subscriptionData.startDate,
+    renewalDate: subscriptionData.renewalDate
+  };
+
+  const text = template.text(context);
+  const html = template.html(context);
+
+  try {
+    const result = await sendEmail({
+      to: email,
+      subject: template.subject,
+      text,
+      html
+    });
+    logger.info(`Subscription confirmation email sent to ${email} for subscription ${subscriptionData.subscriptionId}`);
+    return { success: true, result, email };
+  } catch (error) {
+    logger.error(`Error sending subscription confirmation email to ${email}:`, error);
+    throw error;
+  }
+}
+
+module.exports = { sendEmail, getTransporter, sendRegistrationEmail, sendSubscriptionConfirmationEmail };
