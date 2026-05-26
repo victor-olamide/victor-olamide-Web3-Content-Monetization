@@ -1,24 +1,69 @@
-const logger = require('../utils/logger');
 const express = require('express');
 const router = express.Router();
+const logger = require('../utils/logger');
+const { protect, authorize } = require('../middleware/auth');
 const adminService = require('../services/adminService');
-const { authMiddleware } = require('../middleware/auth');
+const {
+  getStats,
+  getDashboardOverview,
+  getStatistics,
+  getUserStatistics,
+  getContentStatistics,
+  getRevenueStatistics,
+  getSystemHealth,
+} = require('../controllers/adminDashboardController');
 
-// Simple admin check middleware
-async function requireAdmin(req, res, next) {
-  try {
-    // If authMiddleware populated req.user, check role; otherwise allow if DEV_ADMIN env set
-    if (req.user && req.user.role === 'admin') return next();
-    if (process.env.DEV_ADMIN === 'true') return next();
-    return res.status(403).json({ success: false, error: 'Admin access required' });
-  } catch (err) {
-    logger.error('Admin check failed', err);
-    return res.status(500).json({ success: false, error: 'Admin check failed' });
-  }
-}
+// All admin routes require a valid JWT AND admin role
+router.use(protect, authorize('admin'));
 
-// GET /api/admin/status - overall platform status
-router.get('/status', authMiddleware, requireAdmin, async (req, res) => {
+// ---------------------------------------------------------------------------
+// Platform-wide stats (issue #182 primary endpoint)
+// GET /api/admin/stats
+// Returns: totalUsers, totalRevenue, totalContent, activeSubscriptions
+// ---------------------------------------------------------------------------
+router.get('/stats', getStats);
+
+// ---------------------------------------------------------------------------
+// Dashboard overview — latest persisted snapshot
+// GET /api/admin/dashboard/overview
+// ---------------------------------------------------------------------------
+router.get('/dashboard/overview', getDashboardOverview);
+
+// ---------------------------------------------------------------------------
+// Historical statistics by date range
+// GET /api/admin/statistics?startDate=&endDate=
+// ---------------------------------------------------------------------------
+router.get('/statistics', getStatistics);
+
+// ---------------------------------------------------------------------------
+// User statistics
+// GET /api/admin/users/stats
+// ---------------------------------------------------------------------------
+router.get('/users/stats', getUserStatistics);
+
+// ---------------------------------------------------------------------------
+// Content statistics
+// GET /api/admin/content/stats
+// ---------------------------------------------------------------------------
+router.get('/content/stats', getContentStatistics);
+
+// ---------------------------------------------------------------------------
+// Revenue statistics
+// GET /api/admin/revenue/stats
+// ---------------------------------------------------------------------------
+router.get('/revenue/stats', getRevenueStatistics);
+
+// ---------------------------------------------------------------------------
+// System health
+// GET /api/admin/health
+// ---------------------------------------------------------------------------
+router.get('/health', getSystemHealth);
+
+// ---------------------------------------------------------------------------
+// Platform status (lightweight)
+// GET /api/admin/status
+// ---------------------------------------------------------------------------
+router.get('/status', async (req, res) => {
   try {
     const status = await adminService.getPlatformStatus();
     res.json({ success: true, data: status });
@@ -28,8 +73,11 @@ router.get('/status', authMiddleware, requireAdmin, async (req, res) => {
   }
 });
 
-// GET /api/admin/metrics - aggregated metrics
-router.get('/metrics', authMiddleware, requireAdmin, async (req, res) => {
+// ---------------------------------------------------------------------------
+// Aggregated metrics (purchases last 7 days)
+// GET /api/admin/metrics
+// ---------------------------------------------------------------------------
+router.get('/metrics', async (req, res) => {
   try {
     const metrics = await adminService.getMetrics();
     res.json({ success: true, data: metrics });
@@ -39,8 +87,11 @@ router.get('/metrics', authMiddleware, requireAdmin, async (req, res) => {
   }
 });
 
-// POST /api/admin/action/rebuild-indexes - example admin action
-router.post('/action/rebuild-indexes', authMiddleware, requireAdmin, async (req, res) => {
+// ---------------------------------------------------------------------------
+// Admin maintenance action — rebuild indexes
+// POST /api/admin/action/rebuild-indexes
+// ---------------------------------------------------------------------------
+router.post('/action/rebuild-indexes', async (req, res) => {
   try {
     const result = await adminService.rebuildIndexes();
     res.json({ success: true, data: result });
