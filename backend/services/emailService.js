@@ -1,6 +1,6 @@
 const logger = require('../utils/logger');
 const nodemailer = require('nodemailer');
-const { emailConfig } = require('../config/emailConfig');
+const { emailConfig, getEmailLayout } = require('../config/emailConfig');
 
 let transporter = null;
 
@@ -44,4 +44,34 @@ async function sendEmail({ to, from, subject, text, html }) {
   return await t.sendMail(mail);
 }
 
-module.exports = { sendEmail, getTransporter };
+/**
+ * Send registration welcome email
+ * @param {string} email - User email address
+ * @param {Object} userData - User data (userName, accountUrl)
+ * @returns {Promise<Object>} Email send result
+ */
+async function sendRegistrationEmail(email, userData = {}) {
+  if (!email) {
+    throw new Error('Email address is required');
+  }
+
+  const template = emailConfig.templates.registration;
+  const text = template.text({ userName: userData.userName || 'User' });
+  const html = template.html({ userName: userData.userName || 'User' });
+
+  try {
+    const result = await sendEmail({
+      to: email,
+      subject: template.subject,
+      text,
+      html
+    });
+    logger.info(`Registration email sent to ${email}`);
+    return { success: true, result, email };
+  } catch (error) {
+    logger.error(`Error sending registration email to ${email}:`, error);
+    throw error;
+  }
+}
+
+module.exports = { sendEmail, getTransporter, sendRegistrationEmail };
