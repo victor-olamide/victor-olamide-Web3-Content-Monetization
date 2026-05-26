@@ -7,7 +7,7 @@
 const Notification = require('../models/Notification');
 const logger = require('../utils/logger');
 const UserProfile = require('../models/UserProfile');
-const { sendEmail } = require('./emailService');
+const { sendEmail, sendRegistrationEmail, sendSubscriptionConfirmationEmail, sendPaymentReceiptEmail, sendRenewalReminderEmail } = require('./emailService');
 const { emailConfig } = require('../config/emailConfig');
 
 /**
