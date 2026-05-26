@@ -6,6 +6,62 @@ const AdminDashboardStats = require('../models/AdminDashboardStats');
 const mongoose = require('mongoose');
 
 /**
+ * Build the standardized API response payload for admin dashboard stats.
+ */
+function buildPlatformStatsPayload(snapshot) {
+  if (!snapshot) return null;
+
+  const {
+    totalUsers = 0,
+    totalContent = 0,
+    activeSubscriptions = 0,
+    totalRevenue = 0,
+    activeUsers = 0,
+    newUsers = 0,
+    suspendedUsers = 0,
+    publishedContent = 0,
+    deletedContent = 0,
+    platformFees = 0,
+    creatorPayouts = 0,
+    totalTransactions = 0,
+    purchasesToday = 0,
+    date,
+    generatedAt,
+  } = snapshot;
+
+  return {
+    totalUsers,
+    totalRevenue,
+    totalContent,
+    activeSubscriptions,
+    generatedAt: generatedAt || date || new Date(),
+    users: {
+      total: totalUsers,
+      active: activeUsers,
+      new: newUsers,
+      suspended: suspendedUsers,
+    },
+    content: {
+      total: totalContent,
+      active: publishedContent,
+      removed: deletedContent,
+    },
+    revenue: {
+      total: totalRevenue,
+      platformFees,
+      creatorPayouts,
+      totalTransactions,
+    },
+    subscriptions: {
+      active: activeSubscriptions,
+    },
+    activity: {
+      purchasesToday,
+    },
+  };
+}
+
+/**
  * Compute live platform-wide metrics and persist a snapshot to AdminDashboardStats.
  * Returns: totalUsers, totalRevenue, totalContent, activeSubscriptions + breakdowns.
  */
@@ -78,32 +134,10 @@ async function getPlatformStats() {
     await AdminDashboardStats.updateStats(snapshot);
   } catch (_) { /* ignore */ }
 
-  return {
-    users: {
-      total: totalUsers,
-      active: activeUsers,
-      new: newUsers,
-      suspended: suspendedUsers,
-    },
-    content: {
-      total: totalContent,
-      active: totalContent - removedContent,
-      removed: removedContent,
-    },
-    revenue: {
-      total: revenue.totalRevenue,
-      platformFees: revenue.platformFees,
-      creatorPayouts: revenue.creatorPayouts,
-      totalTransactions: revenue.totalTransactions,
-    },
-    subscriptions: {
-      active: activeSubscriptions,
-    },
-    activity: {
-      purchasesToday,
-    },
-    generatedAt: now,
-  };
+  return buildPlatformStatsPayload({
+    ...snapshot,
+    purchasesToday,
+  });
 }
 
 /**
@@ -112,7 +146,7 @@ async function getPlatformStats() {
  */
 async function getLatestStats() {
   const cached = await AdminDashboardStats.getLatestStats();
-  if (cached) return cached;
+  if (cached) return buildPlatformStatsPayload(cached);
   return getPlatformStats();
 }
 

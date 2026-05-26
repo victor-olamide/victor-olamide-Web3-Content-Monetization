@@ -20,6 +20,7 @@ router.use(protect, authorize('admin'));
 // Platform-wide stats (issue #182 primary endpoint)
 // GET /api/admin/stats
 // Returns: totalUsers, totalRevenue, totalContent, activeSubscriptions
+//          plus nested users, content, revenue, subscriptions, activity
 // ---------------------------------------------------------------------------
 router.get('/stats', getStats);
 
