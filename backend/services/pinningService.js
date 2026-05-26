@@ -89,7 +89,7 @@ class PinningService {
     this.healthCheckIntervalId = null;
 
     // Start health monitoring only in non-test environments
-    if (process.env.NODE_ENV !== 'test') {
+    if ((process.env.NODE_ENV || '').toString().trim() !== 'test') {
       this._startHealthMonitoring();
     }
   }
