@@ -48,6 +48,16 @@ const adminDashboardStatsSchema = new mongoose.Schema(
       default: 0,
     },
 
+    // Subscription statistics
+    activeSubscriptions: {
+      type: Number,
+      default: 0,
+    },
+    expiredSubscriptions: {
+      type: Number,
+      default: 0,
+    },
+
     // Transaction statistics
     totalTransactions: {
       type: Number,
