@@ -695,6 +695,56 @@ async function getUserNotificationStats(userId) {
   }
 }
 
+/**
+ * Notify user of successful registration with welcome email
+ * @param {string} userId - User ID
+ * @param {Object} userData - User data (email, userName)
+ * @returns {Promise<Object>} Created notification with email status
+ * @throws {Error} When userId or userData is invalid
+ */
+async function notifyUserRegistration(userId, userData) {
+  // Input validation
+  if (!userId || typeof userId !== 'string') {
+    throw new Error('Invalid userId: expected non-empty string');
+  }
+  if (!userData || typeof userData !== 'object') {
+    throw new Error('Invalid userData: expected object');
+  }
+  if (!userData.email || typeof userData.email !== 'string') {
+    throw new Error('Invalid userData.email: expected non-empty string');
+  }
+
+  try {
+    // Create in-app notification
+    const notification = await createNotification({
+      userId,
+      type: 'registration',
+      title: 'Welcome to Our Platform!',
+      message: 'Thank you for registering. Your account is ready to use!',
+      icon: 'success'
+    });
+
+    // Send welcome email
+    let emailResult = { success: false, error: 'Email disabled' };
+    try {
+      emailResult = await sendRegistrationEmail(userData.email, {
+        userName: userData.userName || 'User'
+      });
+    } catch (emailErr) {
+      logger.error('Error sending registration email:', emailErr);
+      emailResult = { success: false, error: emailErr.message };
+    }
+
+    return {
+      notification,
+      email: emailResult
+    };
+  } catch (error) {
+    logger.error('Error notifying user registration:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   createNotification,
   getUserNotifications,
@@ -711,5 +761,6 @@ module.exports = {
   notifyListingUpdate,
   notifySystem,
   clearOldNotifications,
-  getUserNotificationStats
+  getUserNotificationStats,
+  notifyUserRegistration
 };
