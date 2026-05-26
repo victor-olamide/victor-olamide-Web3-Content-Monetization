@@ -234,8 +234,9 @@ router.post('/upload-and-register', protect, requireCreator, (req, res) => {
       });
       const newContent = await content.save();
 
-      // 3b. Upload content metadata JSON to IPFS
+      // 3b. Upload content metadata JSON to IPFS and persist metadataCid + gatewayUrl
       let metadataCid = null;
+      const gatewayUrl = getGatewayUrl(ipfsUrl);
       try {
         const { uploadMetadataToIPFS, extractCid } = require('../services/ipfsService');
         const metadataUrl = await uploadMetadataToIPFS({
@@ -246,9 +247,14 @@ router.post('/upload-and-register', protect, requireCreator, (req, res) => {
           creator: req.body.creator,
           cid: cidValue,
           ipfsUrl,
+          gatewayUrl,
           createdAt: new Date().toISOString()
         }, `metadata-${contentId}.json`);
         metadataCid = extractCid(metadataUrl);
+        // Persist metadataCid and gatewayUrl back to the saved content document
+        newContent.metadataCid = metadataCid;
+        newContent.gatewayUrl = gatewayUrl;
+        await newContent.save();
       } catch (metaErr) {
         logger.warn('[Content Creation] Metadata upload to IPFS failed (non-fatal)', { err: metaErr.message });
       }
