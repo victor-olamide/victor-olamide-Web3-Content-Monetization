@@ -8,7 +8,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const encryptionService = require('../services/encryptionService');
 const ContentEncryption = require('../models/ContentEncryption');
-const { uploadToIPFS } = require('../services/storageService');
+const { uploadToIPFS, uploadToIPFSWithCid } = require('../services/storageService');
 const { uploadFileToIPFS, uploadMetadataToIPFS, getGatewayUrl } = require('../services/ipfsService');
 const { pinningManager } = require('../services/pinningManager');
 const { addContentToContract, removeContentFromContract } = require('../services/contractService');
@@ -191,6 +191,7 @@ router.post('/upload-and-register', protect, requireCreator, (req, res) => {
 
     try {
       let ipfsUrl;
+      let cidValue = null;
       let isEncrypted = false;
       let uploadBuffer = req.file.buffer;
 
@@ -220,14 +221,25 @@ router.post('/upload-and-register', protect, requireCreator, (req, res) => {
         });
 
         uploadBuffer = encryptionResult.encryptedBuffer;
-        ipfsUrl = await uploadToIPFS(uploadBuffer, req.file.originalname);
+        const uploadResult = await uploadToIPFSWithCid(uploadBuffer, req.file.originalname, {
+          contentId: String(contentId),
+          creator,
+          encrypted: 'true'
+        });
+        ipfsUrl = uploadResult.ipfsUrl;
+        cidValue = uploadResult.cid;
         isEncrypted = true;
 
         // Update the encryption record with the IPFS URL
         encryptionResult.encryptionRecord.encryptedFileUrl = ipfsUrl;
         await encryptionResult.encryptionRecord.save();
       } else {
-        ipfsUrl = await uploadToIPFS(uploadBuffer, req.file.originalname);
+        const uploadResult = await uploadToIPFSWithCid(uploadBuffer, req.file.originalname, {
+          contentId: String(contentId),
+          creator
+        });
+        ipfsUrl = uploadResult.ipfsUrl;
+        cidValue = uploadResult.cid;
       }
 
       // 2. Register on Smart Contract
@@ -247,6 +259,7 @@ router.post('/upload-and-register', protect, requireCreator, (req, res) => {
         price,
         creator: req.body.creator,
         url: ipfsUrl,
+        cid: cidValue,
         storageType: 'ipfs',
         isEncrypted,
         encryptionAlgorithm: shouldEncrypt ? encryptionService.ENCRYPTION_CONFIG.algorithm : undefined
