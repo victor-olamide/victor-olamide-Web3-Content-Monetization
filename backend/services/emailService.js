@@ -169,4 +169,51 @@ async function sendPaymentReceiptEmail(email, paymentData = {}) {
   }
 }
 
-module.exports = { sendEmail, getTransporter, sendRegistrationEmail, sendSubscriptionConfirmationEmail, sendPaymentReceiptEmail };
+/**
+ * Send renewal reminder email
+ * @param {string} email - User email address
+ * @param {Object} renewalData - Renewal data (planName, amount, currency, renewalDate)
+ * @returns {Promise<Object>} Email send result
+ */
+async function sendRenewalReminderEmail(email, renewalData = {}) {
+  if (!email) {
+    throw new Error('Email address is required');
+  }
+  if (!renewalData.planName) {
+    throw new Error('Plan name is required in renewal data');
+  }
+  if (!renewalData.renewalDate) {
+    throw new Error('Renewal date is required in renewal data');
+  }
+  if (renewalData.amount === undefined || renewalData.amount === null) {
+    throw new Error('Amount is required in renewal data');
+  }
+
+  const template = emailConfig.templates.renewalReminder;
+  const context = {
+    userName: renewalData.userName || 'User',
+    planName: renewalData.planName,
+    amount: renewalData.amount,
+    currency: renewalData.currency || 'STX',
+    renewalDate: renewalData.renewalDate
+  };
+
+  const text = template.text(context);
+  const html = template.html(context);
+
+  try {
+    const result = await sendEmail({
+      to: email,
+      subject: template.subject,
+      text,
+      html
+    });
+    logger.info(`Renewal reminder email sent to ${email} for plan ${renewalData.planName}`);
+    return { success: true, result, email };
+  } catch (error) {
+    logger.error(`Error sending renewal reminder email to ${email}:`, error);
+    throw error;
+  }
+}
+
+module.exports = { sendEmail, getTransporter, sendRegistrationEmail, sendSubscriptionConfirmationEmail, sendPaymentReceiptEmail, sendRenewalReminderEmail };
