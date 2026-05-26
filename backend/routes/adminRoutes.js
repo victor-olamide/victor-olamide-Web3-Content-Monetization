@@ -106,6 +106,21 @@ router.get('/creators/top', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// Revenue time-series
+// GET /api/admin/revenue/chart?days=30
+// ---------------------------------------------------------------------------
+router.get('/revenue/chart', async (req, res) => {
+  try {
+    const { days = 30 } = req.query;
+    const data = await adminService.getRevenueByDay(days);
+    res.json({ success: true, data });
+  } catch (error) {
+    logger.error('Failed to get revenue chart data', { err: error });
+    res.status(500).json({ success: false, error: 'Failed to get revenue chart data' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // Platform status (lightweight)
 // GET /api/admin/status
 // ---------------------------------------------------------------------------

@@ -202,6 +202,25 @@ async function getTopCreators(limit = 10) {
   return results;
 }
 
+/**
+ * Revenue by day for the last N days (default 30).
+ */
+async function getRevenueByDay(days = 30) {
+  const start = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  return Purchase.aggregate([
+    { $match: { timestamp: { $gte: start } } },
+    {
+      $group: {
+        _id: { $dateToString: { format: '%Y-%m-%d', date: '$timestamp' } },
+        revenue: { $sum: '$amount' },
+        platformFees: { $sum: '$platformFee' },
+        transactions: { $sum: 1 },
+      },
+    },
+    { $sort: { _id: 1 } },
+  ]);
+}
+
 module.exports = {
   getPlatformStats,
   getLatestStats,
@@ -210,4 +229,5 @@ module.exports = {
   getPlatformStatus,
   rebuildIndexes,
   getTopCreators,
+  getRevenueByDay,
 };
