@@ -6,6 +6,7 @@
 const axios = require('axios');
 const FormData = require('form-data');
 const logger = require('../utils/logger');
+const pinningConfig = require('../config/pinningConfig');
 
 // Pinning service providers
 const PROVIDERS = {
@@ -77,9 +78,9 @@ const PROVIDER_PRIORITIES = {
 // Configuration
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 2000;
-const PINNING_TIMEOUT = 300000; // 5 minutes
-const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
-const HEALTH_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
+const PINNING_TIMEOUT = pinningConfig.timeout;
+const MAX_FILE_SIZE = pinningConfig.maxFileSize;
+const HEALTH_CHECK_INTERVAL = pinningConfig.healthCheckInterval;
 
 class PinningService {
   constructor() {
