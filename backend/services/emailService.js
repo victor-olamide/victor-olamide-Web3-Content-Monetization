@@ -120,4 +120,53 @@ async function sendSubscriptionConfirmationEmail(email, subscriptionData = {}) {
   }
 }
 
-module.exports = { sendEmail, getTransporter, sendRegistrationEmail, sendSubscriptionConfirmationEmail };
+/**
+ * Send payment receipt email
+ * @param {string} email - User email address
+ * @param {Object} paymentData - Payment data (transactionId, itemName, amount, currency, transactionDate, paymentMethod)
+ * @returns {Promise<Object>} Email send result
+ */
+async function sendPaymentReceiptEmail(email, paymentData = {}) {
+  if (!email) {
+    throw new Error('Email address is required');
+  }
+  if (!paymentData.transactionId) {
+    throw new Error('Transaction ID is required in payment data');
+  }
+  if (!paymentData.itemName) {
+    throw new Error('Item name is required in payment data');
+  }
+  if (paymentData.amount === undefined || paymentData.amount === null) {
+    throw new Error('Amount is required in payment data');
+  }
+
+  const template = emailConfig.templates.paymentReceipt;
+  const context = {
+    userName: paymentData.userName || 'User',
+    transactionId: paymentData.transactionId,
+    itemName: paymentData.itemName,
+    amount: paymentData.amount,
+    currency: paymentData.currency || 'STX',
+    transactionDate: paymentData.transactionDate || new Date().toISOString().split('T')[0],
+    paymentMethod: paymentData.paymentMethod || 'Blockchain'
+  };
+
+  const text = template.text(context);
+  const html = template.html(context);
+
+  try {
+    const result = await sendEmail({
+      to: email,
+      subject: template.subject,
+      text,
+      html
+    });
+    logger.info(`Payment receipt email sent to ${email} for transaction ${paymentData.transactionId}`);
+    return { success: true, result, email };
+  } catch (error) {
+    logger.error(`Error sending payment receipt email to ${email}:`, error);
+    throw error;
+  }
+}
+
+module.exports = { sendEmail, getTransporter, sendRegistrationEmail, sendSubscriptionConfirmationEmail, sendPaymentReceiptEmail };
