@@ -99,7 +99,7 @@ class PinningService {
     const providers = {};
 
     // Pinata
-    if (process.env.PINATA_API_KEY && process.env.PINATA_SECRET_API_KEY) {
+    if (process.env.PINATA_JWT || (process.env.PINATA_API_KEY && process.env.PINATA_SECRET_API_KEY)) {
       providers[PROVIDERS.PINATA] = {
         apiKey: process.env.PINATA_API_KEY,
         secretKey: process.env.PINATA_SECRET_API_KEY,
@@ -212,6 +212,10 @@ class PinningService {
 
     switch (provider) {
       case PROVIDERS.PINATA:
+        // Prefer JWT bearer token if available
+        if (process.env.PINATA_JWT) {
+          return { Authorization: `Bearer ${process.env.PINATA_JWT}` };
+        }
         return config.authHeaders(providerConfig.apiKey, providerConfig.secretKey);
       case PROVIDERS.INFURA:
         return config.authHeaders(providerConfig.projectId, providerConfig.projectSecret);
