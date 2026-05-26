@@ -9,6 +9,8 @@ const contentSchema = new mongoose.Schema({
   creator: { type: String, required: true },
   url: { type: String, required: true }, // IPFS or Gaia URL
   cid: { type: String, default: null }, // IPFS Content Identifier (CID)
+  metadataCid: { type: String, default: null }, // CID of the metadata JSON uploaded to IPFS
+  gatewayUrl: { type: String, default: null }, // Public IPFS gateway URL for the content
   storageType: { type: String, enum: ['ipfs', 'gaia'], default: 'ipfs' },
   isEncrypted: { type: Boolean, default: false },
   encryptionAlgorithm: { type: String },
