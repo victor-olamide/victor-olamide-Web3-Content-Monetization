@@ -146,7 +146,7 @@ async function getPlatformStats() {
  */
 async function getLatestStats() {
   const cached = await AdminDashboardStats.getLatestStats();
-  if (cached) return buildPlatformStatsPayload(cached);
+  if (cached) return AdminDashboardStats.formatForResponse(cached);
   return getPlatformStats();
 }
 
