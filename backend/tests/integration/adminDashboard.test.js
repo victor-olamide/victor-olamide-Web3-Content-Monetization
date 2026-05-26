@@ -92,4 +92,22 @@ describe('Admin Dashboard Stats API', () => {
       message: expect.stringContaining('not authorized'),
     });
   });
+
+  test('returns dashboard overview snapshot for admin user', async () => {
+    const adminUser = await User.create({
+      name: 'Overview Admin',
+      email: 'overview-admin@example.com',
+      password: 'Password123!',
+      role: 'admin',
+    });
+
+    const token = jwt.sign({ id: adminUser._id.toString(), role: adminUser.role }, process.env.JWT_SECRET);
+    const response = await request(app)
+      .get('/api/admin/dashboard/overview')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(response.body).toHaveProperty('success', true);
+    expect(response.body).toHaveProperty('data');
+  });
 });
