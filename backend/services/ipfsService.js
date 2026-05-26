@@ -304,9 +304,49 @@ const uploadDirectory = async (files, dirName = 'content') => {
   }
 };
 
+/**
+ * Extract CID from an IPFS URL or raw hash string
+ * @param {string} ipfsUrlOrHash - ipfs://QmXXX or raw CID
+ * @returns {string} Raw CID string
+ */
+const extractCid = (ipfsUrlOrHash) => {
+  if (!ipfsUrlOrHash) return '';
+  return ipfsUrlOrHash.replace(/^ipfs:\/\//, '').replace(/^ipfs\//, '').split('/')[0];
+};
+
+/**
+ * Upload a file to IPFS via ipfsService and pin it via pinningService.
+ * Returns both the IPFS URL and the raw CID for saving to the Content model.
+ * @param {Buffer} fileBuffer - File content
+ * @param {string} fileName - Original file name
+ * @param {Object} options - Upload options (metadata, tags, maxRetries)
+ * @param {Function} onProgress - Optional progress callback
+ * @returns {Promise<{ipfsUrl: string, cid: string, gatewayUrl: string, pinResult: Object}>}
+ */
+const uploadAndPin = async (fileBuffer, fileName, options = {}, onProgress = null) => {
+  const { pinningService } = require('./pinningService');
+  const { metadata = {}, tags = [], redundancy = 2 } = options;
+
+  // Upload via pinningService for multi-provider redundancy
+  const pinResult = await pinningService.uploadFile(
+    fileBuffer,
+    fileName,
+    { metadata, tags, redundancy },
+    onProgress
+  );
+
+  const cid = extractCid(pinResult.primaryUrl);
+  const ipfsUrl = `ipfs://${cid}`;
+  const gatewayUrl = getGatewayUrl(ipfsUrl);
+
+  return { ipfsUrl, cid, gatewayUrl, pinResult };
+};
+
 module.exports = {
   uploadFileToIPFS,
   uploadMetadataToIPFS,
+  uploadAndPin,
+  extractCid,
   getGatewayUrl,
   listPinnedFiles,
   unpinFile,
