@@ -16,6 +16,28 @@ const { adminAuthMiddleware } = require('../middleware/adminAuth');
 router.use(adminAuthMiddleware);
 
 /**
+ * GET /api/pinning/verify-credentials
+ * Verify Pinata API credentials are valid
+ */
+router.get('/verify-credentials', async (req, res) => {
+  try {
+    const { verifyCredentials } = require('../services/ipfsService');
+    const valid = await verifyCredentials();
+    res.json({
+      success: true,
+      data: { valid, provider: 'pinata' }
+    });
+  } catch (error) {
+    logger.error('Error verifying credentials', { err: error });
+    res.status(500).json({
+      success: false,
+      error: 'Failed to verify credentials',
+      details: error.message
+    });
+  }
+});
+
+/**
  * GET /api/pinning/status
  * Get overall pinning service status
  */
