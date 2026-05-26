@@ -9,7 +9,7 @@ const User = require('../models/User');
 const encryptionService = require('../services/encryptionService');
 const ContentEncryption = require('../models/ContentEncryption');
 const { uploadToIPFS, uploadToIPFSWithCid } = require('../services/storageService');
-const { uploadFileToIPFS, uploadMetadataToIPFS, getGatewayUrl } = require('../services/ipfsService');
+const { uploadAndPin, uploadFileToIPFS, getGatewayUrl } = require('../services/ipfsService');
 const { pinningManager } = require('../services/pinningManager');
 const { addContentToContract, removeContentFromContract } = require('../services/contractService');
 const { protect } = require('../middleware/auth');
@@ -112,51 +112,19 @@ router.post('/upload-ipfs', (req, res) => {
       const parsedMetadata = metadata ? JSON.parse(metadata) : {};
       const parsedTags = tags ? tags.split(',').map(t => t.trim()) : [];
 
-      console.log(`[IPFS Upload] Starting upload for ${req.file.originalname}`);
+      logger.info('[IPFS Upload] Starting upload', { fileName: req.file.originalname });
 
-      // Upload file to IPFS with retry logic
-      let ipfsHash;
-      let attempts = 0;
-      const maxAttempts = 3;
+      const { ipfsUrl, cid, gatewayUrl } = await uploadAndPin(
+        req.file.buffer,
+        req.file.originalname,
+        { metadata: parsedMetadata, tags: parsedTags }
+      );
 
-      while (attempts < maxAttempts) {
-        try {
-          // Mock progress reporting (in production, use streaming)
-          res.write(`data: {"status":"uploading","progress":${Math.min(attempts * 30, 90)}} \n\n`);
-          
-          ipfsHash = await uploadFileToIPFS(
-            req.file.buffer,
-            req.file.originalname,
-            {
-              metadata: parsedMetadata,
-              tags: parsedTags,
-              public: true
-            },
-            (percent) => {
-              // Progress callback - could be streamed to client in production
-              console.log(`[IPFS Upload] Progress: ${percent}%`);
-            }
-          );
-          break;
-        } catch (err) {
-          attempts++;
-          console.error(`[IPFS Upload] Attempt ${attempts} failed:`, err.message);
-          if (attempts >= maxAttempts) {
-            throw err;
-          }
-          // Exponential backoff
-          await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempts - 1)));
-        }
-      }
-
-      const ipfsUrl = `ipfs://${ipfsHash}`;
-      const gatewayUrl = getGatewayUrl(ipfsUrl);
-
-      console.log(`[IPFS Upload] Successfully uploaded: ${ipfsUrl}`);
+      logger.info('[IPFS Upload] Succeeded', { cid, ipfsUrl });
 
       res.json({
         success: true,
-        ipfsHash,
+        cid,
         ipfsUrl,
         gatewayUrl,
         fileName: req.file.originalname,
