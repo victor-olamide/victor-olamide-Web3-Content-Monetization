@@ -234,6 +234,25 @@ router.post('/upload-and-register', protect, requireCreator, (req, res) => {
       });
       const newContent = await content.save();
 
+      // 3b. Upload content metadata JSON to IPFS
+      let metadataCid = null;
+      try {
+        const { uploadMetadataToIPFS, extractCid } = require('../services/ipfsService');
+        const metadataUrl = await uploadMetadataToIPFS({
+          contentId: parseInt(contentId),
+          title: req.body.title,
+          description: req.body.description,
+          contentType: req.body.contentType,
+          creator: req.body.creator,
+          cid: cidValue,
+          ipfsUrl,
+          createdAt: new Date().toISOString()
+        }, `metadata-${contentId}.json`);
+        metadataCid = extractCid(metadataUrl);
+      } catch (metaErr) {
+        logger.warn('[Content Creation] Metadata upload to IPFS failed (non-fatal)', { err: metaErr.message });
+      }
+
       // 4. Pin content for reliability
       try {
         console.log(`[Content Creation] Starting to pin content ${contentId}`);
@@ -247,6 +266,8 @@ router.post('/upload-and-register', protect, requireCreator, (req, res) => {
       res.status(201).json({
         message: 'Content uploaded and registered successfully',
         content: newContent,
+        cid: cidValue,
+        metadataCid,
         transactionId: txResult.txid,
         encrypted: isEncrypted
       });
