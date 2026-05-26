@@ -65,6 +65,7 @@ async function getPlatformStats() {
     totalContent,
     publishedContent: totalContent - removedContent,
     deletedContent: removedContent,
+    activeSubscriptions,
     totalRevenue: revenue.totalRevenue,
     platformFees: revenue.platformFees,
     creatorPayouts: revenue.creatorPayouts,
