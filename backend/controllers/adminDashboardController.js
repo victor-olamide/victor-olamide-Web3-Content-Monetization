@@ -39,7 +39,7 @@ async function audit(req, action, resourceId, details = {}) {
 // ---------------------------------------------------------------------------
 const getStats = async (req, res) => {
   try {
-    const stats = await adminService.getPlatformStats();
+    const stats = await adminService.getDashboardStats();
     await audit(req, 'VIEW', 'STATS', { endpoint: '/admin/stats' });
     return res.status(200).json({ success: true, data: stats });
   } catch (error) {
