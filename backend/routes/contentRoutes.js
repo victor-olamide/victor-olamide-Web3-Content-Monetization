@@ -256,6 +256,17 @@ router.post('/upload-and-register', protect, requireCreator, (req, res) => {
   });
 });
 
+// Get content by IPFS CID
+router.get('/cid/:cid', async (req, res) => {
+  try {
+    const content = await Content.findOne({ cid: req.params.cid });
+    if (!content) return res.status(404).json({ message: 'Content not found for this CID' });
+    res.json(content);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // Get single content metadata by contentId
 router.get('/:contentId', async (req, res) => {
   try {
