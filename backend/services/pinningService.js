@@ -89,8 +89,10 @@ class PinningService {
     this.lastHealthCheck = new Map();
     this.healthCheckIntervalId = null;
 
-    // Start health monitoring
-    this._startHealthMonitoring();
+    // Start health monitoring only in non-test environments
+    if ((process.env.NODE_ENV || '').toString().trim() !== 'test') {
+      this._startHealthMonitoring();
+    }
   }
 
   /**

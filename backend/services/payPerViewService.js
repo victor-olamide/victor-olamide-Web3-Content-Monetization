@@ -115,6 +115,16 @@ async function checkContentAccess(contentId, userAddress) {
       }
     }
 
+    setCachedResult(cacheKey, hasAccess);
+    return hasAccess;
+  } catch (error) {
+    console.error(`Error checking content access for ${contentId}:`, error.message);
+    throw new Error(`Failed to check content access: ${error.message}`);
+  }
+}
+
+/**
+ * Verify a user purchase against on-chain state
  * @param {string} contentId - Content ID
  * @param {string} userAddress - User's STX address
  * @param {string} txId - Transaction ID to verify
