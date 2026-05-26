@@ -173,6 +173,35 @@ async function rebuildIndexes() {
   }
 }
 
+/**
+ * Top creators by total revenue (purchases).
+ * @param {number} limit - Number of creators to return (default 10)
+ */
+async function getTopCreators(limit = 10) {
+  const results = await Purchase.aggregate([
+    {
+      $group: {
+        _id: '$creator',
+        totalRevenue: { $sum: '$amount' },
+        totalSales: { $sum: 1 },
+        creatorEarnings: { $sum: '$creatorAmount' },
+      },
+    },
+    { $sort: { totalRevenue: -1 } },
+    { $limit: parseInt(limit) },
+    {
+      $project: {
+        creator: '$_id',
+        totalRevenue: 1,
+        totalSales: 1,
+        creatorEarnings: 1,
+        _id: 0,
+      },
+    },
+  ]);
+  return results;
+}
+
 module.exports = {
   getPlatformStats,
   getLatestStats,
@@ -180,4 +209,5 @@ module.exports = {
   getMetrics,
   getPlatformStatus,
   rebuildIndexes,
+  getTopCreators,
 };
