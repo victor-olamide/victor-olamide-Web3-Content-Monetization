@@ -14,8 +14,20 @@ const buildQuery = (params) => {
     isRemoved,
   } = params;
 
-  const contentTypeValue = typeof contentType === 'string' ? contentType.trim() : contentType;
-  const categoryValue = typeof category === 'string' ? category.trim() : category;
+  const normalizeValues = (value) => {
+    if (Array.isArray(value)) {
+      return value.map((item) => String(item).trim()).filter(Boolean);
+    }
+
+    if (typeof value === 'string') {
+      return value.split(',').map((item) => item.trim()).filter(Boolean);
+    }
+
+    return [];
+  };
+
+  const contentTypeValues = normalizeValues(contentType);
+  const categoryValues = normalizeValues(category);
   const creatorValue = typeof creator === 'string' ? creator.trim() : creator;
   const searchQuery = typeof q === 'string' ? q.trim() : q;
 
@@ -28,9 +40,11 @@ const buildQuery = (params) => {
   }
 
   // Accept `category` as an alias for contentType so clients can filter by category.
-  const contentCategory = contentTypeValue || categoryValue;
-  if (contentCategory) {
-    query.contentType = contentCategory;
+  const contentCategoryValues = [...contentTypeValues, ...categoryValues];
+  if (contentCategoryValues.length === 1) {
+    query.contentType = contentCategoryValues[0];
+  } else if (contentCategoryValues.length > 1) {
+    query.contentType = { $in: contentCategoryValues };
   }
 
   if (creatorValue) {
