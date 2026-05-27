@@ -7,7 +7,7 @@
 const Notification = require('../models/Notification');
 const logger = require('../utils/logger');
 const UserProfile = require('../models/UserProfile');
-const { sendEmail } = require('./emailService');
+const { sendEmail, sendRegistrationEmail, sendSubscriptionConfirmationEmail, sendPaymentReceiptEmail, sendRenewalReminderEmail } = require('./emailService');
 const { emailConfig } = require('../config/emailConfig');
 
 /**
@@ -374,13 +374,15 @@ async function notifyPurchaseSuccess(userId, purchaseData) {
         const toEmail = purchaseData.email || purchaseData.userEmail || (profile && (profile.email || profile.contactEmail));
 
         if (emailConfig.enabled && toEmail && allowEmail) {
-          const subject = emailConfig.templates.purchase.subject;
-          const text = emailConfig.templates.purchase.body({
-            userName: profile && (profile.displayName || profile.username) ? (profile.displayName || profile.username) : undefined,
+          await sendPaymentReceiptEmail(toEmail, {
+            userName: profile && (profile.displayName || profile.username) ? (profile.displayName || profile.username) : 'User',
+            transactionId: purchaseData.transactionId,
             itemName: purchaseData.contentTitle,
-            transactionId: purchaseData.transactionId
+            amount: purchaseData.price,
+            currency: purchaseData.currency,
+            transactionDate: purchaseData.transactionDate,
+            paymentMethod: purchaseData.paymentMethod
           });
-          await sendEmail({ to: toEmail, subject, text });
         }
       } catch (emailErr) {
         logger.error('Error sending purchase email notification:', emailErr);
@@ -405,15 +407,19 @@ async function notifyPurchaseSuccess(userId, purchaseData) {
       if (!emailConfig.enabled) return { success: false, error: 'Email disabled' };
       if (!toEmail) return { success: false, error: 'No recipient email available' };
       if (!allowEmail) return { success: false, error: 'User opted out of email notifications' };
+      if (!subscriptionData.planName) return { success: false, error: 'Plan name is required' };
+      if (!subscriptionData.subscriptionId) return { success: false, error: 'Subscription ID is required' };
 
-      const subject = emailConfig.templates.subscription.subject;
-      const text = emailConfig.templates.subscription.body({
-        userName: profile && (profile.displayName || profile.username) ? (profile.displayName || profile.username) : undefined,
+      const result = await sendSubscriptionConfirmationEmail(toEmail, {
+        userName: profile && (profile.displayName || profile.username) ? (profile.displayName || profile.username) : 'User',
         planName: subscriptionData.planName,
-        subscriptionId: subscriptionData.subscriptionId
+        subscriptionId: subscriptionData.subscriptionId,
+        amount: subscriptionData.amount,
+        currency: subscriptionData.currency,
+        startDate: subscriptionData.startDate,
+        renewalDate: subscriptionData.renewalDate
       });
 
-      const result = await sendEmail({ to: toEmail, subject, text });
       return { success: true, result };
     } catch (error) {
       logger.error('Error sending subscription email:', error);
@@ -695,6 +701,257 @@ async function getUserNotificationStats(userId) {
   }
 }
 
+/**
+ * Notify user of successful registration with welcome email
+ * @param {string} userId - User ID
+ * @param {Object} userData - User data (email, userName)
+ * @returns {Promise<Object>} Created notification with email status
+ * @throws {Error} When userId or userData is invalid
+ */
+async function notifyUserRegistration(userId, userData) {
+  // Input validation
+  if (!userId || typeof userId !== 'string') {
+    throw new Error('Invalid userId: expected non-empty string');
+  }
+  if (!userData || typeof userData !== 'object') {
+    throw new Error('Invalid userData: expected object');
+  }
+  if (!userData.email || typeof userData.email !== 'string') {
+    throw new Error('Invalid userData.email: expected non-empty string');
+  }
+
+  try {
+    // Create in-app notification
+    const notification = await createNotification({
+      userId,
+      type: 'registration',
+      title: 'Welcome to Our Platform!',
+      message: 'Thank you for registering. Your account is ready to use!',
+      icon: 'success'
+    });
+
+    // Send welcome email
+    let emailResult = { success: false, error: 'Email disabled' };
+    try {
+      emailResult = await sendRegistrationEmail(userData.email, {
+        userName: userData.userName || 'User'
+      });
+    } catch (emailErr) {
+      logger.error('Error sending registration email:', emailErr);
+      emailResult = { success: false, error: emailErr.message };
+    }
+
+    return {
+      notification,
+      email: emailResult
+    };
+  } catch (error) {
+    logger.error('Error notifying user registration:', error);
+    throw error;
+  }
+}
+
+/**
+ * Notify user of subscription confirmation with email
+ * @param {string} userId - User ID
+ * @param {Object} subscriptionData - Subscription data (email, userName, planName, subscriptionId, amount, currency, startDate, renewalDate)
+ * @returns {Promise<Object>} Created notification with email status
+ * @throws {Error} When userId or subscriptionData is invalid
+ */
+async function notifySubscriptionConfirmation(userId, subscriptionData) {
+  // Input validation
+  if (!userId || typeof userId !== 'string') {
+    throw new Error('Invalid userId: expected non-empty string');
+  }
+  if (!subscriptionData || typeof subscriptionData !== 'object') {
+    throw new Error('Invalid subscriptionData: expected object');
+  }
+  if (!subscriptionData.email || typeof subscriptionData.email !== 'string') {
+    throw new Error('Invalid subscriptionData.email: expected non-empty string');
+  }
+  if (!subscriptionData.planName || typeof subscriptionData.planName !== 'string') {
+    throw new Error('Invalid subscriptionData.planName: expected non-empty string');
+  }
+  if (!subscriptionData.subscriptionId || typeof subscriptionData.subscriptionId !== 'string') {
+    throw new Error('Invalid subscriptionData.subscriptionId: expected non-empty string');
+  }
+
+  try {
+    // Create in-app notification
+    const notification = await createNotification({
+      userId,
+      type: 'subscription_confirmation',
+      title: 'Subscription Activated!',
+      message: `Your subscription to ${subscriptionData.planName} is now active.`,
+      icon: 'success',
+      metadata: {
+        planName: subscriptionData.planName,
+        subscriptionId: subscriptionData.subscriptionId,
+        amount: subscriptionData.amount
+      }
+    });
+
+    // Send subscription confirmation email
+    let emailResult = { success: false, error: 'Email disabled' };
+    try {
+      emailResult = await sendSubscriptionConfirmationEmail(subscriptionData.email, {
+        userName: subscriptionData.userName || 'User',
+        planName: subscriptionData.planName,
+        subscriptionId: subscriptionData.subscriptionId,
+        amount: subscriptionData.amount,
+        currency: subscriptionData.currency,
+        startDate: subscriptionData.startDate,
+        renewalDate: subscriptionData.renewalDate
+      });
+    } catch (emailErr) {
+      logger.error('Error sending subscription confirmation email:', emailErr);
+      emailResult = { success: false, error: emailErr.message };
+    }
+
+    return {
+      notification,
+      email: emailResult
+    };
+  } catch (error) {
+    logger.error('Error notifying subscription confirmation:', error);
+    throw error;
+  }
+}
+
+/**
+ * Notify user of payment receipt with email
+ * @param {string} userId - User ID
+ * @param {Object} paymentData - Payment data (email, userName, transactionId, itemName, amount, currency, transactionDate, paymentMethod)
+ * @returns {Promise<Object>} Created notification with email status
+ * @throws {Error} When userId or paymentData is invalid
+ */
+async function notifyPaymentReceipt(userId, paymentData) {
+  if (!userId || typeof userId !== 'string') {
+    throw new Error('Invalid userId: expected non-empty string');
+  }
+  if (!paymentData || typeof paymentData !== 'object') {
+    throw new Error('Invalid paymentData: expected object');
+  }
+  if (!paymentData.email || typeof paymentData.email !== 'string') {
+    throw new Error('Invalid paymentData.email: expected non-empty string');
+  }
+  if (!paymentData.transactionId || typeof paymentData.transactionId !== 'string') {
+    throw new Error('Invalid paymentData.transactionId: expected non-empty string');
+  }
+  if (!paymentData.itemName || typeof paymentData.itemName !== 'string') {
+    throw new Error('Invalid paymentData.itemName: expected non-empty string');
+  }
+  if (paymentData.amount === undefined || paymentData.amount === null) {
+    throw new Error('Invalid paymentData.amount: expected number');
+  }
+
+  try {
+    const notification = await createNotification({
+      userId,
+      type: 'payment_receipt',
+      title: 'Payment Receipt',
+      message: `Your payment for ${paymentData.itemName} has been processed successfully.`,
+      icon: 'receipt',
+      metadata: {
+        transactionId: paymentData.transactionId,
+        itemName: paymentData.itemName,
+        amount: paymentData.amount,
+        currency: paymentData.currency
+      }
+    });
+
+    let emailResult = { success: false, error: 'Email disabled' };
+    try {
+      emailResult = await sendPaymentReceiptEmail(paymentData.email, {
+        userName: paymentData.userName || 'User',
+        transactionId: paymentData.transactionId,
+        itemName: paymentData.itemName,
+        amount: paymentData.amount,
+        currency: paymentData.currency,
+        transactionDate: paymentData.transactionDate,
+        paymentMethod: paymentData.paymentMethod
+      });
+    } catch (emailErr) {
+      logger.error('Error sending payment receipt email:', emailErr);
+      emailResult = { success: false, error: emailErr.message };
+    }
+
+    return {
+      notification,
+      email: emailResult
+    };
+  } catch (error) {
+    logger.error('Error notifying payment receipt:', error);
+    throw error;
+  }
+}
+
+/**
+ * Notify user of upcoming subscription renewal reminder with email
+ * @param {string} userId - User ID
+ * @param {Object} renewalData - Renewal data (email, userName, planName, amount, currency, renewalDate)
+ * @returns {Promise<Object>} Created notification with email status
+ * @throws {Error} When userId or renewalData is invalid
+ */
+async function notifyRenewalReminder(userId, renewalData) {
+  if (!userId || typeof userId !== 'string') {
+    throw new Error('Invalid userId: expected non-empty string');
+  }
+  if (!renewalData || typeof renewalData !== 'object') {
+    throw new Error('Invalid renewalData: expected object');
+  }
+  if (!renewalData.email || typeof renewalData.email !== 'string') {
+    throw new Error('Invalid renewalData.email: expected non-empty string');
+  }
+  if (!renewalData.planName || typeof renewalData.planName !== 'string') {
+    throw new Error('Invalid renewalData.planName: expected non-empty string');
+  }
+  if (!renewalData.renewalDate || typeof renewalData.renewalDate !== 'string') {
+    throw new Error('Invalid renewalData.renewalDate: expected non-empty string');
+  }
+  if (renewalData.amount === undefined || renewalData.amount === null) {
+    throw new Error('Invalid renewalData.amount: expected number');
+  }
+
+  try {
+    const notification = await createNotification({
+      userId,
+      type: 'renewal_reminder',
+      title: 'Subscription Renewal Reminder',
+      message: `Your subscription to ${renewalData.planName} renews on ${renewalData.renewalDate}.`,
+      icon: 'reminder',
+      metadata: {
+        planName: renewalData.planName,
+        renewalDate: renewalData.renewalDate,
+        amount: renewalData.amount,
+        currency: renewalData.currency
+      }
+    });
+
+    let emailResult = { success: false, error: 'Email disabled' };
+    try {
+      emailResult = await sendRenewalReminderEmail(renewalData.email, {
+        userName: renewalData.userName || 'User',
+        planName: renewalData.planName,
+        amount: renewalData.amount,
+        currency: renewalData.currency,
+        renewalDate: renewalData.renewalDate
+      });
+    } catch (emailErr) {
+      logger.error('Error sending renewal reminder email:', emailErr);
+      emailResult = { success: false, error: emailErr.message };
+    }
+
+    return {
+      notification,
+      email: emailResult
+    };
+  } catch (error) {
+    logger.error('Error notifying renewal reminder:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   createNotification,
   getUserNotifications,
@@ -711,5 +968,10 @@ module.exports = {
   notifyListingUpdate,
   notifySystem,
   clearOldNotifications,
-  getUserNotificationStats
+  getUserNotificationStats,
+  sendSubscriptionEmail,
+  notifyUserRegistration,
+  notifySubscriptionConfirmation,
+  notifyPaymentReceipt,
+  notifyRenewalReminder
 };
