@@ -87,6 +87,43 @@ const emailConfig = {
         <p>If you have any questions about your subscription, please reach out to our support team.</p>
       `)
     },
+    subscription: {
+      subject: 'Subscription Activated - Your Account is Ready',
+      text: (ctx) => `Hello ${ctx.userName || 'User'},\n\nYour subscription to ${ctx.planName} has been successfully activated!\n\nSubscription ID: ${ctx.subscriptionId}\nAmount: ${ctx.amount} ${ctx.currency || 'STX'}\nStart Date: ${ctx.startDate || new Date().toISOString().split('T')[0]}\nNext Renewal: ${ctx.renewalDate || ''}\n\nYou now have access to all premium content and features.\n\nBest regards,\nThe Platform Team`,
+      html: (ctx) => getEmailLayout('Subscription Activated!', `
+        <h2>Your Subscription is Now Active!</h2>
+        <p>Thank you for subscribing to <strong>${ctx.planName}</strong>. Your subscription has been successfully activated.</p>
+        <div class="highlight">
+          <p><strong>Subscription Details:</strong></p>
+          <ul>
+            <li>Plan: ${ctx.planName}</li>
+            <li>Amount: ${ctx.amount} ${ctx.currency || 'STX'}</li>
+            <li>Subscription ID: ${ctx.subscriptionId}</li>
+            <li>Start Date: ${ctx.startDate || new Date().toISOString().split('T')[0]}</li>
+            <li>Next Renewal: ${ctx.renewalDate || 'To be determined'}</li>
+          </ul>
+        </div>
+        <p>You now have full access to all premium content and features included in your subscription tier.</p>
+        <p>If you have any questions about your subscription, please reach out to our support team.</p>
+      `)
+    },
+    purchase: {
+      subject: 'Your purchase is complete',
+      text: (ctx) => `Hello ${ctx.userName || 'User'},\n\nThank you for your purchase of ${ctx.itemName}. Your transaction ID: ${ctx.transactionId}.\n\nRegards,\nThe Team`,
+      html: (ctx) => getEmailLayout('Purchase Completed', `
+        <h2>Purchase Confirmed</h2>
+        <p>Thank you for your purchase of <strong>${ctx.itemName}</strong>.</p>
+        <div class="highlight">
+          <p><strong>Transaction Details:</strong></p>
+          <ul>
+            <li>Transaction ID: ${ctx.transactionId}</li>
+            <li>Item: ${ctx.itemName}</li>
+            <li>Amount: ${ctx.amount || ''} ${ctx.currency || 'STX'}</li>
+          </ul>
+        </div>
+        <p>Your purchase is now available in your library.</p>
+      `)
+    },
     paymentReceipt: {
       subject: 'Payment Receipt - Transaction Confirmed',
       text: (ctx) => `Hello ${ctx.userName || 'User'},\n\nThank you for your payment! Your transaction has been successfully processed.\n\nTransaction Details:\nTransaction ID: ${ctx.transactionId}\nItem: ${ctx.itemName}\nAmount: ${ctx.amount} ${ctx.currency || 'STX'}\nDate: ${ctx.transactionDate || new Date().toISOString().split('T')[0]}\nPayment Method: ${ctx.paymentMethod || 'Blockchain'}\n\nYou can access your purchase in your library.\n\nBest regards,\nThe Platform Team`,
