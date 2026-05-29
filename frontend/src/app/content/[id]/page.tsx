@@ -3,13 +3,23 @@
 import React, { useState, useCallback } from 'react';
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardShell from "@/components/DashboardShell";
-import { Lock, Unlock, PlayCircle, ChevronLeft, Loader2, ExternalLink } from 'lucide-react';
+import { Lock, ChevronLeft, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useContentAccess } from '@/hooks/useContentAccess';
 import { usePayPerView } from '@/hooks/usePayPerView';
 import { useWalletBalance } from '@/hooks/useWalletBalance';
 import { useToast } from '@/contexts/ToastContext';
-import { STACKS_API_BASE, STACKS_EXPLORER_BASE, STACKS_CHAIN } from '@/utils/constants';
+import { useContentView } from '@/hooks/useContentView';
+import { useSTXPrice } from '@/hooks/useSTXPrice';
+import { STACKS_EXPLORER_BASE, STACKS_CHAIN } from '@/utils/constants';
+import ContentPlayer from '@/components/ContentPlayer';
+import PaywallComponent from '@/components/PaywallComponent';
+import ContentMetadata from '@/components/ContentMetadata';
+import ContentErrorBoundary from '@/components/ContentErrorBoundary';
+import { ContentLoadingSkeleton } from '@/components/ContentLoadingSkeleton';
+import SubscriptionModal from '@/components/SubscriptionModal';
+import RelatedContent from '@/components/RelatedContent';
+import { handleContentShare } from '@/utils/contentSharingUtils';
 
 export default function ContentView({ params }: { params: { id: string } }) {
   const { isLoggedIn, stxAddress } = useAuth();
