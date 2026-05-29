@@ -57,7 +57,7 @@ class Indexer {
     }
 
     try {
-      console.log(`Polling for events from ${this.contractAddress}...`);
+      logger.debug('Polling for events from contract', { contractAddress: this.contractAddress });
       const response = await axios.get(`${this.apiUrl}/extended/v1/address/${this.contractAddress}/transactions?limit=20`);
       const transactions = response.data.results;
 
