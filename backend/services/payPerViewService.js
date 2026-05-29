@@ -11,6 +11,7 @@
  * - Handle refunds
  */
 
+const logger = require('../utils/logger');
 const {
   callReadOnlyFunction,
   cvToJSON,
@@ -55,26 +56,30 @@ const metrics = {
  * @returns {Object|null} Cached result or null
  */
 function getCachedResult(cacheKey) {
-  const cached = verificationCache.get(cacheKey);
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-    metrics.cacheHits++;
-    return cached.result;
+  try {
+    const cached = verificationCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      metrics.cacheHits++;
+      return cached.result;
+    }
+    verificationCache.delete(cacheKey);
+    metrics.cacheMisses++;
+    return null;
+  } catch (error) {
+    logger.error('Cache retrieval failed', { cacheKey, error: error.message });
+    return null;
   }
-  verificationCache.delete(cacheKey);
-  metrics.cacheMisses++;
-  return null;
 }
 
-/**
- * Set cache with TTL
- * @param {string} cacheKey - Cache key
- * @param {Object} result - Result to cache
- */
 function setCachedResult(cacheKey, result) {
-  verificationCache.set(cacheKey, {
-    result,
-    timestamp: Date.now(),
-  });
+  try {
+    verificationCache.set(cacheKey, {
+      result,
+      timestamp: Date.now(),
+    });
+  } catch (error) {
+    logger.error('Failed to set cache result', { cacheKey, error: error.message });
+  }
 }
 
 /**
@@ -118,7 +123,7 @@ async function checkContentAccess(contentId, userAddress) {
     setCachedResult(cacheKey, hasAccess);
     return hasAccess;
   } catch (error) {
-    console.error(`Error checking content access for ${contentId}:`, error.message);
+    logger.error('Failed to check content access', { contentId, userAddress, error: error.message });
     throw new Error(`Failed to check content access: ${error.message}`);
   }
 }
@@ -167,7 +172,7 @@ async function verifyPurchase(contentId, userAddress, txId) {
     setCachedResult(cacheKey, result);
     return result;
   } catch (error) {
-    console.error('Error verifying purchase:', error.message);
+    logger.error('Purchase verification failed', { contentId, userAddress, txId, error: error.message });
     throw new Error(`Failed to verify purchase: ${error.message}`);
   }
 }
@@ -198,7 +203,7 @@ async function getContentPricing(contentId) {
     setCachedResult(cacheKey, pricingData);
     return pricingData;
   } catch (error) {
-    console.error(`Error getting content pricing for ${contentId}:`, error.message);
+    logger.error('Failed to get content pricing', { contentId, error: error.message });
     throw new Error(`Failed to get content pricing: ${error.message}`);
   }
 }
@@ -208,13 +213,18 @@ async function getContentPricing(contentId) {
  * @param {string} contentId - Content ID
  */
 function invalidateContentCache(contentId) {
-  const keysToDelete = [];
-  for (const key of verificationCache.keys()) {
-    if (key.includes(contentId)) {
-      keysToDelete.push(key);
+  try {
+    const keysToDelete = [];
+    for (const key of verificationCache.keys()) {
+      if (key.includes(contentId)) {
+        keysToDelete.push(key);
+      }
     }
+    keysToDelete.forEach(key => verificationCache.delete(key));
+    logger.debug('Content cache invalidated', { contentId, keysRemoved: keysToDelete.length });
+  } catch (error) {
+    logger.error('Failed to invalidate content cache', { contentId, error: error.message });
   }
-  keysToDelete.forEach(key => verificationCache.delete(key));
 }
 
 /**

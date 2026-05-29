@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const Content = require('../models/Content');
 
 /**
@@ -69,13 +70,14 @@ const buildQuery = (params) => {
  * Perform search with pagination and simple facets
  */
 const searchContent = async (params) => {
-  const page = parseInt(params.page, 10) || 1;
-  const limit = parseInt(params.limit, 10) || 20;
-  const sortBy = params.sortBy || 'createdAt';
-  const sortDir = params.sortDir === 'asc' ? 1 : -1;
+  try {
+    const page = parseInt(params.page, 10) || 1;
+    const limit = parseInt(params.limit, 10) || 20;
+    const sortBy = params.sortBy || 'createdAt';
+    const sortDir = params.sortDir === 'asc' ? 1 : -1;
 
-  const skip = (page - 1) * limit;
-  const query = buildQuery(params);
+    const skip = (page - 1) * limit;
+    const query = buildQuery(params);
 
   // Projection: if text score available include it
   const projection = {};
@@ -101,14 +103,18 @@ const searchContent = async (params) => {
     acc[f._id] = f.count; return acc;
   }, {});
 
-  return {
-    page,
-    limit,
-    total,
-    pages: Math.ceil(total / limit),
-    results,
-    facets: { contentType: formattedFacets }
-  };
+    return {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit),
+      results,
+      facets: { contentType: formattedFacets }
+    };
+  } catch (error) {
+    logger.error('Content search failed', { params, error: error.message });
+    throw new Error(`Content search failed: ${error.message}`);
+  }
 };
 
 module.exports = {

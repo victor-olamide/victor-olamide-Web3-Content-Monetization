@@ -11,24 +11,31 @@ const { uploadAndPin, extractCid, getGatewayUrl: ipfsGetGatewayUrl } = require('
  * @returns {Promise<string>} ipfs:// URL
  */
 const uploadToIPFS = async (fileBuffer, fileName, metadata = {}) => {
-  const { ipfsUrl } = await uploadAndPin(fileBuffer, fileName, { metadata });
-  return ipfsUrl;
+  try {
+    const { ipfsUrl } = await uploadAndPin(fileBuffer, fileName, { metadata });
+    return ipfsUrl;
+  } catch (error) {
+    logger.error('IPFS upload failed', { fileName, error: error.message });
+    throw new Error(`Failed to upload ${fileName} to IPFS: ${error.message}`);
+  }
 };
 
-/**
- * Upload a file to IPFS and return both the URL and the raw CID.
- * Use this when you need to save the CID to the Content model.
- * @param {Buffer} fileBuffer
- * @param {string} fileName
- * @param {Object} metadata
- * @returns {Promise<{ipfsUrl: string, cid: string, gatewayUrl: string}>}
- */
 const uploadToIPFSWithCid = async (fileBuffer, fileName, metadata = {}) => {
-  return uploadAndPin(fileBuffer, fileName, { metadata });
+  try {
+    return await uploadAndPin(fileBuffer, fileName, { metadata });
+  } catch (error) {
+    logger.error('IPFS upload with CID failed', { fileName, error: error.message });
+    throw new Error(`Failed to upload ${fileName} to IPFS with CID: ${error.message}`);
+  }
 };
 
 const getGatewayUrl = (ipfsUrl) => {
-  return ipfsGetGatewayUrl(ipfsUrl);
+  try {
+    return ipfsGetGatewayUrl(ipfsUrl);
+  } catch (error) {
+    logger.error('Failed to resolve IPFS gateway URL', { ipfsUrl, error: error.message });
+    throw new Error(`Failed to resolve gateway URL for ${ipfsUrl}: ${error.message}`);
+  }
 };
 
 const getContentFromStorage = async (url, storageType) => {
@@ -58,8 +65,13 @@ const checkStorageHealth = async () => {
 };
 
 const uploadToGaia = async (fileBuffer, fileName) => {
-  console.log(`Uploading ${fileName} to Gaia (Mock)`);
-  return `gaia://${process.env.GAIA_HUB_URL || 'hub.blockstack.org'}/${fileName}`;
+  try {
+    logger.info('Uploading file to Gaia storage', { fileName });
+    return `gaia://${process.env.GAIA_HUB_URL || 'hub.blockstack.org'}/${fileName}`;
+  } catch (error) {
+    logger.error('Gaia upload failed', { fileName, error: error.message });
+    throw new Error(`Failed to upload ${fileName} to Gaia: ${error.message}`);
+  }
 };
 
 module.exports = {

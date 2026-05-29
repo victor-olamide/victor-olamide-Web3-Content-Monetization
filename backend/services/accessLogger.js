@@ -30,36 +30,45 @@ async function logAccess(data) {
  * Get access logs for a user
  */
 async function getUserAccessLogs(userAddress, limit = 50) {
-  return await AccessLog.find({ userAddress })
-    .sort({ timestamp: -1 })
-    .limit(limit);
+  try {
+    return await AccessLog.find({ userAddress })
+      .sort({ timestamp: -1 })
+      .limit(limit);
+  } catch (error) {
+    logger.error('Failed to get user access logs', { userAddress, error: error.message });
+    throw new Error(`Failed to retrieve access logs: ${error.message}`);
+  }
 }
 
-/**
- * Get access logs for content
- */
 async function getContentAccessLogs(contentId, limit = 50) {
-  return await AccessLog.find({ contentId, accessGranted: true })
-    .sort({ timestamp: -1 })
-    .limit(limit);
+  try {
+    return await AccessLog.find({ contentId, accessGranted: true })
+      .sort({ timestamp: -1 })
+      .limit(limit);
+  } catch (error) {
+    logger.error('Failed to get content access logs', { contentId, error: error.message });
+    throw new Error(`Failed to retrieve content access logs: ${error.message}`);
+  }
 }
 
-/**
- * Get access statistics
- */
 async function getAccessStats(contentId) {
-  const stats = await AccessLog.aggregate([
-    { $match: { contentId, accessGranted: true } },
-    { $group: {
-      _id: '$accessMethod',
-      count: { $sum: 1 }
-    }}
-  ]);
+  try {
+    const stats = await AccessLog.aggregate([
+      { $match: { contentId, accessGranted: true } },
+      { $group: {
+        _id: '$accessMethod',
+        count: { $sum: 1 }
+      }}
+    ]);
 
-  return stats.reduce((acc, stat) => {
-    acc[stat._id] = stat.count;
-    return acc;
-  }, {});
+    return stats.reduce((acc, stat) => {
+      acc[stat._id] = stat.count;
+      return acc;
+    }, {});
+  } catch (error) {
+    logger.error('Failed to get access stats', { contentId, error: error.message });
+    throw new Error(`Failed to retrieve access statistics: ${error.message}`);
+  }
 }
 
 module.exports = {
