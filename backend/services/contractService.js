@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const {
   makeContractCall,
   broadcastTransaction,
@@ -13,33 +14,41 @@ const { StacksMainnet, StacksTestnet } = require('@stacks/network');
 const network = process.env.NODE_ENV === 'production' ? new StacksMainnet() : new StacksTestnet();
 
 const getPlatformFee = async () => {
-  const { callReadOnlyFunction, cvToJSON } = require('@stacks/transactions');
-  
-  const result = await callReadOnlyFunction({
-    contractAddress: process.env.CONTRACT_ADDRESS,
-    contractName: 'pay-per-view',
-    functionName: 'get-platform-fee',
-    functionArgs: [],
-    network,
-    senderAddress: process.env.CONTRACT_ADDRESS,
-  });
-  
-  return cvToJSON(result).value;
+  try {
+    const { callReadOnlyFunction, cvToJSON } = require('@stacks/transactions');
+    
+    const result = await callReadOnlyFunction({
+      contractAddress: process.env.CONTRACT_ADDRESS,
+      contractName: 'pay-per-view',
+      functionName: 'get-platform-fee',
+      functionArgs: [],
+      network,
+      senderAddress: process.env.CONTRACT_ADDRESS,
+    });
+    
+    return cvToJSON(result).value;
+  } catch (error) {
+    throw new Error(`Failed to get platform fee from blockchain: ${error.message}`);
+  }
 };
 
 const calculatePlatformFee = async (amount) => {
-  const { callReadOnlyFunction, cvToJSON } = require('@stacks/transactions');
-  
-  const result = await callReadOnlyFunction({
-    contractAddress: process.env.CONTRACT_ADDRESS,
-    contractName: 'pay-per-view',
-    functionName: 'calculate-platform-fee',
-    functionArgs: [uintCV(amount)],
-    network,
-    senderAddress: process.env.CONTRACT_ADDRESS,
-  });
-  
-  return cvToJSON(result).value;
+  try {
+    const { callReadOnlyFunction, cvToJSON } = require('@stacks/transactions');
+    
+    const result = await callReadOnlyFunction({
+      contractAddress: process.env.CONTRACT_ADDRESS,
+      contractName: 'pay-per-view',
+      functionName: 'calculate-platform-fee',
+      functionArgs: [uintCV(amount)],
+      network,
+      senderAddress: process.env.CONTRACT_ADDRESS,
+    });
+    
+    return cvToJSON(result).value;
+  } catch (error) {
+    throw new Error(`Failed to calculate platform fee for amount ${amount}: ${error.message}`);
+  }
 };
 
 const addContentToContract = async (contentId, price, uri, privateKey) => {
