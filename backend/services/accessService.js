@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const Purchase = require('../models/Purchase');
 const Subscription = require('../models/Subscription');
 const WalletConnection = require('../models/WalletConnection');
@@ -87,6 +88,7 @@ async function hasAccess(content, userAddress) {
 
     return { allowed: false, reason: 'no-access', method: null };
   } catch (error) {
+    logger.error('Access verification failed for content', { contentId: content.contentId, error: error.message });
     throw new Error(`Access verification failed for content ${content.contentId}: ${error.message}`);
   }
 }
@@ -98,22 +100,26 @@ async function hasAccess(content, userAddress) {
  * @returns {Promise<Object>}
  */
 async function verifyAccess(contentId, userAddress) {
-  const cacheKey = `access:${contentId}:${userAddress}`;
-  const cachedResult = accessCache.get(cacheKey);
-  if (cachedResult) return cachedResult;
+  try {
+    const cacheKey = `access:${contentId}:${userAddress}`;
+    const cachedResult = accessCache.get(cacheKey);
+    if (cachedResult) return cachedResult;
 
-  const Content = require('../models/Content');
-  const content = await Content.findOne({ contentId });
+    const Content = require('../models/Content');
+    const content = await Content.findOne({ contentId });
 
-  if (!content) {
-    return { allowed: false, reason: 'content-not-found' };
+    if (!content) {
+      return { allowed: false, reason: 'content-not-found' };
+    }
+
+    const result = await hasAccess(content, userAddress);
+    if (result.allowed) {
+      accessCache.set(cacheKey, result);
+    }
+    return result;
+  } catch (error) {
+    throw new Error(`Access verification failed for contentId ${contentId}: ${error.message}`);
   }
-
-  const result = await hasAccess(content, userAddress);
-  if (result.allowed) {
-    accessCache.set(cacheKey, result);
-  }
-  return result;
 }
 
 /**
@@ -123,116 +129,115 @@ async function verifyAccess(contentId, userAddress) {
  * @returns {Promise<Object>}
  */
 async function hasAccessByUserId(content, userId) {
-  if (!userId) {
-    return { allowed: false, reason: 'No user ID provided' };
-  }
-  
-  // 0. Check if content is removed
-  if (content.isRemoved) {
-    return { allowed: false, reason: 'content-removed', method: null };
-  }
-  
-  // Get user's connected wallets
-  const wallets = await WalletConnection.find({ userId, isConnected: true });
-  const userAddresses = wallets.map(w => w.address);
-  
-  // 1. Creator always has access (check if any wallet is creator)
-  if (userAddresses.includes(content.creator)) {
-    return { allowed: true, reason: 'creator', method: 'creator' };
-  }
-
-  // 2. Check purchases for any of user's addresses
-  for (const address of userAddresses) {
-    const hasPurchased = await verifyPurchase(address, content.contentId);
-    if (hasPurchased) {
-      return { allowed: true, reason: 'purchase', method: 'pay-per-view' };
+  try {
+    if (!userId) {
+      return { allowed: false, reason: 'No user ID provided' };
     }
-  }
-
-  // 3. Check subscription (if applicable)
-  if (content.subscriptionTier) {
-    for (const address of userAddresses) {
-      const hasSubscription = await verifySubscription(
-        address, 
-        content.creator, 
-        content.subscriptionTier
-      );
-      if (hasSubscription) {
-        return { allowed: true, reason: 'subscription', method: 'subscription' };
-      }
-    }
-  }
-
-  // 4. Check Token-Gating from on-chain content-gate contract
-  const onChainRule = await contentGateService.getGatingRule(content.contentId);
-  if (onChainRule) {
-    for (const address of userAddresses) {
-      if (onChainRule.gating_type === 0) {
-        // FT verification
-        const ftAccess = await contentGateService.verifyFTAccess(
-          content.contentId,
-          address,
-          onChainRule.token_contract
-        );
-        if (ftAccess.verified) {
-          return { allowed: true, reason: 'token-gating', method: 'sip-010' };
-        }
-      } else if (onChainRule.gating_type === 1) {
-        // NFT verification
-        const nftAccess = await contentGateService.verifyNFTAccess(
-          content.contentId,
-          address
-        );
-        if (nftAccess.verified) {
-          return { allowed: true, reason: 'token-gating', method: 'sip-009' };
-        }
-      }
-    }
-  }
-
-  // 5. Check Token-Gating from database (fallback)
-  const gatingRule = await GatingRule.findOne({ contentId: content.contentId, isActive: true });
-  if (gatingRule) {
-    const { tokenContract, threshold, tokenType } = gatingRule;
     
+    if (content.isRemoved) {
+      return { allowed: false, reason: 'content-removed', method: null };
+    }
+    
+    const wallets = await WalletConnection.find({ userId, isConnected: true });
+    const userAddresses = wallets.map(w => w.address);
+    
+    if (userAddresses.includes(content.creator)) {
+      return { allowed: true, reason: 'creator', method: 'creator' };
+    }
+
     for (const address of userAddresses) {
-      if (tokenType === 'FT') {
-        const hasTokens = await verifyFTBalance(address, tokenContract, threshold);
-        if (hasTokens) {
-          return { allowed: true, reason: 'token-gating', method: 'sip-010' };
-        }
-      } else if (tokenType === 'NFT') {
-        const ownsNFT = await verifyNFTOwnership(address, tokenContract, threshold);
-        if (ownsNFT) {
-          return { allowed: true, reason: 'token-gating', method: 'sip-009' };
+      const hasPurchased = await verifyPurchase(address, content.contentId);
+      if (hasPurchased) {
+        return { allowed: true, reason: 'purchase', method: 'pay-per-view' };
+      }
+    }
+
+    if (content.subscriptionTier) {
+      for (const address of userAddresses) {
+        const hasSubscription = await verifySubscription(
+          address, 
+          content.creator, 
+          content.subscriptionTier
+        );
+        if (hasSubscription) {
+          return { allowed: true, reason: 'subscription', method: 'subscription' };
         }
       }
     }
-  }
 
-  return { allowed: false, reason: 'no-access', method: null };
+    const onChainRule = await contentGateService.getGatingRule(content.contentId);
+    if (onChainRule) {
+      for (const address of userAddresses) {
+        if (onChainRule.gating_type === 0) {
+          const ftAccess = await contentGateService.verifyFTAccess(
+            content.contentId,
+            address,
+            onChainRule.token_contract
+          );
+          if (ftAccess.verified) {
+            return { allowed: true, reason: 'token-gating', method: 'sip-010' };
+          }
+        } else if (onChainRule.gating_type === 1) {
+          const nftAccess = await contentGateService.verifyNFTAccess(
+            content.contentId,
+            address
+          );
+          if (nftAccess.verified) {
+            return { allowed: true, reason: 'token-gating', method: 'sip-009' };
+          }
+        }
+      }
+    }
+
+    const gatingRule = await GatingRule.findOne({ contentId: content.contentId, isActive: true });
+    if (gatingRule) {
+      const { tokenContract, threshold, tokenType } = gatingRule;
+      
+      for (const address of userAddresses) {
+        if (tokenType === 'FT') {
+          const hasTokens = await verifyFTBalance(address, tokenContract, threshold);
+          if (hasTokens) {
+            return { allowed: true, reason: 'token-gating', method: 'sip-010' };
+          }
+        } else if (tokenType === 'NFT') {
+          const ownsNFT = await verifyNFTOwnership(address, tokenContract, threshold);
+          if (ownsNFT) {
+            return { allowed: true, reason: 'token-gating', method: 'sip-009' };
+          }
+        }
+      }
+    }
+
+    return { allowed: false, reason: 'no-access', method: null };
+  } catch (error) {
+    throw new Error(`Access verification by userId failed for user ${userId}: ${error.message}`);
+  }
 }
 
 /**
  * Verify access with caching by userId
  */
 async function verifyAccessByUserId(contentId, userId) {
-  const cacheKey = `access:${contentId}:user:${userId}`;
-  const cachedResult = accessCache.get(cacheKey);
-  if (cachedResult) return cachedResult;
+  try {
+    const cacheKey = `access:${contentId}:user:${userId}`;
+    const cachedResult = accessCache.get(cacheKey);
+    if (cachedResult) return cachedResult;
 
-  const Content = require('../models/Content');
-  const content = await Content.findOne({ contentId });
-  
-  if (!content) {
-    return { allowed: false, reason: 'content-not-found' };
+    const Content = require('../models/Content');
+    const content = await Content.findOne({ contentId });
+    
+    if (!content) {
+      return { allowed: false, reason: 'content-not-found' };
+    }
+    
+    const result = await hasAccessByUserId(content, userId);
+    if (result.allowed) {
+      accessCache.set(cacheKey, result);
+    }
+    return result;
+  } catch (error) {
+    throw new Error(`Access verification by userId failed for contentId ${contentId}: ${error.message}`);
   }
-  
-  const result = await hasAccessByUserId(content, userId);
-  if (result.allowed) {
-    accessCache.set(cacheKey, result);
-  }
-  return result;
 }
 
 module.exports = {
