@@ -17,82 +17,78 @@ const accessCache = new NodeCache({ stdTTL: 300, checkperiod: 60 });
  * @returns {Promise<Object>}
  */
 async function hasAccess(content, userAddress) {
-  if (!userAddress) {
-    return { allowed: false, reason: 'No user address provided' };
-  }
-  
-  // 0. Check if content is removed
-  if (content.isRemoved) {
-    return { allowed: false, reason: 'content-removed', method: null };
-  }
-  
-  // 1. Creator always has access
-  if (content.creator === userAddress) {
-    return { allowed: true, reason: 'creator', method: 'creator' };
-  }
-
-  // 2. Verify on-chain purchase
-  const hasPurchased = await verifyPurchase(userAddress, content.contentId);
-  if (hasPurchased) {
-    return { allowed: true, reason: 'purchase', method: 'pay-per-view' };
-  }
-
-  // 3. Check subscription (if applicable)
-  if (content.subscriptionTier) {
-    const hasSubscription = await verifySubscription(
-      userAddress, 
-      content.creator, 
-      content.subscriptionTier
-    );
-    if (hasSubscription) {
-      return { allowed: true, reason: 'subscription', method: 'subscription' };
+  try {
+    if (!userAddress) {
+      return { allowed: false, reason: 'No user address provided' };
     }
-  }
-
-  // 4. Check Token-Gating from on-chain content-gate contract
-  const onChainRule = await contentGateService.getGatingRule(content.contentId);
-  if (onChainRule) {
-    if (onChainRule.gating_type === 0) {
-      // FT verification
-      const ftAccess = await contentGateService.verifyFTAccess(
-        content.contentId,
-        userAddress,
-        onChainRule.token_contract
-      );
-      if (ftAccess.verified) {
-        return { allowed: true, reason: 'token-gating', method: 'sip-010' };
-      }
-    } else if (onChainRule.gating_type === 1) {
-      // NFT verification
-      const nftAccess = await contentGateService.verifyNFTAccess(
-        content.contentId,
-        userAddress
-      );
-      if (nftAccess.verified) {
-        return { allowed: true, reason: 'token-gating', method: 'sip-009' };
-      }
-    }
-  }
-
-  // 5. Check Token-Gating from database (fallback)
-  const gatingRule = await GatingRule.findOne({ contentId: content.contentId, isActive: true });
-  if (gatingRule) {
-    const { tokenContract, threshold, tokenType } = gatingRule;
     
-    if (tokenType === 'FT') {
-      const hasTokens = await verifyFTBalance(userAddress, tokenContract, threshold);
-      if (hasTokens) {
-        return { allowed: true, reason: 'token-gating', method: 'sip-010' };
-      }
-    } else if (tokenType === 'NFT') {
-      const ownsNFT = await verifyNFTOwnership(userAddress, tokenContract, threshold);
-      if (ownsNFT) {
-        return { allowed: true, reason: 'token-gating', method: 'sip-009' };
+    if (content.isRemoved) {
+      return { allowed: false, reason: 'content-removed', method: null };
+    }
+    
+    if (content.creator === userAddress) {
+      return { allowed: true, reason: 'creator', method: 'creator' };
+    }
+
+    const hasPurchased = await verifyPurchase(userAddress, content.contentId);
+    if (hasPurchased) {
+      return { allowed: true, reason: 'purchase', method: 'pay-per-view' };
+    }
+
+    if (content.subscriptionTier) {
+      const hasSubscription = await verifySubscription(
+        userAddress, 
+        content.creator, 
+        content.subscriptionTier
+      );
+      if (hasSubscription) {
+        return { allowed: true, reason: 'subscription', method: 'subscription' };
       }
     }
-  }
 
-  return { allowed: false, reason: 'no-access', method: null };
+    const onChainRule = await contentGateService.getGatingRule(content.contentId);
+    if (onChainRule) {
+      if (onChainRule.gating_type === 0) {
+        const ftAccess = await contentGateService.verifyFTAccess(
+          content.contentId,
+          userAddress,
+          onChainRule.token_contract
+        );
+        if (ftAccess.verified) {
+          return { allowed: true, reason: 'token-gating', method: 'sip-010' };
+        }
+      } else if (onChainRule.gating_type === 1) {
+        const nftAccess = await contentGateService.verifyNFTAccess(
+          content.contentId,
+          userAddress
+        );
+        if (nftAccess.verified) {
+          return { allowed: true, reason: 'token-gating', method: 'sip-009' };
+        }
+      }
+    }
+
+    const gatingRule = await GatingRule.findOne({ contentId: content.contentId, isActive: true });
+    if (gatingRule) {
+      const { tokenContract, threshold, tokenType } = gatingRule;
+      
+      if (tokenType === 'FT') {
+        const hasTokens = await verifyFTBalance(userAddress, tokenContract, threshold);
+        if (hasTokens) {
+          return { allowed: true, reason: 'token-gating', method: 'sip-010' };
+        }
+      } else if (tokenType === 'NFT') {
+        const ownsNFT = await verifyNFTOwnership(userAddress, tokenContract, threshold);
+        if (ownsNFT) {
+          return { allowed: true, reason: 'token-gating', method: 'sip-009' };
+        }
+      }
+    }
+
+    return { allowed: false, reason: 'no-access', method: null };
+  } catch (error) {
+    throw new Error(`Access verification failed for content ${content.contentId}: ${error.message}`);
+  }
 }
 
 /**
