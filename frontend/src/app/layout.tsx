@@ -30,12 +30,23 @@ export default function RootLayout({
         <AuthProvider>
           <JWTAuthProvider>
             <ToastProvider maxToasts={5} position="top-right">
-              {/* Session timeout warning component */}
-              <SessionWarning 
-                warningTime={5 * 60}
-                timeoutTime={30 * 60}
-              />
-              {children}
+              {/* Wallet provider wraps children so header/components can access balance */}
+              {/* Importing here to avoid circular deps in contexts */}
+              {/* WalletProvider lives in src/contexts/WalletContext.tsx */}
+              {/* eslint-disable-next-line @typescript-eslint/no-var-requires */}
+              {(() => {
+                const { WalletProvider } = require('@/contexts/WalletContext');
+                return (
+                  <WalletProvider>
+                    <SessionWarning 
+                      warningTime={5 * 60}
+                      timeoutTime={30 * 60}
+                    />
+                    {children}
+                  </WalletProvider>
+                );
+              })()}
+              
             </ToastProvider>
           </JWTAuthProvider>
         </AuthProvider>
