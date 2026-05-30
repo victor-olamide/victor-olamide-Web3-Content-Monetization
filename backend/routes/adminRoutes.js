@@ -12,6 +12,7 @@ const {
   getRevenueStatistics,
   getSystemHealth,
 } = require('../controllers/adminDashboardController');
+const adminUserController = require('../controllers/adminUserController');
 
 // All admin routes require a valid JWT AND admin role
 router.use(protect, authorize('admin'));
@@ -59,6 +60,27 @@ router.get('/revenue/stats', getRevenueStatistics);
 // GET /api/admin/health
 // ---------------------------------------------------------------------------
 router.get('/health', getSystemHealth);
+
+// ---------------------------------------------------------------------------
+// Admin analytics alias
+// Mount analytics routes under /api/admin/analytics so frontend clients
+// using /api/admin/analytics/* continue to work without frontend changes.
+// ---------------------------------------------------------------------------
+router.use('/analytics', require('./analytics'));
+
+// ---------------------------------------------------------------------------
+// User management
+// GET /api/admin/users?page=&limit=&search=&role=&isSuspended=
+// GET /api/admin/users/:id
+// POST /api/admin/users/:id/ban
+// POST /api/admin/users/:id/unban
+// POST /api/admin/users/:id/role { role }
+// ---------------------------------------------------------------------------
+router.get('/users', adminUserController.listUsers);
+router.get('/users/:id', adminUserController.getUser);
+router.post('/users/:id/ban', adminUserController.banUser);
+router.post('/users/:id/unban', adminUserController.unbanUser);
+router.post('/users/:id/role', adminUserController.changeUserRole);
 
 // ---------------------------------------------------------------------------
 // Audit logs

@@ -25,4 +25,11 @@ export const adminApi = {
     request(`/api/admin/analytics/user-behavior?${new URLSearchParams(params)}`),
   getContentPerformanceAnalytics: (params: Record<string, string>) =>
     request(`/api/admin/analytics/content-performance?${new URLSearchParams(params)}`),
+  // User management
+  getUsers: (params: Record<string, string>) =>
+    request(`/api/admin/users?${new URLSearchParams(params)}`),
+  getUser: (id: string) => request(`/api/admin/users/${id}`),
+  banUser: (id: string) => request(`/api/admin/users/${id}/ban`, { method: 'POST' }),
+  unbanUser: (id: string) => request(`/api/admin/users/${id}/unban`, { method: 'POST' }),
+  changeUserRole: (id: string, role: string) => request(`/api/admin/users/${id}/role`, { method: 'POST', body: JSON.stringify({ role }) }),
 };
