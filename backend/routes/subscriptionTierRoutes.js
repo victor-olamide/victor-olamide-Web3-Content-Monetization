@@ -274,23 +274,6 @@ router.get('/creators/:creatorId/suggestions', validateCreatorId, verifyToken, i
   }
 });
 
-    if (!result.success) {
-      return res.status(400).json({ success: false, message: result.error });
-    }
-
-    res.json({
-      success: true,
-      suggestions: result.suggestions
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching suggestions',
-      error: error.message
-    });
-  }
-});
-
 /**
  * POST /tiers/reorder
  * Reorder tiers for a creator
