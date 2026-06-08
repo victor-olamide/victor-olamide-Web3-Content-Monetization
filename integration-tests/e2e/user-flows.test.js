@@ -1,15 +1,31 @@
 /**
  * End-to-End User Flow Tests
  * Tests complete user journeys from registration to content consumption
+ * 
+ * Test Coverage:
+ * - User Registration & Onboarding
+ * - Authentication (Login/Logout/Password Reset)
+ * - Content Discovery & Browsing
+ * - Wallet Connection & Management
+ * - Subscription Purchase & Management
+ * - Content Purchase & Access (Pay-Per-View)
+ * - Gated Content Viewing
+ * - Creator Upload & Management
+ * - Admin Moderation
+ * - Error Handling & Edge Cases
  */
 
 const { test, expect } = require('@playwright/test');
 const TestUtils = require('../utils/test-setup');
 
+// Configuration
+const BASE_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+const API_URL = process.env.API_URL || 'http://localhost:3001';
+
 test.describe('User Registration and Onboarding Flow', () => {
   test('should complete full user registration journey', async ({ page }) => {
     // Navigate to registration page
-    await page.goto('/register');
+    await page.goto(`${BASE_URL}/register`);
 
     // Fill registration form
     const userData = TestUtils.generateUser();
@@ -22,14 +38,14 @@ test.describe('User Registration and Onboarding Flow', () => {
     await page.click('[data-testid="register-button"]');
 
     // Verify redirect to dashboard
-    await expect(page).toHaveURL('/dashboard');
+    await expect(page).toHaveURL(/\/dashboard/, { timeout: 5000 });
 
     // Verify welcome message
-    await expect(page.locator('[data-testid="welcome-message"]')).toContainText('Welcome');
+    await expect(page.locator('[data-testid="welcome-message"]')).toContainText('Welcome', { timeout: 5000 });
 
     // Verify user profile setup
     await page.click('[data-testid="profile-link"]');
-    await expect(page.locator('[data-testid="profile-email"]')).toContainText(userData.email);
+    await expect(page.locator('[data-testid="profile-email"]')).toContainText(userData.email, { timeout: 5000 });
   });
 
   test('should handle registration validation errors', async ({ page }) => {
