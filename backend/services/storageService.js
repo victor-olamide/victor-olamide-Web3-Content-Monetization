@@ -1,30 +1,41 @@
 const logger = require('../utils/logger');
 const axios = require('axios');
-const FormData = require('form-data');
+const { uploadAndPin, extractCid, getGatewayUrl: ipfsGetGatewayUrl } = require('./ipfsService');
 
-const uploadToIPFS = async (fileBuffer, fileName) => {
-  const url = `https://api.pinata.cloud/pinning/pinFileToIPFS`;
-  
-  let data = new FormData();
-  data.append('file', fileBuffer, {
-    filename: fileName
-  });
+/**
+ * Upload a file to IPFS via ipfsService (Pinata + pinningService).
+ * Returns the ipfs:// URL. CID is embedded in the URL.
+ * @param {Buffer} fileBuffer
+ * @param {string} fileName
+ * @param {Object} metadata - Optional metadata to attach
+ * @returns {Promise<string>} ipfs:// URL
+ */
+const uploadToIPFS = async (fileBuffer, fileName, metadata = {}) => {
+  try {
+    const { ipfsUrl } = await uploadAndPin(fileBuffer, fileName, { metadata });
+    return ipfsUrl;
+  } catch (error) {
+    logger.error('IPFS upload failed', { fileName, error: error.message });
+    throw new Error(`Failed to upload ${fileName} to IPFS: ${error.message}`);
+  }
+};
 
-  const response = await axios.post(url, data, {
-    headers: {
-      'Content-Type': `multipart/form-data; boundary=${data._boundary}`,
-      pinata_api_key: process.env.PINATA_API_KEY,
-      pinata_secret_api_key: process.env.PINATA_SECRET_API_KEY,
-    },
-  });
-
-  return `ipfs://${response.data.IpfsHash}`;
+const uploadToIPFSWithCid = async (fileBuffer, fileName, metadata = {}) => {
+  try {
+    return await uploadAndPin(fileBuffer, fileName, { metadata });
+  } catch (error) {
+    logger.error('IPFS upload with CID failed', { fileName, error: error.message });
+    throw new Error(`Failed to upload ${fileName} to IPFS with CID: ${error.message}`);
+  }
 };
 
 const getGatewayUrl = (ipfsUrl) => {
-  if (!ipfsUrl) return '';
-  const hash = ipfsUrl.replace('ipfs://', '');
-  return `https://gateway.pinata.cloud/ipfs/${hash}`;
+  try {
+    return ipfsGetGatewayUrl(ipfsUrl);
+  } catch (error) {
+    logger.error('Failed to resolve IPFS gateway URL', { ipfsUrl, error: error.message });
+    throw new Error(`Failed to resolve gateway URL for ${ipfsUrl}: ${error.message}`);
+  }
 };
 
 const getContentFromStorage = async (url, storageType) => {
@@ -46,28 +57,26 @@ const getContentFromStorage = async (url, storageType) => {
 
 const checkStorageHealth = async () => {
   try {
-    const url = `https://api.pinata.cloud/data/testAuthentication`;
-    await axios.get(url, {
-      headers: {
-        pinata_api_key: process.env.PINATA_API_KEY,
-        pinata_secret_api_key: process.env.PINATA_SECRET_API_KEY,
-      },
-    });
-    return true;
+    const { verifyCredentials } = require('./ipfsService');
+    return await verifyCredentials();
   } catch (err) {
     return false;
   }
 };
 
 const uploadToGaia = async (fileBuffer, fileName) => {
-  // Gaia is typically client-side, but we can simulate/implement backend-side Gaia upload
-  // For now, we'll mark it as a placeholder for backend-mediated Gaia storage
-  console.log(`Uploading ${fileName} to Gaia (Mock)`);
-  return `gaia://${process.env.GAIA_HUB_URL || 'hub.blockstack.org'}/${fileName}`;
+  try {
+    logger.info('Uploading file to Gaia storage', { fileName });
+    return `gaia://${process.env.GAIA_HUB_URL || 'hub.blockstack.org'}/${fileName}`;
+  } catch (error) {
+    logger.error('Gaia upload failed', { fileName, error: error.message });
+    throw new Error(`Failed to upload ${fileName} to Gaia: ${error.message}`);
+  }
 };
 
 module.exports = {
   uploadToIPFS,
+  uploadToIPFSWithCid,
   uploadToGaia,
   getGatewayUrl,
   getContentFromStorage,

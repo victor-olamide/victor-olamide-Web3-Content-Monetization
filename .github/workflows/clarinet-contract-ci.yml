@@ -1,0 +1,48 @@
+name: Clarity Contract CI
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'contracts/**'
+      - 'Clarinet.toml'
+      - 'tests/**'
+  pull_request:
+    paths:
+      - 'contracts/**'
+      - 'Clarinet.toml'
+      - 'tests/**'
+
+jobs:
+  clarinet-contract-ci:
+    name: Run Clarinet and Clarity contract tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Clarinet CLI
+        run: npm install -g clarity-cli@1.0.0
+
+      - name: Validate Clarinet contracts
+        run: clarinet check
+
+      - name: Run Clarinet contract test suite
+        run: clarinet test
+
+      - name: Install contracts package dependencies
+        run: |
+          cd contracts
+          npm install
+
+      - name: Run Clarity upgrade tests
+        run: |
+          cd contracts
+          npm test

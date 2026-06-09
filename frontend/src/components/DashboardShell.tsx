@@ -10,6 +10,7 @@ const DashboardShell: React.FC<{ children: React.ReactNode }> = ({ children }) =
   
   const navigationItems = [  
     { href: '/dashboard', label: 'Overview', icon: Home },  
+    { href: '/explore', label: 'Explore', icon: FolderOpen },  
     { href: '#', label: 'My Content', icon: FolderOpen },  
     { href: '#', label: 'Subscriptions', icon: CreditCard },  
     { href: '#', label: 'Settings', icon: Settings },  

@@ -2,7 +2,7 @@
 // Provides caching functionality for subscription tier operations
 
 const NodeCache = require('node-cache');
-const logger = require('./subscriptionTierLogger');
+const logger = require('../utils/subscriptionTierLogger');
 
 class TierCache {
   constructor(ttlSeconds = 300) { // 5 minutes default TTL

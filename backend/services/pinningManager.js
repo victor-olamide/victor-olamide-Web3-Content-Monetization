@@ -226,6 +226,9 @@ class PinningManager {
    * @param {boolean} isRepair - Whether this is a repair operation
    */
   async updateContentPinningInfo(contentId, pinningResult, isRepair = false) {
+    const { extractCid } = require('./ipfsService');
+    const cid = pinningResult.primaryHash || extractCid(pinningResult.primaryUrl || '');
+
     const updateData = {
       pinningInfo: {
         ...pinningResult,
@@ -234,6 +237,8 @@ class PinningManager {
         isRepair
       }
     };
+
+    if (cid) updateData.cid = cid;
 
     await Content.findByIdAndUpdate(contentId, updateData);
   }
