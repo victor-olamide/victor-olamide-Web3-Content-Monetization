@@ -9,7 +9,7 @@ The project uses GitHub Actions for continuous integration and deployment.
 ### Workflows
 
 - **ci-backend.yml**: Runs tests and builds for the backend on pushes to main/develop.
-- **ci-frontend.yml**: Runs tests and builds for the frontend on pushes to main/develop.
+- **ci-frontend.yml**: Runs lint, TypeScript checks, Jest component tests, and builds the Next.js frontend on pull requests and on pushes to main/develop.
 - **ci-blockchain.yml**: Compiles and tests blockchain contracts.
 - **deploy.yml**: Deploys to production on pushes to main.
 

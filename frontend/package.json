@@ -8,7 +8,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "typecheck": "tsc --noEmit",
     "test": "jest --passWithNoTests",
+    "test:ci": "jest --passWithNoTests --runInBand",
     "test:watch": "jest --watch",
     "deploy": "vercel --prod"
   },
