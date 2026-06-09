@@ -9,6 +9,7 @@
  * - Check and manage token gating rules
  */
 
+const logger = require('../utils/logger');
 const {
   callReadOnlyFunction,
   cvToJSON,
@@ -113,22 +114,15 @@ async function getGatingRule(contentId) {
     setCachedRule(contentId, rule);
     return rule;
   } catch (error) {
-    console.error(`Error retrieving gating rule for content ${contentId}:`, error.message);
-    return null;
+    logger.error('Failed to retrieve gating rule', { contentId, error: error.message });
+    throw new Error(`Failed to retrieve gating rule for content ${contentId}: ${error.message}`);
   }
-}
+};
 
 /**
- * Get gating type for content
- * @param {string} contentId - Content ID
- * @returns {Promise<number>} Gating type (0=FT, 1=NFT) or null
+ * Get gating type for a content (read-only)
  */
 async function getGatingType(contentId) {
-  const cached = getCachedRule(contentId);
-  if (cached !== null && cached.gating_type !== undefined) {
-    return cached.gating_type;
-  }
-
   try {
     const result = await callReadOnlyFunction({
       contractAddress: CONTENT_GATE_ADDRESS,
@@ -139,10 +133,9 @@ async function getGatingType(contentId) {
       senderAddress: CONTENT_GATE_ADDRESS,
     });
 
-    const decoded = cvToJSON(result);
-    return decoded.value || decoded;
+    return cvToJSON(result).value;
   } catch (error) {
-    console.error(`Error getting gating type for content ${contentId}:`, error.message);
+    logger.error('Failed to get gating type', { contentId, error: error.message });
     return null;
   }
 }
@@ -166,7 +159,7 @@ async function getRequiredToken(contentId) {
     const decoded = cvToJSON(result);
     return decoded.value || decoded;
   } catch (error) {
-    console.error(`Error getting required token for content ${contentId}:`, error.message);
+    logger.error('Failed to get required token', { contentId, error: error.message });
     return null;
   }
 }
@@ -209,7 +202,7 @@ async function verifyFTAccess(contentId, userAddress, tokenContract) {
 
     return result;
   } catch (error) {
-    console.error(`Error verifying FT access:`, error.message);
+    logger.error('FT access verification failed', { error: error.message });
     throw new Error(`Failed to verify FT access: ${error.message}`);
   }
 }
@@ -250,7 +243,7 @@ async function verifyNFTAccess(contentId, userAddress) {
 
     return result;
   } catch (error) {
-    console.error(`Error verifying NFT access:`, error.message);
+    logger.error('NFT access verification failed', { error: error.message });
     throw new Error(`Failed to verify NFT access: ${error.message}`);
   }
 }

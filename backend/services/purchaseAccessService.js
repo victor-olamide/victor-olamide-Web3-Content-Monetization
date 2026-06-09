@@ -1,8 +1,6 @@
-const express = require('express');
-const router = express.Router();
+const logger = require('../utils/logger');
 const Purchase = require('../models/Purchase');
 const Content = require('../models/Content');
-const { accessService } = require('../services/accessService');
 const TransactionHistory = require('../models/TransactionHistory');
 
 /**
@@ -17,7 +15,7 @@ async function grantAccessToContent(contentId, userAddress, purchaseRecord) {
     await purchaseRecord.save();
 
     // Log access event
-    console.log(`Access granted to user ${userAddress} for content ${contentId}`);
+    logger.info('Access granted to user', { userAddress, contentId });
 
     return {
       contentId,
@@ -26,7 +24,7 @@ async function grantAccessToContent(contentId, userAddress, purchaseRecord) {
       grantedAt: purchaseRecord.accessGrantedAt
     };
   } catch (error) {
-    console.error('Error granting access:', error);
+    logger.error('Error granting access', { contentId, userAddress, error: error.message });
     throw error;
   }
 }
@@ -49,7 +47,7 @@ async function revokeAccessToContent(contentId, userAddress) {
     purchase.accessRevokedAt = new Date();
     await purchase.save();
 
-    console.log(`Access revoked for user ${userAddress} to content ${contentId}`);
+    logger.info('Access revoked for user', { userAddress, contentId });
 
     return {
       success: true,
@@ -58,7 +56,7 @@ async function revokeAccessToContent(contentId, userAddress) {
       revokedAt: purchase.accessRevokedAt
     };
   } catch (error) {
-    console.error('Error revoking access:', error);
+    logger.error('Error revoking access', { contentId, userAddress, error: error.message });
     throw error;
   }
 }
@@ -96,7 +94,7 @@ async function getAccessInfo(contentId, userAddress) {
       accessRevokedAt: purchase.accessRevokedAt || null
     };
   } catch (error) {
-    console.error('Error getting access info:', error);
+    logger.error('Error getting access info', { contentId, userAddress, error: error.message });
     throw error;
   }
 }
@@ -122,7 +120,7 @@ async function hasAccessToContent(contentId, userAddress) {
 
     return true;
   } catch (error) {
-    console.error('Error checking access:', error);
+    logger.error('Error checking access', { contentId, userAddress, error: error.message });
     return false;
   }
 }
@@ -172,7 +170,7 @@ async function getAccessibleContent(userAddress, options = {}) {
       limit
     };
   } catch (error) {
-    console.error('Error getting accessible content:', error);
+    logger.error('Error getting accessible content', { userAddress, error: error.message });
     throw error;
   }
 }
@@ -241,7 +239,7 @@ async function transferAccess(fromAddress, toAddress, contentId) {
       transferredAt: new Date()
     };
   } catch (error) {
-    console.error('Error transferring access:', error);
+    logger.error('Error transferring access', { fromAddress, toAddress, contentId, error: error.message });
     throw error;
   }
 }
@@ -267,7 +265,7 @@ async function getPurchaseStats(contentId) {
       revokedAccess: totalPurchases - activeAccess
     };
   } catch (error) {
-    console.error('Error getting purchase stats:', error);
+    logger.error('Error getting purchase stats', { contentId, error: error.message });
     throw error;
   }
 }

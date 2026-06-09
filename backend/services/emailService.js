@@ -5,43 +5,52 @@ const { emailConfig, getEmailLayout } = require('../config/emailConfig');
 let transporter = null;
 
 function getTransporter() {
-  if (transporter) return transporter;
-  if (!emailConfig.enabled) {
-    transporter = {
-      sendMail: async (mail) => {
-        // In disabled mode, log and resolve
-        logger.info('Email disabled - would send:', mail);
-        return Promise.resolve({ simulated: true, mail });
-      }
-    };
+  try {
+    if (transporter) return transporter;
+    if (!emailConfig.enabled) {
+      transporter = {
+        sendMail: async (mail) => {
+          logger.info('Email disabled - would send:', mail);
+          return Promise.resolve({ simulated: true, mail });
+        }
+      };
+      return transporter;
+    }
+
+    if (emailConfig.provider === 'smtp') {
+      transporter = nodemailer.createTransport({
+        host: emailConfig.smtp.host,
+        port: emailConfig.smtp.port,
+        secure: !!emailConfig.smtp.secure,
+        auth: emailConfig.smtp.auth
+      });
+    } else {
+      throw new Error(`Unsupported email provider: ${emailConfig.provider}`);
+    }
+
     return transporter;
+  } catch (error) {
+    logger.error('Failed to create email transporter', { provider: emailConfig.provider, error: error.message });
+    throw error;
   }
-
-  if (emailConfig.provider === 'smtp') {
-    transporter = nodemailer.createTransport({
-      host: emailConfig.smtp.host,
-      port: emailConfig.smtp.port,
-      secure: !!emailConfig.smtp.secure,
-      auth: emailConfig.smtp.auth
-    });
-  } else {
-    throw new Error(`Unsupported email provider: ${emailConfig.provider}`);
-  }
-
-  return transporter;
 }
 
 async function sendEmail({ to, from, subject, text, html }) {
-  const t = getTransporter();
-  const mail = {
-    from: from || emailConfig.defaultFrom,
-    to,
-    subject,
-    text,
-    html
-  };
+  try {
+    const t = getTransporter();
+    const mail = {
+      from: from || emailConfig.defaultFrom,
+      to,
+      subject,
+      text,
+      html
+    };
 
-  return await t.sendMail(mail);
+    return await t.sendMail(mail);
+  } catch (error) {
+    logger.error('Failed to send email', { to, subject, error: error.message });
+    throw error;
+  }
 }
 
 /**

@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { StacksMainnet, StacksTestnet } = require('@stacks/network');
 const axios = require('axios');
 
@@ -57,8 +58,8 @@ async function verifyTransaction(txId, retries = DEFAULT_RETRY_ATTEMPTS) {
       }
     }
   }
-  console.error('Error verifying transaction after retries:', lastError?.message);
-  throw new Error('Failed to verify transaction');
+  logger.error('Transaction verification failed after retries', { txId, error: lastError?.message });
+  throw new Error(`Failed to verify transaction ${txId} after ${retries + 1} attempts`);
 }
 
 /**
@@ -70,7 +71,7 @@ async function getCurrentBlockHeight() {
     const response = await axios.get(`${stacksApiUrl}/v2/info`);
     return response.data.stacks_tip_height || 0;
   } catch (error) {
-    console.error('Error fetching block height:', error.message);
+    logger.error('Failed to fetch block height from Stacks API', { error: error.message });
     return 0;
   }
 }
@@ -97,21 +98,26 @@ async function batchVerifyTransactions(txIds) {
  * @returns {Promise<Object>} Transaction details when confirmed
  */
 async function waitForConfirmation(txId, maxAttempts = 30, delayMs = 10000) {
-  for (let i = 0; i < maxAttempts; i++) {
-    const result = await verifyTransaction(txId);
+  try {
+    for (let i = 0; i < maxAttempts; i++) {
+      const result = await verifyTransaction(txId);
 
-    if (result.success) {
-      return result;
+      if (result.success) {
+        return result;
+      }
+
+      if (result.status === 'abort_by_response' || result.status === 'abort_by_post_condition') {
+        throw new Error(`Transaction failed: ${result.status}`);
+      }
+
+      await sleep(delayMs);
     }
 
-    if (result.status === 'abort_by_response' || result.status === 'abort_by_post_condition') {
-      throw new Error(`Transaction failed: ${result.status}`);
-    }
-
-    await sleep(delayMs);
+    throw new Error('Transaction confirmation timeout');
+  } catch (error) {
+    logger.error('Transaction confirmation failed', { txId, error: error.message });
+    throw error;
   }
-
-  throw new Error('Transaction confirmation timeout');
 }
 
 module.exports = {
