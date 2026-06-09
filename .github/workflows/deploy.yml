@@ -1,99 +1,83 @@
-name: Deploy to Production
+name: Deploy Backend to Staging
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - master
+      - main
+  workflow_dispatch:
 
 jobs:
-  deploy:
+  deploy-staging:
+    name: Build backend image, deploy to staging, run smoke tests
     runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-
-    - name: Setup Clarinet
-      uses: hirosystems/clarinet-action@v1
-      with:
-        clarinet-version: latest
-
-    - name: Run tests
-      run: clarinet test
-
-    - name: Check contracts
-      run: clarinet check
-
-    - name: Configure deployment credentials
-      run: |
-        mkdir -p ~/.clarinet
-        echo "${{ secrets.DEPLOYER_MNEMONIC }}" > ~/.clarinet/mnemonic.txt
-
-    - name: Deploy contracts
-      run: |
-        clarinet deployments apply -p deployments/mainnet.plan.yaml
-      env:
-        DEPLOYER_MNEMONIC: ${{ secrets.DEPLOYER_MNEMONIC }}
-
-    - name: Verify deployment
-      run: |
-        echo "Deployment to mainnet completed"
-        clarinet deployments status
-
-    - name: Cleanup
-      if: always()
-      run: rm -f ~/.clarinet/mnemonic.txt
-
-  deploy-backend:
-    runs-on: ubuntu-latest
+    env:
+      DOCKER_REGISTRY: ${{ secrets.DOCKER_REGISTRY }}
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+      DOCKER_IMAGE_NAME: ${{ secrets.DOCKER_IMAGE_NAME }}
+      STAGING_SSH_HOST: ${{ secrets.STAGING_SSH_HOST }}
+      STAGING_SSH_USER: ${{ secrets.STAGING_SSH_USER }}
+      STAGING_SSH_PRIVATE_KEY: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+      STAGING_CONTAINER_NAME: ${{ secrets.STAGING_CONTAINER_NAME }}
+      STAGING_URL: ${{ secrets.STAGING_URL }}
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
-        cache-dependency-path: backend/package-lock.json
-    - name: Install dependencies
-      run: npm ci
-      working-directory: backend
-    - name: Build
-      run: npm run build
-      working-directory: backend
-    - name: Build Docker image
-      run: docker build -t my-backend:${{ github.sha }} backend
-    - name: Push Docker image
-      run: |
-        echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
-        docker tag my-backend:${{ github.sha }} ${{ secrets.DOCKER_USERNAME }}/my-backend:latest
-        docker push ${{ secrets.DOCKER_USERNAME }}/my-backend:latest
-    - name: Deploy backend
-      run: |
-        echo "Deploying backend using deploy script"
-        # Assuming server access, e.g., scp deploy.sh to server and run
-        echo "Deployment script executed"
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-  deploy-frontend:
-    runs-on: ubuntu-latest
+      - name: Setup Node.js for smoke tests
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-    steps:
-    - uses: actions/checkout@v4
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
-        cache-dependency-path: frontend/package-lock.json
-    - name: Install dependencies
-      run: npm ci
-      working-directory: frontend
-    - name: Build
-      run: npm run build
-      working-directory: frontend
-    - name: Deploy to Vercel
-      uses: amondnet/vercel-action@v25
-      with:
-        vercel-token: ${{ secrets.VERCEL_TOKEN }}
-        vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-        vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-        working-directory: frontend
+      - name: Build backend Docker image
+        run: |
+          cd backend
+          IMAGE_NAME="${DOCKER_IMAGE_NAME:-web3-content-platform-backend}"
+          REGISTRY="${DOCKER_REGISTRY:-docker.io}"
+          IMAGE="${REGISTRY}/${IMAGE_NAME}:staging-${GITHUB_RUN_NUMBER}"
+          docker build -f Dockerfile -t "${IMAGE}" .
+          echo "IMAGE=${IMAGE}" >> $GITHUB_ENV
+
+      - name: Login to Docker registry
+        uses: docker/login-action@v5
+        with:
+          registry: ${{ secrets.DOCKER_REGISTRY || 'docker.io' }}
+          username: ${{ env.DOCKER_USERNAME }}
+          password: ${{ env.DOCKER_PASSWORD }}
+
+      - name: Push backend Docker image
+        run: |
+          docker push "$IMAGE"
+
+      - name: Deploy backend to staging host
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ env.STAGING_SSH_HOST }}
+          username: ${{ env.STAGING_SSH_USER }}
+          key: ${{ env.STAGING_SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            set -e
+            DOCKER_REGISTRY="${{ env.DOCKER_REGISTRY }}"
+            if [ -z "${DOCKER_REGISTRY}" ]; then
+              DOCKER_REGISTRY="docker.io"
+            fi
+            IMAGE_NAME="${{ env.DOCKER_IMAGE_NAME:-web3-content-platform-backend }}"
+            IMAGE="${DOCKER_REGISTRY}/${IMAGE_NAME}:staging-${{ github.run_number }}"
+            CONTAINER_NAME="${{ env.STAGING_CONTAINER_NAME:-web3-backend }}"
+            echo "Deploying ${IMAGE} as ${CONTAINER_NAME}"
+            docker login "${DOCKER_REGISTRY}" -u "${{ env.DOCKER_USERNAME }}" -p "${{ env.DOCKER_PASSWORD }}"
+            docker pull "${IMAGE}"
+            docker stop "${CONTAINER_NAME}" || true
+            docker rm "${CONTAINER_NAME}" || true
+            docker run -d --name "${CONTAINER_NAME}" --restart always -p 5000:5000 "${IMAGE}"
+            docker ps -f name="${CONTAINER_NAME}"
+
+      - name: Run deployment smoke tests
+        run: |
+          DEPLOYMENT_URL="${STAGING_URL:-http://${STAGING_SSH_HOST}:5000}"
+          echo "Deployment URL: ${DEPLOYMENT_URL}"
+          chmod +x integration-tests/smoke/run-deployment-smoke-tests.sh
+          ./integration-tests/smoke/run-deployment-smoke-tests.sh --url="${DEPLOYMENT_URL}" --environment=staging
