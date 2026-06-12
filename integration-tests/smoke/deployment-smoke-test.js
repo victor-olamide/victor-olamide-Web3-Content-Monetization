@@ -14,6 +14,7 @@ const fs = require('fs');
 const path = require('path');
 const yaml = require('js-yaml');
 const { withRetry } = require('./smoke-retry');
+const { saveReport } = require('./smoke-reporter');
 
 class DeploymentSmokeTester {
   constructor(
@@ -322,6 +323,10 @@ class DeploymentSmokeTester {
 
     const status = this.isDeploymentReady() ? '✅ DEPLOYMENT READY' : '❌ DEPLOYMENT BLOCKED';
     console.log(`\n🎯 OVERALL STATUS: ${status}\n`);
+
+    try {
+      saveReport(this.results, this.baseUrl, this.environment);
+    } catch (_) { /* non-fatal — never block deployment due to report write failure */ }
   }
 }
 
