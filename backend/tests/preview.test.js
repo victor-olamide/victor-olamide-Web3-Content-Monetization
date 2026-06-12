@@ -9,10 +9,87 @@ jest.mock('../models/ContentPreview');
 jest.mock('../models/Content');
 jest.mock('../models/Purchase');
 jest.mock('../models/Subscription');
+jest.mock('../services/ipfsService', () => ({
+  uploadFileToIPFS: jest.fn().mockResolvedValue('ipfs://QmPreviewCidTest123'),
+}));
 
 describe('Preview Service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  // ── Generation methods (issue #198) ─────────────────────────────────────
+
+  describe('generateVideoPreview', () => {
+    it('should slice buffer and upload to IPFS', async () => {
+      const buf = Buffer.alloc(1000, 0xAB);
+      const result = await previewService.generateVideoPreview(buf, 1, 60);
+      expect(result.previewCid).toBe('QmPreviewCidTest123');
+      expect(result.durationSeconds).toBe(30);
+      expect(result.previewUrl).toContain('ipfs://');
+    });
+
+    it('should handle zero totalSeconds (full buffer)', async () => {
+      const buf = Buffer.alloc(500, 0x00);
+      const result = await previewService.generateVideoPreview(buf, 2, 0);
+      expect(result.previewCid).toBe('QmPreviewCidTest123');
+    });
+  });
+
+  describe('generateDocumentPreview', () => {
+    it('should truncate plain-text to first 50 lines', async () => {
+      const lines = Array.from({ length: 100 }, (_, i) => `line ${i + 1}`).join('\n');
+      const buf = Buffer.from(lines);
+      const result = await previewService.generateDocumentPreview(buf, 'text/plain', 3);
+      expect(result.previewCid).toBe('QmPreviewCidTest123');
+      expect(result.pageCount).toBe(1);
+    });
+
+    it('should slice binary PDFs to 64 KB', async () => {
+      const buf = Buffer.alloc(200 * 1024, 0xFF);
+      const result = await previewService.generateDocumentPreview(buf, 'application/pdf', 4);
+      expect(result.previewCid).toBe('QmPreviewCidTest123');
+    });
+  });
+
+  describe('generateAudioPreview', () => {
+    it('should upload first 30-s slice to IPFS', async () => {
+      const buf = Buffer.alloc(2000, 0x11);
+      const result = await previewService.generateAudioPreview(buf, 5, 120);
+      expect(result.durationSeconds).toBe(30);
+      expect(result.previewCid).toBe('QmPreviewCidTest123');
+    });
+  });
+
+  describe('generateAndStorePreview', () => {
+    it('should generate video preview and upsert ContentPreview', async () => {
+      ContentPreview.findOneAndUpdate.mockResolvedValue({
+        contentId: 1,
+        previewCid: 'QmPreviewCidTest123',
+        trailerUrl: 'ipfs://QmPreviewCidTest123',
+        trailerDuration: 30,
+      });
+
+      const buf = Buffer.alloc(1000, 0x00);
+      const result = await previewService.generateAndStorePreview(1, buf, 'video/mp4');
+      expect(ContentPreview.findOneAndUpdate).toHaveBeenCalledWith(
+        { contentId: 1 },
+        expect.objectContaining({ previewCid: 'QmPreviewCidTest123' }),
+        { upsert: true, new: true }
+      );
+      expect(result.previewCid).toBe('QmPreviewCidTest123');
+    });
+
+    it('should generate document preview for PDF', async () => {
+      ContentPreview.findOneAndUpdate.mockResolvedValue({
+        contentId: 10,
+        previewCid: 'QmPreviewCidTest123',
+        previewImageUrl: 'ipfs://QmPreviewCidTest123',
+      });
+      const buf = Buffer.alloc(50 * 1024, 0x25);
+      const result = await previewService.generateAndStorePreview(10, buf, 'application/pdf');
+      expect(result.previewCid).toBe('QmPreviewCidTest123');
+    });
   });
 
   describe('createOrUpdatePreview', () => {
