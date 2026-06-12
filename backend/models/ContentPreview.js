@@ -106,5 +106,6 @@ contentPreviewSchema.index({ contentId: 1 });
 contentPreviewSchema.index({ creator: 1 });
 contentPreviewSchema.index({ previewEnabled: 1 });
 contentPreviewSchema.index({ contentType: 1 });
+contentPreviewSchema.index({ previewCid: 1 }, { sparse: true }); // fast lookup by CID
 
 module.exports = mongoose.model('ContentPreview', contentPreviewSchema);
