@@ -292,6 +292,7 @@ class PreviewService {
         trailerQuality: preview.trailerQuality,
         previewText: preview.previewText,
         previewImageUrl: preview.previewImageUrl,
+        previewCid: preview.previewCid || null,
         contentAccessType: preview.contentAccessType,
         totalViews: preview.totalViews
       };
