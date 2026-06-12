@@ -114,6 +114,38 @@ router.post('/:contentId/generate', verifyCreatorOwnership, validateContentId, a
 });
 
 /**
+ * Look up a preview record by its dedicated IPFS CID (public, no access check).
+ * GET /api/preview/cid/:cid
+ */
+router.get('/cid/:cid', async (req, res) => {
+  try {
+    const { cid } = req.params;
+    if (!cid || cid.length < 10) {
+      return res.status(400).json({ success: false, error: 'Invalid CID' });
+    }
+
+    const preview = await previewService.getPreviewByCid(cid);
+    if (!preview) {
+      return res.status(404).json({ success: false, error: 'Preview not found for CID' });
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        contentId: preview.contentId,
+        contentType: preview.contentType,
+        previewCid: preview.previewCid,
+        gatewayUrl: toGatewayUrl(`ipfs://${preview.previewCid}`),
+        trailerDuration: preview.trailerDuration || null,
+      }
+    });
+  } catch (error) {
+    logger.error('Error fetching preview by CID', { err: error });
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
  * Get preview for specific content (public)
  * GET /api/preview/:contentId
  */
