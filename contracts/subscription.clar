@@ -31,7 +31,7 @@
         (price (get price tier))
         (fee-amount (/ (* price (var-get platform-fee)) u10000))
         (creator-amount (- price fee-amount))
-        (expiry (+ stacks-block-height (* (get duration tier) u144)))
+        (expiry (+ block-height (* (get duration tier) u144)))
     )
     (begin
         (asserts! (get active tier) ERR-INVALID-TIER)
@@ -50,7 +50,7 @@
         (fee-amount (/ (* price (var-get platform-fee)) u10000))
         (creator-amount (- price fee-amount))
         (current-expiry (get expiry current-sub))
-        (new-start (if (> current-expiry stacks-block-height) current-expiry stacks-block-height))
+        (new-start (if (> current-expiry block-height) current-expiry block-height))
     )
     (begin
         (asserts! (get active tier) ERR-INVALID-TIER)
@@ -85,7 +85,7 @@
 
 (define-read-only (is-subscribed (user principal) (creator principal) (tier-id uint))
     (match (map-get? active-subscriptions { user: user, creator: creator, tier-id: tier-id })
-        sub (>= (get expiry sub) stacks-block-height)
+        sub (>= (get expiry sub) block-height)
         false
     )
 )

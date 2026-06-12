@@ -11,10 +11,23 @@ const logger = require('../utils/logger');
 
 // Configuration
 const PINATA_API_URL = 'https://api.pinata.cloud';
-const PINATA_GATEWAY = 'https://gateway.pinata.cloud';
+const PINATA_GATEWAY = process.env.IPFS_GATEWAY_URL || 'https://gateway.pinata.cloud';
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 2000; // 2 seconds
 const CHUNK_SIZE = 1024 * 1024; // 1MB chunks for progress tracking
+
+/**
+ * Build Pinata auth headers — supports both API key pair and JWT bearer token
+ */
+const _getPinataAuthHeaders = () => {
+  if (process.env.PINATA_JWT) {
+    return { Authorization: `Bearer ${process.env.PINATA_JWT}` };
+  }
+  return {
+    'pinata_api_key': process.env.PINATA_API_KEY,
+    'pinata_secret_api_key': process.env.PINATA_SECRET_API_KEY
+  };
+};
 
 /**
  * Upload a file to IPFS via Pinata with progress tracking
@@ -99,8 +112,7 @@ const _uploadWithProgress = async (fileBuffer, fileName, metadata = {}, tags = [
     data: formData,
     headers: {
       ...headers,
-      'pinata_api_key': process.env.PINATA_API_KEY,
-      'pinata_secret_api_key': process.env.PINATA_SECRET_API_KEY,
+      ..._getPinataAuthHeaders(),
     },
     timeout: 300000, // 5 minutes
     maxContentLength: 100 * 1024 * 1024, // 100MB
@@ -187,10 +199,7 @@ const getGatewayUrl = (ipfsUrl, gateway = PINATA_GATEWAY) => {
 const listPinnedFiles = async () => {
   try {
     const response = await axios.get(`${PINATA_API_URL}/data/pinList`, {
-      headers: {
-        'pinata_api_key': process.env.PINATA_API_KEY,
-        'pinata_secret_api_key': process.env.PINATA_SECRET_API_KEY,
-      }
+      headers: _getPinataAuthHeaders()
     });
 
     return response.data.rows || [];
@@ -210,10 +219,7 @@ const unpinFile = async (ipfsHash) => {
     const hash = ipfsHash.replace('ipfs://', '').replace('ipfs/', '');
     
     await axios.delete(`${PINATA_API_URL}/pinning/unpin/${hash}`, {
-      headers: {
-        'pinata_api_key': process.env.PINATA_API_KEY,
-        'pinata_secret_api_key': process.env.PINATA_SECRET_API_KEY,
-      }
+      headers: _getPinataAuthHeaders()
     });
 
     logger.info('IPFS file unpinned', { hash });
@@ -230,10 +236,7 @@ const unpinFile = async (ipfsHash) => {
 const verifyCredentials = async () => {
   try {
     const response = await axios.get(`${PINATA_API_URL}/data/testAuthentication`, {
-      headers: {
-        'pinata_api_key': process.env.PINATA_API_KEY,
-        'pinata_secret_api_key': process.env.PINATA_SECRET_API_KEY,
-      }
+      headers: _getPinataAuthHeaders()
     });
 
     return response.status === 200;
@@ -250,10 +253,7 @@ const verifyCredentials = async () => {
 const getStorageUsage = async () => {
   try {
     const response = await axios.get(`${PINATA_API_URL}/data/userPinnedDataTotal`, {
-      headers: {
-        'pinata_api_key': process.env.PINATA_API_KEY,
-        'pinata_secret_api_key': process.env.PINATA_SECRET_API_KEY,
-      }
+      headers: _getPinataAuthHeaders()
     });
 
     return {
@@ -293,8 +293,7 @@ const uploadDirectory = async (files, dirName = 'content') => {
     const response = await axios.post(`${PINATA_API_URL}/pinning/pinFileToIPFS`, formData, {
       headers: {
         ...formData.getHeaders(),
-        'pinata_api_key': process.env.PINATA_API_KEY,
-        'pinata_secret_api_key': process.env.PINATA_SECRET_API_KEY,
+        ..._getPinataAuthHeaders()
       }
     });
 
@@ -304,9 +303,49 @@ const uploadDirectory = async (files, dirName = 'content') => {
   }
 };
 
+/**
+ * Extract CID from an IPFS URL or raw hash string
+ * @param {string} ipfsUrlOrHash - ipfs://QmXXX or raw CID
+ * @returns {string} Raw CID string
+ */
+const extractCid = (ipfsUrlOrHash) => {
+  if (!ipfsUrlOrHash) return '';
+  return ipfsUrlOrHash.replace(/^ipfs:\/\//, '').replace(/^ipfs\//, '').split('/')[0];
+};
+
+/**
+ * Upload a file to IPFS via ipfsService and pin it via pinningService.
+ * Returns both the IPFS URL and the raw CID for saving to the Content model.
+ * @param {Buffer} fileBuffer - File content
+ * @param {string} fileName - Original file name
+ * @param {Object} options - Upload options (metadata, tags, maxRetries)
+ * @param {Function} onProgress - Optional progress callback
+ * @returns {Promise<{ipfsUrl: string, cid: string, gatewayUrl: string, pinResult: Object}>}
+ */
+const uploadAndPin = async (fileBuffer, fileName, options = {}, onProgress = null) => {
+  const { pinningService } = require('./pinningService');
+  const { metadata = {}, tags = [], redundancy = 2 } = options;
+
+  // Upload via pinningService for multi-provider redundancy
+  const pinResult = await pinningService.uploadFile(
+    fileBuffer,
+    fileName,
+    { metadata, tags, redundancy },
+    onProgress
+  );
+
+  const cid = extractCid(pinResult.primaryUrl);
+  const ipfsUrl = `ipfs://${cid}`;
+  const gatewayUrl = getGatewayUrl(ipfsUrl);
+
+  return { ipfsUrl, cid, gatewayUrl, pinResult };
+};
+
 module.exports = {
   uploadFileToIPFS,
   uploadMetadataToIPFS,
+  uploadAndPin,
+  extractCid,
   getGatewayUrl,
   listPinnedFiles,
   unpinFile,

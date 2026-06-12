@@ -2,6 +2,7 @@
 // Initializes MongoDB replica set connection on application startup
 
 const { dbConnection } = require('../config/database');
+const { createIpfsIndexes } = require('./createIpfsIndexes');
 
 /**
  * Initialize database connection
@@ -24,6 +25,13 @@ async function initializeDatabase() {
       console.log(`📊 Total members: ${healthStatus.replicaSet.members}`);
     } else {
       console.warn('⚠️  Database connected but health check failed:', healthStatus.message);
+    }
+
+    // Ensure IPFS-related indexes exist
+    try {
+      await createIpfsIndexes();
+    } catch (idxErr) {
+      console.warn('⚠️  IPFS index creation failed (non-fatal):', idxErr.message);
     }
 
     return true;
