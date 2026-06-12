@@ -126,6 +126,14 @@ const cdnConfig = {
       blockedCountries: (process.env.CDN_BLOCKED_COUNTRIES || '').split(',').filter(Boolean),
     },
   },
+
+  // IPFS fallback settings (used when CDN has no cached entry)
+  ipfsFallback: {
+    enabled: process.env.CDN_IPFS_FALLBACK_ENABLED !== 'false', // enabled by default
+    primaryGateway: process.env.IPFS_GATEWAY_URL || 'https://gateway.pinata.cloud',
+    altGateway: process.env.IPFS_ALT_GATEWAY_URL || 'https://cloudflare-ipfs.com',
+    probeTimeout: parseInt(process.env.IPFS_PROBE_TIMEOUT_MS, 10) || 8000,
+  },
 };
 
 /**
