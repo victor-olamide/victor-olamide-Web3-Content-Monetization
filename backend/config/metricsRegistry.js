@@ -3,17 +3,20 @@
 /**
  * Prometheus metrics registry (#196).
  *
- * Exports a single shared Registry plus every named metric used across
- * the application:
+ * Single shared Registry — import this module everywhere instead of
+ * creating new registries, to avoid duplicate-metric errors.
+ *
+ * Metrics:
  *   - httpRequestsTotal      (Counter)   — total HTTP requests by method/route/status
  *   - httpRequestDuration    (Histogram) — request latency buckets
  *   - httpErrorsTotal        (Counter)   — 4xx/5xx responses by method/route/status
- *   - activeUsersGauge       (Gauge)     — currently authenticated sessions
- *   - dbConnectionGauge      (Gauge)     — mongoose readyState (0=disconnected,1=connected)
+ *   - activeUsersGauge       (Gauge)     — in-flight authenticated requests
+ *   - dbConnectionGauge      (Gauge)     — mongoose readyState (1=connected, 0=disconnected)
  *   - dbOperationDuration    (Histogram) — DB query latency (opt-in per route)
+ *   - processUptimeGauge     (Gauge)     — process uptime in seconds (updated on scrape)
  *
- * All Node.js default metrics (event loop lag, GC, heap, etc.) are also
- * collected automatically via collectDefaultMetrics().
+ * Node.js default metrics (event loop lag, GC, heap, etc.) are collected
+ * automatically via collectDefaultMetrics().
  */
 
 const promClient = require('prom-client');
@@ -70,6 +73,16 @@ const dbOperationDuration = new promClient.Histogram({
   registers: [registry],
 });
 
+// ── Process uptime gauge ─────────────────────────────────────────────────────
+const processUptimeGauge = new promClient.Gauge({
+  name: 'process_uptime_seconds',
+  help: 'Process uptime in seconds',
+  registers: [registry],
+  collect() {
+    this.set(process.uptime());
+  },
+});
+
 module.exports = {
   registry,
   httpRequestsTotal,
@@ -78,4 +91,5 @@ module.exports = {
   activeUsersGauge,
   dbConnectionGauge,
   dbOperationDuration,
+  processUptimeGauge,
 };
