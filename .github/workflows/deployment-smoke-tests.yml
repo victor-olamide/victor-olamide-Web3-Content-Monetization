@@ -71,6 +71,10 @@ jobs:
           DEPLOYMENT_URL: ${{ env.DEPLOYMENT_URL }}
           NODE_ENV: ${{ env.NODE_ENV }}
 
+      - name: Check deployment gate
+        working-directory: integration-tests
+        run: node smoke/check-deployment-gate.js
+
       - name: Upload smoke test results
         if: always()
         uses: actions/upload-artifact@v4

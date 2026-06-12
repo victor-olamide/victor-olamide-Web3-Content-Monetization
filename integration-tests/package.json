@@ -12,6 +12,7 @@
     "test:smoke:deployment:health": "node smoke/deployment-smoke-test.js --health-only",
     "test:smoke:deployment:script": "./smoke/run-deployment-smoke-tests.sh",
     "test:smoke:ci": "jest --config jest.smoke.config.js --forceExit",
+    "test:smoke:gate": "node smoke/check-deployment-gate.js",
     "test:security": "jest --config jest.security.config.js --testPathPattern=security",
     "test:performance": "artillery run performance/load-test.yml",
     "test:performance:content": "artillery run performance/content-delivery-load-test.yml --output test-results/content-delivery-report.json",
