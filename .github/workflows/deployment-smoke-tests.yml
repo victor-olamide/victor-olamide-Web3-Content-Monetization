@@ -1,0 +1,90 @@
+name: Deployment Smoke Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      deployment_url:
+        description: 'Target deployment URL'
+        required: false
+        default: 'http://localhost:5000'
+      environment:
+        description: 'Target environment'
+        required: false
+        default: 'staging'
+  workflow_run:
+    workflows: ["Deploy to Staging"]
+    types: [completed]
+  push:
+    branches:
+      - master
+      - 'feature/issue-195-smoke-tests'
+    paths:
+      - 'integration-tests/smoke/**'
+      - 'backend/**'
+
+jobs:
+  smoke-tests:
+    name: Run Deployment Smoke Tests
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name != 'workflow_run' }}
+
+    env:
+      DEPLOYMENT_URL: ${{ github.event.inputs.deployment_url || secrets.STAGING_URL || 'http://localhost:5000' }}
+      NODE_ENV: ${{ github.event.inputs.environment || 'staging' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: integration-tests/package-lock.json
+
+      - name: Install dependencies
+        working-directory: integration-tests
+        run: npm ci
+
+      - name: Wait for deployment to be ready
+        run: |
+          echo "Waiting for $DEPLOYMENT_URL to be ready..."
+          for i in $(seq 1 12); do
+            if curl -sf "$DEPLOYMENT_URL/health" > /dev/null 2>&1; then
+              echo "✅ Deployment is ready"
+              break
+            fi
+            echo "Attempt $i/12 — waiting 10s..."
+            sleep 10
+          done
+
+      - name: Run health-check smoke tests
+        working-directory: integration-tests
+        run: node smoke/deployment-smoke-test.js --health-only
+        continue-on-error: false
+
+      - name: Run full deployment smoke tests
+        working-directory: integration-tests
+        run: node smoke/deployment-smoke-test.js
+        env:
+          DEPLOYMENT_URL: ${{ env.DEPLOYMENT_URL }}
+          NODE_ENV: ${{ env.NODE_ENV }}
+
+      - name: Check deployment gate
+        working-directory: integration-tests
+        run: node smoke/check-deployment-gate.js
+
+      - name: Upload smoke test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-results-${{ github.run_id }}
+          path: integration-tests/test-results/
+          retention-days: 14
+
+      - name: Block deployment on critical failure
+        if: failure()
+        run: |
+          echo "❌ Critical smoke tests failed — deployment is BLOCKED."
+          exit 1

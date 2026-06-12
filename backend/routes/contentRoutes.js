@@ -8,8 +8,8 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const encryptionService = require('../services/encryptionService');
 const ContentEncryption = require('../models/ContentEncryption');
-const { uploadToIPFS } = require('../services/storageService');
-const { uploadFileToIPFS, uploadMetadataToIPFS, getGatewayUrl } = require('../services/ipfsService');
+const { uploadToIPFS, uploadToIPFSWithCid } = require('../services/storageService');
+const { uploadAndPin, uploadFileToIPFS, getGatewayUrl } = require('../services/ipfsService');
 const { pinningManager } = require('../services/pinningManager');
 const { addContentToContract, removeContentFromContract } = require('../services/contractService');
 const { protect } = require('../middleware/auth');
@@ -21,6 +21,8 @@ const { validateContentBody } = require('../middleware/inputValidation');
 const { shouldEncryptContent } = require('../utils/contentUtils');
 const { withCdnResolution, enrichContentResponse } = require('../middleware/cdnMiddleware');
 const { invalidateCdnOnMutation } = require('../middleware/cdnCacheInvalidation');
+
+const { validateCidParam } = require('../middleware/cidValidation');
 
 const getTokenFromRequest = (req) => {
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
@@ -114,51 +116,19 @@ router.post('/upload-ipfs', (req, res) => {
       const parsedMetadata = metadata ? JSON.parse(metadata) : {};
       const parsedTags = tags ? tags.split(',').map(t => t.trim()) : [];
 
-      console.log(`[IPFS Upload] Starting upload for ${req.file.originalname}`);
+      logger.info('[IPFS Upload] Starting upload', { fileName: req.file.originalname });
 
-      // Upload file to IPFS with retry logic
-      let ipfsHash;
-      let attempts = 0;
-      const maxAttempts = 3;
+      const { ipfsUrl, cid, gatewayUrl } = await uploadAndPin(
+        req.file.buffer,
+        req.file.originalname,
+        { metadata: parsedMetadata, tags: parsedTags }
+      );
 
-      while (attempts < maxAttempts) {
-        try {
-          // Mock progress reporting (in production, use streaming)
-          res.write(`data: {"status":"uploading","progress":${Math.min(attempts * 30, 90)}} \n\n`);
-          
-          ipfsHash = await uploadFileToIPFS(
-            req.file.buffer,
-            req.file.originalname,
-            {
-              metadata: parsedMetadata,
-              tags: parsedTags,
-              public: true
-            },
-            (percent) => {
-              // Progress callback - could be streamed to client in production
-              console.log(`[IPFS Upload] Progress: ${percent}%`);
-            }
-          );
-          break;
-        } catch (err) {
-          attempts++;
-          console.error(`[IPFS Upload] Attempt ${attempts} failed:`, err.message);
-          if (attempts >= maxAttempts) {
-            throw err;
-          }
-          // Exponential backoff
-          await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempts - 1)));
-        }
-      }
-
-      const ipfsUrl = `ipfs://${ipfsHash}`;
-      const gatewayUrl = getGatewayUrl(ipfsUrl);
-
-      console.log(`[IPFS Upload] Successfully uploaded: ${ipfsUrl}`);
+      logger.info('[IPFS Upload] Succeeded', { cid, ipfsUrl });
 
       res.json({
         success: true,
-        ipfsHash,
+        cid,
         ipfsUrl,
         gatewayUrl,
         fileName: req.file.originalname,
@@ -193,6 +163,7 @@ router.post('/upload-and-register', protect, requireCreator, (req, res) => {
 
     try {
       let ipfsUrl;
+      let cidValue = null;
       let isEncrypted = false;
       let uploadBuffer = req.file.buffer;
 
@@ -222,14 +193,25 @@ router.post('/upload-and-register', protect, requireCreator, (req, res) => {
         });
 
         uploadBuffer = encryptionResult.encryptedBuffer;
-        ipfsUrl = await uploadToIPFS(uploadBuffer, req.file.originalname);
+        const uploadResult = await uploadToIPFSWithCid(uploadBuffer, req.file.originalname, {
+          contentId: String(contentId),
+          creator,
+          encrypted: 'true'
+        });
+        ipfsUrl = uploadResult.ipfsUrl;
+        cidValue = uploadResult.cid;
         isEncrypted = true;
 
         // Update the encryption record with the IPFS URL
         encryptionResult.encryptionRecord.encryptedFileUrl = ipfsUrl;
         await encryptionResult.encryptionRecord.save();
       } else {
-        ipfsUrl = await uploadToIPFS(uploadBuffer, req.file.originalname);
+        const uploadResult = await uploadToIPFSWithCid(uploadBuffer, req.file.originalname, {
+          contentId: String(contentId),
+          creator
+        });
+        ipfsUrl = uploadResult.ipfsUrl;
+        cidValue = uploadResult.cid;
       }
 
       // 2. Register on Smart Contract
@@ -249,11 +231,37 @@ router.post('/upload-and-register', protect, requireCreator, (req, res) => {
         price,
         creator: req.body.creator,
         url: ipfsUrl,
+        cid: cidValue,
         storageType: 'ipfs',
         isEncrypted,
         encryptionAlgorithm: shouldEncrypt ? encryptionService.ENCRYPTION_CONFIG.algorithm : undefined
       });
       const newContent = await content.save();
+
+      // 3b. Upload content metadata JSON to IPFS and persist metadataCid + gatewayUrl
+      let metadataCid = null;
+      const gatewayUrl = getGatewayUrl(ipfsUrl);
+      try {
+        const { uploadMetadataToIPFS, extractCid } = require('../services/ipfsService');
+        const metadataUrl = await uploadMetadataToIPFS({
+          contentId: parseInt(contentId),
+          title: req.body.title,
+          description: req.body.description,
+          contentType: req.body.contentType,
+          creator: req.body.creator,
+          cid: cidValue,
+          ipfsUrl,
+          gatewayUrl,
+          createdAt: new Date().toISOString()
+        }, `metadata-${contentId}.json`);
+        metadataCid = extractCid(metadataUrl);
+        // Persist metadataCid and gatewayUrl back to the saved content document
+        newContent.metadataCid = metadataCid;
+        newContent.gatewayUrl = gatewayUrl;
+        await newContent.save();
+      } catch (metaErr) {
+        logger.warn('[Content Creation] Metadata upload to IPFS failed (non-fatal)', { err: metaErr.message });
+      }
 
       // 4. Pin content for reliability
       try {
@@ -268,6 +276,8 @@ router.post('/upload-and-register', protect, requireCreator, (req, res) => {
       res.status(201).json({
         message: 'Content uploaded and registered successfully',
         content: newContent,
+        cid: cidValue,
+        metadataCid,
         transactionId: txResult.txid,
         encrypted: isEncrypted
       });

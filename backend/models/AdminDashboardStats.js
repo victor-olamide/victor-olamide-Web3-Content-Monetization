@@ -48,6 +48,16 @@ const adminDashboardStatsSchema = new mongoose.Schema(
       default: 0,
     },
 
+    // Subscription statistics
+    activeSubscriptions: {
+      type: Number,
+      default: 0,
+    },
+    expiredSubscriptions: {
+      type: Number,
+      default: 0,
+    },
+
     // Transaction statistics
     totalTransactions: {
       type: Number,
@@ -135,6 +145,41 @@ adminDashboardStatsSchema.statics.getStatsByDateRange = async function (
       $lte: endDate,
     },
   }).sort({ date: 1 });
+};
+
+adminDashboardStatsSchema.statics.formatForResponse = function (doc) {
+  const snapshot = doc.toObject ? doc.toObject() : doc;
+
+  return {
+    totalUsers: snapshot.totalUsers || 0,
+    totalRevenue: snapshot.totalRevenue || 0,
+    totalContent: snapshot.totalContent || 0,
+    activeSubscriptions: snapshot.activeSubscriptions || 0,
+    generatedAt: snapshot.date || snapshot.createdAt || new Date(),
+    users: {
+      total: snapshot.totalUsers || 0,
+      active: snapshot.activeUsers || 0,
+      new: snapshot.newUsers || 0,
+      suspended: snapshot.suspendedUsers || 0,
+    },
+    content: {
+      total: snapshot.totalContent || 0,
+      active: snapshot.publishedContent || 0,
+      removed: snapshot.deletedContent || 0,
+    },
+    revenue: {
+      total: snapshot.totalRevenue || 0,
+      platformFees: snapshot.platformFees || 0,
+      creatorPayouts: snapshot.creatorPayouts || 0,
+      totalTransactions: snapshot.totalTransactions || 0,
+    },
+    subscriptions: {
+      active: snapshot.activeSubscriptions || 0,
+    },
+    activity: {
+      purchasesToday: snapshot.purchasesToday || 0,
+    },
+  };
 };
 
 /**

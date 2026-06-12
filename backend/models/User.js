@@ -29,6 +29,14 @@ const userSchema = new mongoose.Schema(
       enum: ['subscriber', 'creator', 'admin'],
       default: 'subscriber'
     },
+    isActive: {
+      type: Boolean,
+      default: true
+    },
+    isSuspended: {
+      type: Boolean,
+      default: false
+    },
     avatar: {
       type: String,
       default: 'default-avatar.png'

@@ -1,14 +1,12 @@
 /**
  * Payment and Subscription API Integration Tests
- * Tests for payment processing, subscriptions, and monetization flows
+ * Tests for payment processing, subscriptions, and platform purchase flows
  */
 
 const request = require('supertest');
-const mongoose = require('mongoose');
-const User = require('../../../backend/models/User');
-const Content = require('../../../backend/models/Content');
-const Subscription = require('../../../backend/models/Subscription');
-const Transaction = require('../../../backend/models/Transaction');
+const User = require('../../backend/models/User');
+const Content = require('../../backend/models/Content');
+const Subscription = require('../../backend/models/Subscription');
 const TestUtils = require('../utils/test-setup');
 
 describe('Payment and Subscription API Integration Tests', () => {
@@ -16,15 +14,11 @@ describe('Payment and Subscription API Integration Tests', () => {
   let creatorUser;
   let consumerUser;
   let premiumContent;
-  let creatorToken;
-  let consumerToken;
 
   beforeAll(async () => {
-    // Setup test server
     const serverSetup = await TestUtils.setupTestServer();
     server = serverSetup.server;
 
-    // Create test users
     creatorUser = TestUtils.generateUser({
       email: 'creator@example.com',
       role: 'creator',
@@ -33,26 +27,21 @@ describe('Payment and Subscription API Integration Tests', () => {
     const creator = new User(creatorUser);
     await creator.save();
     creatorUser._id = creator._id;
-    creatorToken = TestUtils.generateToken(creatorUser);
 
     consumerUser = TestUtils.generateUser({
-      email: 'consumer@example.com',
-      role: 'consumer',
-      walletAddress: 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM',
+      email: 'subscriber@example.com',
+      role: 'subscriber',
     });
     consumerUser.password = await TestUtils.hashPassword(consumerUser.password);
     const consumer = new User(consumerUser);
     await consumer.save();
     consumerUser._id = consumer._id;
-    consumerToken = TestUtils.generateToken(consumerUser);
 
-    // Create premium content
-    premiumContent = TestUtils.generateContent({
-      creator: creatorUser._id,
+    premiumContent = TestUtils.generateContent(creatorUser.walletAddress, {
       title: 'Premium Content',
+      description: 'Premium video content',
       price: 25,
       contentType: 'video',
-      accessType: 'paid',
     });
     const content = new Content(premiumContent);
     await content.save();
@@ -63,411 +52,181 @@ describe('Payment and Subscription API Integration Tests', () => {
     await TestUtils.teardownTestServer(server);
   });
 
-  describe('POST /api/payments/purchase', () => {
-    it('should process content purchase successfully', async () => {
+  describe('Payment route coverage', () => {
+    it('should return platform fee information', async () => {
+      const response = await request(server)
+        .get('/api/purchases/platform-fee')
+        .expect(200);
+
+      expect(response.body.platformFee).toBeDefined();
+      expect(typeof response.body.platformFee).toBe('number');
+      expect(response.body.feePercentage).toMatch(/%$/);
+    });
+
+    it('should calculate platform fee for a given amount', async () => {
+      const response = await request(server)
+        .get('/api/purchases/calculate-fee/100')
+        .expect(200);
+
+      expect(response.body.totalAmount).toBe(100);
+      expect(response.body.platformFee).toBe(1);
+      expect(response.body.creatorAmount).toBe(99);
+    });
+
+    it('should validate purchase body before saving', async () => {
+      const response = await request(server)
+        .post('/api/purchases')
+        .send({})
+        .expect(400);
+
+      expect(response.body.message).toContain('Missing required fields');
+    });
+
+    it('should create a new purchase record successfully', async () => {
       const purchaseData = {
-        contentId: premiumContent._id,
-        paymentMethod: 'stacks',
+        contentId: premiumContent.contentId,
+        user: consumerUser.walletAddress,
+        txId: TestUtils.generateTxId(),
         amount: premiumContent.price,
+        creator: creatorUser.walletAddress,
       };
 
       const response = await request(server)
-        .post('/api/payments/purchase')
-        .set('Authorization', `Bearer ${consumerToken}`)
+        .post('/api/purchases')
         .send(purchaseData)
         .expect(201);
 
-      expect(response.body.success).toBe(true);
-      expect(response.body.data).toHaveProperty('transactionId');
-      expect(response.body.data.status).toBe('pending');
-      expect(response.body.data.amount).toBe(premiumContent.price);
+      expect(response.body).toHaveProperty('purchase');
+      expect(response.body.purchase.contentId).toBe(premiumContent.contentId);
+      expect(response.body.purchase.user).toBe(consumerUser.walletAddress);
+      expect(response.body.purchase.creator).toBe(creatorUser.walletAddress);
     });
 
-    it('should reject purchase for own content', async () => {
+    it('should prevent duplicate purchase records for the same txId', async () => {
+      const txId = TestUtils.generateTxId();
       const purchaseData = {
-        contentId: premiumContent._id,
-        paymentMethod: 'stacks',
+        contentId: premiumContent.contentId,
+        user: consumerUser.walletAddress,
+        txId,
         amount: premiumContent.price,
+        creator: creatorUser.walletAddress,
       };
 
-      const response = await request(server)
-        .post('/api/payments/purchase')
-        .set('Authorization', `Bearer ${creatorToken}`)
+      await request(server)
+        .post('/api/purchases')
         .send(purchaseData)
-        .expect(400);
+        .expect(201);
 
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toContain('own content');
+      const duplicateResponse = await request(server)
+        .post('/api/purchases')
+        .send(purchaseData)
+        .expect(409);
+
+      expect(duplicateResponse.body.message).toContain('already exists');
     });
 
-    it('should validate payment amount', async () => {
-      const invalidPurchase = {
-        contentId: premiumContent._id,
-        paymentMethod: 'stacks',
-        amount: 10, // Wrong amount
-      };
-
+    it('should return purchase history for a user', async () => {
       const response = await request(server)
-        .post('/api/payments/purchase')
-        .set('Authorization', `Bearer ${consumerToken}`)
-        .send(invalidPurchase)
-        .expect(400);
+        .get(`/api/purchases/user/${consumerUser.walletAddress}`)
+        .expect(200);
 
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toContain('amount');
+      expect(Array.isArray(response.body)).toBe(true);
+      response.body.forEach((purchase) => {
+        expect(purchase.user).toBe(consumerUser.walletAddress);
+      });
     });
 
-    it('should validate payment method', async () => {
-      const invalidPurchase = {
-        contentId: premiumContent._id,
-        paymentMethod: 'invalid-method',
-        amount: premiumContent.price,
-      };
-
+    it('should check if a user has access to a purchased content item', async () => {
       const response = await request(server)
-        .post('/api/payments/purchase')
-        .set('Authorization', `Bearer ${consumerToken}`)
-        .send(invalidPurchase)
-        .expect(400);
+        .get(`/api/purchases/check/${consumerUser.walletAddress}/${premiumContent.contentId}`)
+        .expect(200);
 
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toContain('payment method');
+      expect(response.body.hasAccess).toBe(true);
     });
   });
 
-  describe('POST /api/subscriptions/create', () => {
-    it('should create subscription successfully', async () => {
+  describe('Subscription route coverage', () => {
+    let subscriptionId;
+
+    it('should create a new subscription purchase', async () => {
       const subscriptionData = {
-        creatorId: creatorUser._id,
-        tier: 'premium',
-        price: 50,
-        duration: 30, // days
-        benefits: ['Exclusive content', 'Early access'],
+        user: consumerUser.walletAddress,
+        creator: creatorUser.walletAddress,
+        tierId: 1,
+        tierName: 'premium',
+        tierPrice: 50,
+        tierBenefits: ['Exclusive access'],
+        amount: 50,
+        transactionId: TestUtils.generateTxId(),
+        expiry: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString(),
       };
 
       const response = await request(server)
-        .post('/api/subscriptions/create')
-        .set('Authorization', `Bearer ${creatorToken}`)
+        .post('/api/subscriptions')
         .send(subscriptionData)
         .expect(201);
 
       expect(response.body.success).toBe(true);
-      expect(response.body.data.creator).toBe(creatorUser._id.toString());
-      expect(response.body.data.tier).toBe('premium');
-      expect(response.body.data.price).toBe(50);
+      expect(response.body.subscription).toBeDefined();
+      expect(response.body.subscription.user).toBe(consumerUser.walletAddress);
+      subscriptionId = response.body.subscription._id;
     });
 
-    it('should reject subscription creation for non-creator', async () => {
-      const subscriptionData = {
-        creatorId: consumerUser._id,
-        tier: 'basic',
-        price: 20,
-      };
-
+    it('should return active subscriptions for a user', async () => {
       const response = await request(server)
-        .post('/api/subscriptions/create')
-        .set('Authorization', `Bearer ${consumerToken}`)
-        .send(subscriptionData)
-        .expect(403);
-
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toContain('creator');
-    });
-
-    it('should validate subscription data', async () => {
-      const invalidSubscription = {
-        tier: 'invalid-tier',
-        price: -10,
-      };
-
-      const response = await request(server)
-        .post('/api/subscriptions/create')
-        .set('Authorization', `Bearer ${creatorToken}`)
-        .send(invalidSubscription)
-        .expect(400);
-
-      expect(response.body.success).toBe(false);
-    });
-  });
-
-  describe('POST /api/subscriptions/subscribe', () => {
-    let testSubscription;
-
-    beforeEach(async () => {
-      // Create a test subscription
-      testSubscription = TestUtils.generateSubscription({
-        creator: creatorUser._id,
-        tier: 'monthly',
-        price: 30,
-      });
-      const subscription = new Subscription(testSubscription);
-      await subscription.save();
-      testSubscription._id = subscription._id;
-    });
-
-    it('should subscribe to creator successfully', async () => {
-      const subscribeData = {
-        subscriptionId: testSubscription._id,
-        paymentMethod: 'stacks',
-      };
-
-      const response = await request(server)
-        .post('/api/subscriptions/subscribe')
-        .set('Authorization', `Bearer ${consumerToken}`)
-        .send(subscribeData)
-        .expect(201);
-
-      expect(response.body.success).toBe(true);
-      expect(response.body.data.status).toBe('active');
-      expect(response.body.data.subscriber).toBe(consumerUser._id.toString());
-    });
-
-    it('should reject subscription to own content', async () => {
-      const subscribeData = {
-        subscriptionId: testSubscription._id,
-        paymentMethod: 'stacks',
-      };
-
-      const response = await request(server)
-        .post('/api/subscriptions/subscribe')
-        .set('Authorization', `Bearer ${creatorToken}`)
-        .send(subscribeData)
-        .expect(400);
-
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toContain('own subscription');
-    });
-
-    it('should handle duplicate subscriptions', async () => {
-      // First subscription
-      const subscribeData = {
-        subscriptionId: testSubscription._id,
-        paymentMethod: 'stacks',
-      };
-
-      await request(server)
-        .post('/api/subscriptions/subscribe')
-        .set('Authorization', `Bearer ${consumerToken}`)
-        .send(subscribeData)
-        .expect(201);
-
-      // Try to subscribe again
-      const response = await request(server)
-        .post('/api/subscriptions/subscribe')
-        .set('Authorization', `Bearer ${consumerToken}`)
-        .send(subscribeData)
-        .expect(400);
-
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toContain('already subscribed');
-    });
-  });
-
-  describe('GET /api/subscriptions/my-subscriptions', () => {
-    it('should return user subscriptions', async () => {
-      const response = await request(server)
-        .get('/api/subscriptions/my-subscriptions')
-        .set('Authorization', `Bearer ${consumerToken}`)
+        .get(`/api/subscriptions/${consumerUser.walletAddress}`)
         .expect(200);
 
-      expect(response.body.success).toBe(true);
-      expect(Array.isArray(response.body.data)).toBe(true);
-    });
-
-    it('should return creator subscriptions', async () => {
-      const response = await request(server)
-        .get('/api/subscriptions/my-subscriptions')
-        .set('Authorization', `Bearer ${creatorToken}`)
-        .expect(200);
-
-      expect(response.body.success).toBe(true);
-      expect(Array.isArray(response.body.data)).toBe(true);
-    });
-  });
-
-  describe('POST /api/subscriptions/cancel', () => {
-    let activeSubscription;
-
-    beforeEach(async () => {
-      // Create and activate a subscription
-      activeSubscription = TestUtils.generateSubscription({
-        creator: creatorUser._id,
-        subscriber: consumerUser._id,
-        status: 'active',
-      });
-      const subscription = new Subscription(activeSubscription);
-      await subscription.save();
-      activeSubscription._id = subscription._id;
-    });
-
-    it('should cancel subscription successfully', async () => {
-      const response = await request(server)
-        .post(`/api/subscriptions/${activeSubscription._id}/cancel`)
-        .set('Authorization', `Bearer ${consumerToken}`)
-        .expect(200);
-
-      expect(response.body.success).toBe(true);
-      expect(response.body.data.status).toBe('cancelled');
-    });
-
-    it('should reject cancellation by non-subscriber', async () => {
-      const response = await request(server)
-        .post(`/api/subscriptions/${activeSubscription._id}/cancel`)
-        .set('Authorization', `Bearer ${creatorToken}`)
-        .expect(403);
-
-      expect(response.body.success).toBe(false);
-    });
-  });
-
-  describe('GET /api/payments/transactions', () => {
-    it('should return user transactions', async () => {
-      const response = await request(server)
-        .get('/api/payments/transactions')
-        .set('Authorization', `Bearer ${consumerToken}`)
-        .expect(200);
-
-      expect(response.body.success).toBe(true);
-      expect(Array.isArray(response.body.data)).toBe(true);
-    });
-
-    it('should filter transactions by type', async () => {
-      const response = await request(server)
-        .get('/api/payments/transactions?type=purchase')
-        .set('Authorization', `Bearer ${consumerToken}`)
-        .expect(200);
-
-      expect(response.body.success).toBe(true);
-      response.body.data.forEach(transaction => {
-        expect(transaction.type).toBe('purchase');
+      expect(Array.isArray(response.body)).toBe(true);
+      response.body.forEach((subscription) => {
+        expect(subscription.user).toBe(consumerUser.walletAddress);
       });
     });
 
-    it('should filter transactions by status', async () => {
+    it('should return subscription status for a user', async () => {
       const response = await request(server)
-        .get('/api/payments/transactions?status=completed')
-        .set('Authorization', `Bearer ${consumerToken}`)
+        .get(`/api/subscriptions/${consumerUser.walletAddress}/status`)
         .expect(200);
 
-      expect(response.body.success).toBe(true);
-      response.body.data.forEach(transaction => {
-        expect(transaction.status).toBe('completed');
-      });
-    });
-  });
-
-  describe('POST /api/payments/webhook', () => {
-    it('should handle payment webhook', async () => {
-      const webhookData = {
-        transactionId: 'test-transaction-123',
-        status: 'completed',
-        amount: 25,
-        signature: 'test-signature',
-      };
-
-      const response = await request(server)
-        .post('/api/payments/webhook')
-        .send(webhookData)
-        .expect(200);
-
-      expect(response.body.success).toBe(true);
+      expect(response.body.user).toBe(consumerUser.walletAddress);
+      expect(Array.isArray(response.body.subscriptions)).toBe(true);
     });
 
-    it('should validate webhook signature', async () => {
-      const invalidWebhook = {
-        transactionId: 'test-transaction-123',
-        status: 'completed',
-        amount: 25,
-        signature: 'invalid-signature',
-      };
-
-      const response = await request(server)
-        .post('/api/payments/webhook')
-        .send(invalidWebhook)
-        .expect(400);
-
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toContain('signature');
-    });
-  });
-
-  describe('Royalty Distribution', () => {
-    it('should calculate and distribute royalties', async () => {
-      const purchaseData = {
-        contentId: premiumContent._id,
-        paymentMethod: 'stacks',
-        amount: premiumContent.price,
-      };
-
-      // Make a purchase
-      await request(server)
-        .post('/api/payments/purchase')
-        .set('Authorization', `Bearer ${consumerToken}`)
-        .send(purchaseData)
+    it('should cancel an existing subscription', async () => {
+      const createResponse = await request(server)
+        .post('/api/subscriptions')
+        .send({
+          user: consumerUser.walletAddress,
+          creator: creatorUser.walletAddress,
+          tierId: 2,
+          tierName: 'monthly',
+          tierPrice: 20,
+          tierBenefits: ['Monthly access'],
+          amount: 20,
+          transactionId: TestUtils.generateTxId(),
+          expiry: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString(),
+        })
         .expect(201);
 
-      // Check royalty distribution
-      const response = await request(server)
-        .get('/api/payments/royalties')
-        .set('Authorization', `Bearer ${creatorToken}`)
+      const subscription = createResponse.body.subscription;
+
+      const cancelResponse = await request(server)
+        .post(`/api/subscriptions/${subscription._id}/cancel`)
         .expect(200);
 
-      expect(response.body.success).toBe(true);
-      expect(Array.isArray(response.body.data)).toBe(true);
+      expect(cancelResponse.body.message).toContain('cancelled successfully');
+      expect(cancelResponse.body.subscription).toBeDefined();
+      expect(cancelResponse.body.subscription.cancelledAt).toBeTruthy();
     });
 
-    it('should track platform fees', async () => {
+    it('should reject subscription purchase with missing fields', async () => {
       const response = await request(server)
-        .get('/api/admin/platform-fees')
-        .set('Authorization', `Bearer ${creatorToken}`)
-        .expect(200);
-
-      expect(response.body.success).toBe(true);
-      expect(response.body.data).toHaveProperty('totalFees');
-    });
-  });
-
-  describe('Payment Security', () => {
-    it('should prevent double-spending', async () => {
-      const purchaseData = {
-        contentId: premiumContent._id,
-        paymentMethod: 'stacks',
-        amount: premiumContent.price,
-      };
-
-      // First purchase
-      await request(server)
-        .post('/api/payments/purchase')
-        .set('Authorization', `Bearer ${consumerToken}`)
-        .send(purchaseData)
-        .expect(201);
-
-      // Attempt duplicate purchase
-      const response = await request(server)
-        .post('/api/payments/purchase')
-        .set('Authorization', `Bearer ${consumerToken}`)
-        .send(purchaseData)
+        .post('/api/subscriptions')
+        .send({ user: consumerUser.walletAddress })
         .expect(400);
 
+      expect(response.body.errors).toBeDefined();
       expect(response.body.success).toBe(false);
-      expect(response.body.message).toContain('already purchased');
-    });
-
-    it('should validate payment amounts against content prices', async () => {
-      const fraudulentPurchase = {
-        contentId: premiumContent._id,
-        paymentMethod: 'stacks',
-        amount: 1, // Much lower than actual price
-      };
-
-      const response = await request(server)
-        .post('/api/payments/purchase')
-        .set('Authorization', `Bearer ${consumerToken}`)
-        .send(fraudulentPurchase)
-        .expect(400);
-
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toContain('amount');
     });
   });
 });

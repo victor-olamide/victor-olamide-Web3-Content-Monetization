@@ -6,6 +6,7 @@
 const axios = require('axios');
 const FormData = require('form-data');
 const logger = require('../utils/logger');
+const pinningConfig = require('../config/pinningConfig');
 
 // Pinning service providers
 const PROVIDERS = {
@@ -77,9 +78,9 @@ const PROVIDER_PRIORITIES = {
 // Configuration
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 2000;
-const PINNING_TIMEOUT = 300000; // 5 minutes
-const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
-const HEALTH_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
+const PINNING_TIMEOUT = pinningConfig.timeout;
+const MAX_FILE_SIZE = pinningConfig.maxFileSize;
+const HEALTH_CHECK_INTERVAL = pinningConfig.healthCheckInterval;
 
 class PinningService {
   constructor() {
@@ -88,8 +89,10 @@ class PinningService {
     this.lastHealthCheck = new Map();
     this.healthCheckIntervalId = null;
 
-    // Start health monitoring
-    this._startHealthMonitoring();
+    // Start health monitoring only in non-test environments
+    if ((process.env.NODE_ENV || '').toString().trim() !== 'test') {
+      this._startHealthMonitoring();
+    }
   }
 
   /**
@@ -99,7 +102,7 @@ class PinningService {
     const providers = {};
 
     // Pinata
-    if (process.env.PINATA_API_KEY && process.env.PINATA_SECRET_API_KEY) {
+    if (process.env.PINATA_JWT || (process.env.PINATA_API_KEY && process.env.PINATA_SECRET_API_KEY)) {
       providers[PROVIDERS.PINATA] = {
         apiKey: process.env.PINATA_API_KEY,
         secretKey: process.env.PINATA_SECRET_API_KEY,
@@ -117,9 +120,9 @@ class PinningService {
     }
 
     // Web3.Storage
-    if (process.env.WEB3_STORAGE_API_KEY) {
+    if (process.env.WEB3_STORAGE_API_KEY || process.env.WEB3_STORAGE_TOKEN) {
       providers[PROVIDERS.WEB3_STORAGE] = {
-        apiKey: process.env.WEB3_STORAGE_API_KEY,
+        apiKey: process.env.WEB3_STORAGE_API_KEY || process.env.WEB3_STORAGE_TOKEN,
         enabled: true
       };
     }
@@ -212,6 +215,10 @@ class PinningService {
 
     switch (provider) {
       case PROVIDERS.PINATA:
+        // Prefer JWT bearer token if available
+        if (process.env.PINATA_JWT) {
+          return { Authorization: `Bearer ${process.env.PINATA_JWT}` };
+        }
         return config.authHeaders(providerConfig.apiKey, providerConfig.secretKey);
       case PROVIDERS.INFURA:
         return config.authHeaders(providerConfig.projectId, providerConfig.projectSecret);

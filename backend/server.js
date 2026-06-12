@@ -4,7 +4,6 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const mongoose = require('mongoose');
 require('dotenv').config();
 const logger = require('./utils/logger');
 const { validateEnv } = require('./utils/validateEnv');
@@ -50,10 +49,15 @@ const tierUpgradeRoutes = require('./routes/tierUpgradeRoutes');
 const webhookAdminRoutes = require('./routes/webhookAdminRoutes');
 const blockchainVerificationRoutes = require('./routes/blockchainVerificationRoutes');
 
+// Import routes — health & metrics
+const healthRoutes = require('./routes/healthRoutes');
+const metricsRoutes = require('./routes/metricsRoutes');
+
 // Import middleware
 const { subscriptionRateLimiter } = require('./middleware/subscriptionRateLimiter');
 const { errorHandler } = require('./middleware/errorHandler');
-const { databaseHealthCheck, databaseStatusCheck } = require('./middleware/databaseHealth');
+const { httpMetricsMiddleware } = require('./middleware/metricsMiddleware');
+const { activeUsersMiddleware } = require('./middleware/activeUsersMiddleware');
 
 // Import services
 const {
@@ -68,19 +72,6 @@ const ppvContentRoutes = require('./routes/ppvContentRoutes');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Prometheus metrics
-const promClient = require('prom-client');
-const register = new promClient.Registry();
-promClient.collectDefaultMetrics({ register });
-
-const httpRequestDuration = new promClient.Histogram({
-  name: 'http_request_duration_seconds',
-  help: 'Duration of HTTP requests in seconds',
-  labelNames: ['method', 'route', 'status_code'],
-  buckets: [0.1, 0.5, 1, 2, 5],
-});
-register.registerMetric(httpRequestDuration);
-
 // Security middleware
 app.use(helmet());
 app.use(cors({
@@ -91,17 +82,10 @@ app.use(cors({
 // Logging middleware
 app.use(morgan('combined'));
 
-// Metrics middleware
-app.use((req, res, next) => {
-  const start = Date.now();
-  res.on('finish', () => {
-    const duration = (Date.now() - start) / 1000;
-    httpRequestDuration
-      .labels(req.method, req.route?.path || req.path, res.statusCode.toString())
-      .observe(duration);
-  });
-  next();
-});
+// Prometheus HTTP metrics middleware (request count, latency, error rate)
+app.use(httpMetricsMiddleware);
+// Active-users gauge middleware
+app.use(activeUsersMiddleware);
 
 // Body parsing middleware
 app.use(express.json({ limit: '50mb' }));
@@ -110,26 +94,11 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 // Rate limiting middleware
 app.use('/api', subscriptionRateLimiter);
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-  });
-});
+// Health endpoints: /health, /health/live, /health/ready, /health/database
+app.use('/health', healthRoutes);
 
-// Database health endpoints
-app.get('/health/database', databaseHealthCheck);
-app.get('/health/database/status', databaseStatusCheck);
-
-// Metrics endpoint
-app.get('/metrics', async (req, res) => {
-  res.set('Content-Type', register.contentType);
-  res.end(await register.metrics());
-});
-
-// Note: duplicate /health route removed — single definition above is authoritative
+// Metrics endpoints: /metrics (Prometheus), /metrics/summary (JSON)
+app.use('/metrics', metricsRoutes);
 
 // API routes
 app.use('/api/auth', authRoutes);
@@ -226,30 +195,19 @@ async function startServer() {
   }
 }
 
-// Graceful shutdown — delegates DB teardown to database.js
-process.on('SIGTERM', async () => {
-  logger.info('SIGTERM received — shutting down gracefully');
+// Graceful shutdown — disconnectDB() already closes mongoose connection
+async function gracefulShutdown(signal) {
+  logger.info(`${signal} received — shutting down gracefully`);
   await disconnectDB();
   stopRenewalScheduler();
   stopIndexer();
   contentGateIndexer.stopIndexer();
   pinningManager.stopMonitoring();
-  logger.info('Renewal scheduler stopped');
-  await mongoose.connection.close();
   process.exit(0);
-});
+}
 
-process.on('SIGINT', async () => {
-  logger.info('SIGINT received — shutting down gracefully');
-  await disconnectDB();
-  stopRenewalScheduler();
-  stopIndexer();
-  contentGateIndexer.stopIndexer();
-  pinningManager.stopMonitoring();
-  logger.info('SIGINT received, shutting down gracefully');
-  await mongoose.connection.close();
-  process.exit(0);
-});
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT',  () => gracefulShutdown('SIGINT'));
 
 // Catch unhandled promise rejections — log and exit so the process manager restarts cleanly
 process.on('unhandledRejection', (reason) => {
