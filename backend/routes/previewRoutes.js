@@ -6,6 +6,7 @@ const ContentPreview = require('../models/ContentPreview');
 const Content = require('../models/Content');
 const { verifyCreatorOwnership } = require('../middleware/creatorAuth');
 const { uploadFileToIPFS } = require('../services/ipfsService');
+const { toGatewayUrl } = require('../utils/previewUtils');
 const {
   validateContentId,
   validatePreviewData,
@@ -21,6 +22,95 @@ const upload = multer({
   limits: {
     fileSize: 50 * 1024 * 1024, // 50MB limit for video files
   }
+});
+
+/**
+ * Serve generated preview asset without any access check (public).
+ * Returns the previewCid and a gateway URL so the client can stream directly.
+ * GET /api/preview/:contentId/serve
+ */
+router.get('/:contentId/serve', validateContentId, async (req, res) => {
+  try {
+    const { contentId } = req.params;
+    const preview = await ContentPreview.findOne(
+      { contentId: parseInt(contentId), previewEnabled: true },
+      'contentId contentType previewCid trailerUrl previewImageUrl trailerDuration'
+    );
+
+    if (!preview || !preview.previewCid) {
+      return res.status(404).json({
+        success: false,
+        error: 'No generated preview available for this content'
+      });
+    }
+
+    const gatewayUrl = toGatewayUrl(`ipfs://${preview.previewCid}`);
+    return res.json({
+      success: true,
+      data: {
+        contentId: preview.contentId,
+        contentType: preview.contentType,
+        previewCid: preview.previewCid,
+        gatewayUrl,
+        trailerDuration: preview.trailerDuration || null,
+      }
+    });
+  } catch (error) {
+    logger.error('Error serving preview', { err: error });
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Generate a free preview for content (creator only).
+ * Accepts the full content file, generates the preview slice, uploads to IPFS,
+ * and stores the separate preview CID on the ContentPreview record.
+ * POST /api/preview/:contentId/generate
+ */
+router.post('/:contentId/generate', verifyCreatorOwnership, validateContentId, async (req, res) => {
+  upload.single('file')(req, res, async (uploadErr) => {
+    if (uploadErr) {
+      return res.status(400).json({ success: false, error: uploadErr.message });
+    }
+
+    try {
+      const { contentId } = req.params;
+
+      if (!req.file) {
+        return res.status(400).json({ success: false, error: 'No file uploaded' });
+      }
+
+      const content = await Content.findOne({ contentId: parseInt(contentId) });
+      if (!content || content.creator !== req.user.address) {
+        return res.status(403).json({ success: false, error: 'Unauthorized' });
+      }
+
+      const mimeType = req.file.mimetype;
+      const totalSeconds = req.body.totalSeconds ? parseFloat(req.body.totalSeconds) : 0;
+
+      const preview = await previewService.generateAndStorePreview(
+        parseInt(contentId),
+        req.file.buffer,
+        mimeType,
+        { totalSeconds }
+      );
+
+      res.json({
+        success: true,
+        data: {
+          contentId: preview.contentId,
+          previewCid: preview.previewCid,
+          trailerUrl: preview.trailerUrl,
+          previewImageUrl: preview.previewImageUrl,
+          trailerDuration: preview.trailerDuration,
+        },
+        message: 'Preview generated and stored successfully'
+      });
+    } catch (error) {
+      logger.error('Error generating preview', { err: error });
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
 });
 
 /**
