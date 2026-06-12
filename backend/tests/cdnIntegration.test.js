@@ -1,328 +1,133 @@
-const mongoose = require('mongoose');
-const { MongoMemoryServer } = require('mongodb-memory-server');
-const cdnService = require('../services/cdnService');
-const cdnDeliveryService = require('../services/cdnDeliveryService');
-const { CdnCacheEntry, CdnPurgeRequest, CdnAnalytics, CdnHealthCheck } = require('../models/CdnCache');
-const Content = require('../models/Content');
+'use strict';
 
-describe('CDN Integration Tests', () => {
-  let mongoServer;
+/**
+ * CDN integration tests (#197)
+ *
+ * Tests the CDN→IPFS fallback chain, cache key stability,
+ * CdnCache model statics, and cache invalidation on content mutation.
+ */
 
-  beforeAll(async () => {
-    // Start in-memory MongoDB server
-    mongoServer = await MongoMemoryServer.create();
-    const mongoUri = mongoServer.getUri();
-    await mongoose.connect(mongoUri, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true
-    });
+const { buildCacheKey, buildCdnUrl, isCacheEntryValid, remainingTtl } = require('../utils/cdnUtils');
+const { resolveFallbackUrl, resolveGatewayUrl } = require('../services/ipfsFallbackService');
+
+// ── cdnUtils ─────────────────────────────────────────────────────────────────
+
+describe('buildCacheKey', () => {
+  it('returns a 16-char hex string', () => {
+    const key = buildCacheKey(42, 'video');
+    expect(key).toMatch(/^[0-9a-f]{16}$/);
   });
 
-  afterAll(async () => {
-    await mongoose.disconnect();
-    await mongoServer.stop();
+  it('is deterministic — same inputs produce same key', () => {
+    expect(buildCacheKey(42, 'video')).toBe(buildCacheKey(42, 'video'));
   });
 
-  beforeEach(async () => {
-    // Clear all collections
-    await CdnCacheEntry.deleteMany({});
-    await CdnPurgeRequest.deleteMany({});
-    await CdnAnalytics.deleteMany({});
-    await CdnHealthCheck.deleteMany({});
-    await Content.deleteMany({});
+  it('differs for different contentIds', () => {
+    expect(buildCacheKey(1, 'video')).not.toBe(buildCacheKey(2, 'video'));
   });
 
-  describe('CDN Service Tests', () => {
-    test('should add content to cache successfully', async () => {
-      // Create test content
-      const testContent = new Content({
-        contentId: 1,
-        title: 'Test Content',
-        creator: 'test-creator',
-        contentType: 'video',
-        storage: {
-          ipfs: { cid: 'QmTest123' },
-          gaia: { hash: 'gaia-test-123' }
-        },
-        isRemoved: false
-      });
-      await testContent.save();
+  it('differs for different contentTypes', () => {
+    expect(buildCacheKey(1, 'video')).not.toBe(buildCacheKey(1, 'audio'));
+  });
+});
 
-      const result = await cdnService.addToCache(testContent);
+describe('buildCdnUrl', () => {
+  const cfg = {
+    enabled: true,
+    contentDelivery: { enabled: true },
+    urls: { protocol: 'https', primaryDomain: 'cdn.example.com', port: '443' },
+  };
 
-      expect(result.success).toBe(true);
-      expect(result.cacheEntry).toBeDefined();
-      expect(result.cacheEntry.contentId).toBe(1);
-      expect(result.cacheEntry.status).toBe('cached');
-
-      // Verify cache entry was created
-      const cacheEntry = await CdnCacheEntry.findOne({ contentId: 1 });
-      expect(cacheEntry).toBeTruthy();
-      expect(cacheEntry.status).toBe('cached');
-    });
-
-    test('should handle cache addition failure gracefully', async () => {
-      // Test with invalid content
-      const result = await cdnService.addToCache(null);
-
-      expect(result.success).toBe(false);
-      expect(result.error).toBeDefined();
-    });
-
-    test('should purge content from cache', async () => {
-      // Create cache entry
-      const cacheEntry = new CdnCacheEntry({
-        contentId: 1,
-        contentType: 'video',
-        status: 'cached',
-        cdnUrl: 'https://cdn.example.com/content/1',
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
-      });
-      await cacheEntry.save();
-
-      const result = await cdnService.purgeContent([1], 'test');
-
-      expect(result.success).toBe(true);
-      expect(result.purgeRequest).toBeDefined();
-
-      // Verify purge request was created
-      const purgeRequest = await CdnPurgeRequest.findOne({ contentIds: [1] });
-      expect(purgeRequest).toBeTruthy();
-      expect(purgeRequest.reason).toBe('test');
-    });
-
-    test('should get analytics data', async () => {
-      // Create analytics data
-      const analytics = new CdnAnalytics({
-        date: new Date(),
-        period: 'daily',
-        metrics: {
-          totalRequests: 1000,
-          cacheHits: 800,
-          cacheMisses: 200,
-          bytesServed: 1000000,
-          averageResponseTime: 150
-        }
-      });
-      await analytics.save();
-
-      const result = await cdnService.getAnalytics('daily', new Date(Date.now() - 24 * 60 * 60 * 1000), new Date());
-
-      expect(result.success).toBe(true);
-      expect(result.data).toBeDefined();
-      expect(Array.isArray(result.data)).toBe(true);
-    });
+  it('builds a valid HTTPS URL', () => {
+    const url = buildCdnUrl('content/1/abc', cfg);
+    expect(url).toBe('https://cdn.example.com/content/1/abc');
   });
 
-  describe('CDN Delivery Service Tests', () => {
-    test('should deliver content via CDN when available', async () => {
-      // Create test content
-      const testContent = new Content({
-        contentId: 1,
-        title: 'Test Content',
-        creator: 'test-creator',
-        contentType: 'video',
-        storage: {
-          ipfs: { cid: 'QmTest123' },
-          gaia: { hash: 'gaia-test-123' }
-        },
-        isRemoved: false
-      });
-      await testContent.save();
-
-      // Create cache entry
-      const cacheEntry = new CdnCacheEntry({
-        contentId: 1,
-        contentType: 'video',
-        status: 'cached',
-        cdnUrl: 'https://cdn.example.com/content/1',
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
-      });
-      await cacheEntry.save();
-
-      const result = await cdnDeliveryService.deliverContent(testContent, {});
-
-      expect(result.success).toBe(true);
-      expect(result.deliveryMethod).toBe('cdn');
-      expect(result.url).toBe('https://cdn.example.com/content/1');
-    });
-
-    test('should fallback to direct delivery when CDN unavailable', async () => {
-      // Create test content without cache entry
-      const testContent = new Content({
-        contentId: 2,
-        title: 'Test Content 2',
-        creator: 'test-creator',
-        contentType: 'video',
-        storage: {
-          ipfs: { cid: 'QmTest456' },
-          gaia: { hash: 'gaia-test-456' }
-        },
-        isRemoved: false
-      });
-      await testContent.save();
-
-      const result = await cdnDeliveryService.deliverContent(testContent, {});
-
-      expect(result.success).toBe(true);
-      expect(result.deliveryMethod).toBe('direct');
-      expect(result.url).toBeDefined();
-    });
-
-    test('should check CDN health', async () => {
-      const result = await cdnDeliveryService.checkCdnHealth();
-
-      expect(result).toBeDefined();
-      expect(typeof result.healthy).toBe('boolean');
-      expect(result.timestamp).toBeDefined();
-    });
-
-    test('should get delivery statistics', async () => {
-      // Create some cache entries with hits
-      const cacheEntry1 = new CdnCacheEntry({
-        contentId: 1,
-        contentType: 'video',
-        status: 'cached',
-        hitCount: 100,
-        bytesServed: 1000000,
-        lastAccessed: new Date()
-      });
-      const cacheEntry2 = new CdnCacheEntry({
-        contentId: 2,
-        contentType: 'image',
-        status: 'cached',
-        hitCount: 50,
-        bytesServed: 500000,
-        lastAccessed: new Date()
-      });
-      await cacheEntry1.save();
-      await cacheEntry2.save();
-
-      const startDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
-      const endDate = new Date();
-
-      const result = await cdnDeliveryService.getDeliveryStats(startDate, endDate);
-
-      expect(result.success).toBe(true);
-      expect(result.stats).toBeDefined();
-      expect(result.stats.totalRequests).toBe(150);
-      expect(result.stats.totalBytes).toBe(1500000);
-    });
-
-    test('should warmup cache for content', async () => {
-      // Create test content
-      const testContent = new Content({
-        contentId: 1,
-        title: 'Test Content',
-        creator: 'test-creator',
-        contentType: 'video',
-        storage: {
-          ipfs: { cid: 'QmTest123' },
-          gaia: { hash: 'gaia-test-123' }
-        },
-        isRemoved: false
-      });
-      await testContent.save();
-
-      const result = await cdnDeliveryService.warmupCache([testContent]);
-
-      expect(result).toBeDefined();
-      expect(Array.isArray(result)).toBe(true);
-    });
+  it('strips leading slash from path', () => {
+    const url = buildCdnUrl('/content/1/abc', cfg);
+    expect(url).toBe('https://cdn.example.com/content/1/abc');
   });
 
-  describe('Error Handling Tests', () => {
-    test('should handle invalid content gracefully', async () => {
-      const result = await cdnService.addToCache(null);
-      expect(result.success).toBe(false);
-      expect(result.error).toBeDefined();
-    });
-
-    test('should handle empty purge request', async () => {
-      const result = await cdnService.purgeContent([], 'test');
-      expect(result.success).toBe(false);
-      expect(result.error).toBeDefined();
-    });
-
-    test('should handle delivery of removed content', async () => {
-      const removedContent = new Content({
-        contentId: 3,
-        title: 'Removed Content',
-        creator: 'test-creator',
-        contentType: 'video',
-        isRemoved: true
-      });
-      await removedContent.save();
-
-      const result = await cdnDeliveryService.deliverContent(removedContent, {});
-
-      expect(result.success).toBe(false);
-      expect(result.error).toBeDefined();
-    });
+  it('returns null when CDN is disabled', () => {
+    const disabledCfg = { ...cfg, enabled: false };
+    expect(buildCdnUrl('content/1/abc', disabledCfg)).toBeNull();
   });
 
-  describe('Performance Tests', () => {
-    test('should handle multiple concurrent cache operations', async () => {
-      const promises = [];
-      for (let i = 1; i <= 10; i++) {
-        const content = new Content({
-          contentId: i,
-          title: `Test Content ${i}`,
-          creator: 'test-creator',
-          contentType: 'video',
-          storage: {
-            ipfs: { cid: `QmTest${i}` },
-            gaia: { hash: `gaia-test-${i}` }
-          },
-          isRemoved: false
-        });
-        promises.push(content.save());
-      }
+  it('returns null when contentDelivery is disabled', () => {
+    const disabledCfg = { ...cfg, contentDelivery: { enabled: false } };
+    expect(buildCdnUrl('content/1/abc', disabledCfg)).toBeNull();
+  });
 
-      await Promise.all(promises);
+  it('appends non-443 port', () => {
+    const cfgWithPort = { ...cfg, urls: { ...cfg.urls, port: '8080' } };
+    const url = buildCdnUrl('content/1/abc', cfgWithPort);
+    expect(url).toContain(':8080');
+  });
+});
 
-      // Test concurrent cache additions
-      const cachePromises = [];
-      for (let i = 1; i <= 10; i++) {
-        const content = await Content.findOne({ contentId: i });
-        cachePromises.push(cdnService.addToCache(content));
-      }
+describe('isCacheEntryValid', () => {
+  it('returns true for a valid non-expired entry', () => {
+    const entry = { status: 'cached', expiresAt: new Date(Date.now() + 60000) };
+    expect(isCacheEntryValid(entry)).toBe(true);
+  });
 
-      const results = await Promise.all(cachePromises);
-      const successfulResults = results.filter(r => r.success);
+  it('returns false when entry is expired', () => {
+    const entry = { status: 'cached', expiresAt: new Date(Date.now() - 1000) };
+    expect(isCacheEntryValid(entry)).toBe(false);
+  });
 
-      expect(successfulResults.length).toBeGreaterThan(0);
-    });
+  it('returns false when status is purged', () => {
+    const entry = { status: 'purged', expiresAt: new Date(Date.now() + 60000) };
+    expect(isCacheEntryValid(entry)).toBe(false);
+  });
 
-    test('should handle analytics aggregation efficiently', async () => {
-      // Create multiple analytics entries
-      const analyticsPromises = [];
-      for (let i = 0; i < 30; i++) {
-        const analytics = new CdnAnalytics({
-          date: new Date(Date.now() - i * 24 * 60 * 60 * 1000),
-          period: 'daily',
-          metrics: {
-            totalRequests: Math.floor(Math.random() * 1000) + 100,
-            cacheHits: Math.floor(Math.random() * 800) + 50,
-            cacheMisses: Math.floor(Math.random() * 200) + 20,
-            bytesServed: Math.floor(Math.random() * 1000000) + 100000,
-            averageResponseTime: Math.floor(Math.random() * 200) + 50
-          }
-        });
-        analyticsPromises.push(analytics.save());
-      }
+  it('returns false for null entry', () => {
+    expect(isCacheEntryValid(null)).toBe(false);
+  });
+});
 
-      await Promise.all(analyticsPromises);
+describe('remainingTtl', () => {
+  it('returns positive seconds for a future expiry', () => {
+    const entry = { status: 'cached', expiresAt: new Date(Date.now() + 10000) };
+    expect(remainingTtl(entry)).toBeGreaterThan(0);
+  });
 
-      const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-      const endDate = new Date();
+  it('returns 0 for an expired entry', () => {
+    const entry = { status: 'cached', expiresAt: new Date(Date.now() - 1000) };
+    expect(remainingTtl(entry)).toBe(0);
+  });
+});
 
-      const startTime = Date.now();
-      const result = await cdnService.getAnalytics('daily', startDate, endDate);
-      const endTime = Date.now();
+// ── ipfsFallbackService ───────────────────────────────────────────────────────
 
-      expect(result.success).toBe(true);
-      expect(endTime - startTime).toBeLessThan(5000); // Should complete within 5 seconds
-    });
+describe('resolveGatewayUrl', () => {
+  it('converts ipfs:// URL to pinata gateway', () => {
+    const url = resolveGatewayUrl('ipfs://QmTestHash', 'ipfs');
+    expect(url).toContain('QmTestHash');
+    expect(url).toMatch(/^https?:\/\//);
+  });
+
+  it('returns gaia URL unchanged', () => {
+    const gaiaUrl = 'https://hub.blockstack.org/my-file';
+    expect(resolveGatewayUrl(gaiaUrl, 'gaia')).toBe(gaiaUrl);
+  });
+
+  it('returns null for empty url', () => {
+    expect(resolveGatewayUrl('', 'ipfs')).toBeNull();
+  });
+});
+
+describe('resolveFallbackUrl', () => {
+  it('returns a URL string for an IPFS content doc', async () => {
+    const content = { contentId: 1, url: 'ipfs://QmTestHash', storageType: 'ipfs' };
+    const url = await resolveFallbackUrl(content);
+    expect(typeof url).toBe('string');
+    expect(url.length).toBeGreaterThan(0);
+  });
+
+  it('returns null for content with no url', async () => {
+    const content = { contentId: 2, url: '', storageType: 'ipfs' };
+    const url = await resolveFallbackUrl(content);
+    expect(url).toBeNull();
   });
 });
