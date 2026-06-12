@@ -1,17 +1,16 @@
-// Jest configuration for smoke tests
+// Jest configuration for smoke tests (#195)
 module.exports = {
   displayName: 'Smoke Tests',
   testEnvironment: 'node',
   setupFilesAfterEnv: ['<rootDir>/utils/test-setup.js'],
   testMatch: [
-    '<rootDir>/api/smoke/**/*.test.js',
-    '<rootDir>/e2e/smoke/**/*.spec.js'
+    '<rootDir>/smoke/**/*.test.js',
+    '<rootDir>/smoke/**/*.spec.js',
   ],
   collectCoverageFrom: [
-    'api/**/*.js',
-    'e2e/**/*.js',
+    'smoke/**/*.js',
     '!**/node_modules/**',
-    '!**/test-results/**'
+    '!**/test-results/**',
   ],
   coverageDirectory: 'coverage/smoke',
   coverageReporters: ['text', 'lcov'],
@@ -23,7 +22,7 @@ module.exports = {
     'default',
     ['jest-junit', {
       outputDirectory: 'test-results',
-      outputName: 'smoke-junit.xml'
-    }]
-  ]
+      outputName: 'smoke-junit.xml',
+    }],
+  ],
 };
