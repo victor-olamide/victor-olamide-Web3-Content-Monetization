@@ -239,6 +239,8 @@ class PreviewService {
           price: content.price,
           creator: content.creator,
           ...previewData,
+          // Preserve previewCid if already set and caller doesn't supply a new one
+          ...(previewData.previewCid ? { previewCid: previewData.previewCid } : {}),
           updatedAt: new Date()
         },
         { upsert: true, new: true }
