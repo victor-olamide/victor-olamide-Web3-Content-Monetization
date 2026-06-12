@@ -310,6 +310,24 @@ class PreviewService {
   }
 
   /**
+   * Get a preview record by its dedicated IPFS CID.
+   * Useful for gateway redirect or CID verification without access check.
+   * @param {string} cid  Raw IPFS CID (no ipfs:// prefix)
+   * @returns {Promise<Object|null>}
+   */
+  async getPreviewByCid(cid) {
+    try {
+      return await ContentPreview.findOne(
+        { previewCid: cid, previewEnabled: true },
+        'contentId contentType previewCid trailerUrl previewImageUrl trailerDuration'
+      );
+    } catch (error) {
+      logger.error('Error fetching preview by CID', { err: error, cid });
+      throw error;
+    }
+  }
+
+  /**
    * Get previews for multiple content items
    * @param {Array<Number>} contentIds - Array of content IDs
    * @returns {Promise<Array>} Array of previews
