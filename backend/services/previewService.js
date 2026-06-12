@@ -1,12 +1,26 @@
+'use strict';
+
 const logger = require('../utils/logger');
 const ContentPreview = require('../models/ContentPreview');
 const Content = require('../models/Content');
 const Purchase = require('../models/Purchase');
 const Subscription = require('../models/Subscription');
+const { uploadFileToIPFS } = require('./ipfsService');
+const {
+  PREVIEW_LIMITS,
+  mimeToContentCategory,
+  extractCid,
+  toIpfsUrl,
+  estimateByteOffsetForSeconds,
+  truncateToFirstLines,
+  isLikelyMp4,
+} = require('../utils/previewUtils');
 
 /**
- * Content Preview Service
- * Manages preview functionality for unpurchased content
+ * Content Preview Service (#198)
+ * Generates free previews (first 30 s for video/audio, first page for docs),
+ * stores each preview CID separately in IPFS, and serves them without an
+ * access check so unauthenticated users can discover content.
  */
 
 class PreviewService {
