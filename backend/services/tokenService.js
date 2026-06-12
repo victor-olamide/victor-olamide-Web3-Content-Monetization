@@ -37,7 +37,7 @@ async function getBalances(address) {
   } catch (error) {
     if (error.response) {
       // API responded with an error (e.g. 404, 429)
-      console.error(`Hiro API error (${error.response.status}):`, error.response.data);
+      logger.error('Hiro API error', { status: error.response.status, data: error.response.data });
       if (error.response.status === 404) {
         // Address might not exist yet on chain, return empty balances
         return { stx: { balance: '0' }, fungible_tokens: {}, non_fungible_tokens: {} };

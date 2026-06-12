@@ -58,13 +58,6 @@ router.post('/tiers', validateTierCreation, verifyToken, isCreator, async (req, 
     });
   }
 });
-    res.status(500).json({
-      success: false,
-      message: 'Error creating subscription tier',
-      error: error.message
-    });
-  }
-});
 
 /**
  * GET /creators/:creatorId/tiers
@@ -263,23 +256,6 @@ router.get('/creators/:creatorId/suggestions', validateCreatorId, verifyToken, i
     const { creatorId } = req.params;
 
     const result = await subscriptionTierService.getTierSuggestions(creatorId);
-
-    if (!result.success) {
-      return res.status(400).json({ success: false, message: result.error });
-    }
-
-    res.json({
-      success: true,
-      suggestions: result.suggestions
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching suggestions',
-      error: error.message
-    });
-  }
-});
 
     if (!result.success) {
       return res.status(400).json({ success: false, message: result.error });

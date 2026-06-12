@@ -17,6 +17,7 @@ export interface TokenGatingConfig {
 /** Shape returned by the backend GET /api/content/:id endpoint */
 export interface Content {
   _id?: string;
+  id?: string | number;
   contentId: number;
   title: string;
   description: string;
@@ -29,7 +30,19 @@ export interface Content {
   purchases?: number;
   tokenGating?: TokenGatingConfig;
   tags?: string[];
+  category?: string;
+  thumbnail?: string;
+  duration?: string;
+  viewCount?: number;
+  likes?: number;
   createdAt?: string | number;
+  updatedAt?: string | number;
+  isExplicit?: boolean;
+  subtitles?: Array<{
+    language: string;
+    url: string;
+  }>;
+  relatedContentIds?: string[];
 }
 
 /** Shape used when creating/uploading new content */

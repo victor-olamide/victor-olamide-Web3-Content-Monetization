@@ -4,10 +4,7 @@
 // Usage:
 //   node deploy.js
 //
-// Required env vars (set in .env or export before running):
-//   DEPLOYER_MNEMONIC   — 24-word BIP-39 mnemonic for the deployer wallet
-//   DEPLOYER_ADDRESS    — Stacks mainnet address (SP...) matching the mnemonic
-//
+// Config: settings/Mainnet.toml — set your mnemonic under [accounts.deployer]
 // Optional env vars:
 //   STACKS_NODE_URL     — Stacks API base URL (default: https://api.mainnet.hiro.so)
 //   STACKS_MODULES_PATH — Path to @stacks node_modules
@@ -16,9 +13,22 @@
 const path  = require('path');
 const fs    = require('fs');
 
-const dotenvResult = require('dotenv').config();
-if (dotenvResult.error && !process.env.DEPLOYER_MNEMONIC) {
-  console.warn('No .env file found — expecting environment variables to be set externally');
+// ─── Read mnemonic from settings/Mainnet.toml ─────────────────────────────────
+function readMainnetToml() {
+  const tomlPath = path.join(__dirname, 'settings', 'Mainnet.toml');
+  if (!fs.existsSync(tomlPath)) {
+    console.error('settings/Mainnet.toml not found.');
+    process.exit(1);
+  }
+  const raw = fs.readFileSync(tomlPath, 'utf8');
+
+  // Find the [accounts.deployer] section and extract mnemonic = "..."
+  const match = raw.match(/\[accounts\.deployer\][^\[]*mnemonic\s*=\s*"([^"]+)"/s);
+  if (!match) {
+    console.error('Could not find mnemonic under [accounts.deployer] in settings/Mainnet.toml');
+    process.exit(1);
+  }
+  return match[1].trim();
 }
 
 // Use @stacks packages from the DEBY/stacks project which has wallet-sdk
@@ -29,41 +39,39 @@ const {
   broadcastTransaction,
   AnchorMode,
   PostConditionMode,
+  privateKeyToPublic,
+  publicKeyToAddress,
+  AddressVersion,
+  ClarityVersion,
 } = require(path.join(STACKS_MODULES, '@stacks/transactions'));
 
 const { STACKS_MAINNET } = require(path.join(STACKS_MODULES, '@stacks/network'));
 const { generateWallet } = require(path.join(STACKS_MODULES, '@stacks/wallet-sdk'));
 
-const MNEMONIC        = process.env.DEPLOYER_MNEMONIC;
-const DEPLOYER        = process.env.DEPLOYER_ADDRESS;
-const NODE_URL        = process.env.STACKS_NODE_URL || 'https://api.mainnet.hiro.so';
-const NETWORK         = { ...STACKS_MAINNET, coreApiUrl: NODE_URL };
-const CONTRACTS_DIR   = path.join(__dirname, 'contracts');
-const DRY_RUN         = process.env.DRY_RUN === 'true';
+const MNEMONIC      = readMainnetToml();
+const NODE_URL      = process.env.STACKS_NODE_URL || 'https://api.mainnet.hiro.so';
+const NETWORK       = { ...STACKS_MAINNET, coreApiUrl: NODE_URL };
+const CONTRACTS_DIR = path.join(__dirname, 'contracts');
+const DRY_RUN       = process.env.DRY_RUN === 'true';
 
+// DEPLOYER is set after the wallet is derived in main()
+let DEPLOYER = '';
+
+// Deploy order matters: traits → independent contracts → contracts that reference others
 const CONTRACTS = [
-  { name: 'content-gate',  file: 'content-gate.clar',  fee: BigInt(3000) },
+  { name: 'sip-009-trait',      file: 'sip-009-trait.clar',      fee: BigInt(5000)  },
+  { name: 'sip-010-trait',      file: 'sip-010-trait.clar',      fee: BigInt(5000)  },
+  { name: 'pay-per-view',       file: 'pay-per-view.clar',       fee: BigInt(100000) },
+  { name: 'subscription',       file: 'subscription.clar',       fee: BigInt(50000) },
+  { name: 'web3content-nft',    file: 'web3content-nft.clar',    fee: BigInt(15000) },
+  { name: 'web3content-token',  file: 'web3content-token.clar',  fee: BigInt(15000) },
+  { name: 'content-gate',       file: 'content-gate.clar',       fee: BigInt(30000) },
 ];
 
-function validateEnv() {
-  const missing = [];
-  if (!process.env.DEPLOYER_MNEMONIC) missing.push('DEPLOYER_MNEMONIC');
-  if (!process.env.DEPLOYER_ADDRESS)  missing.push('DEPLOYER_ADDRESS');
-  if (missing.length > 0) {
-    console.error('Missing required environment variables:');
-    missing.forEach(v => console.error(`  - ${v}`));
-    console.error('\nCreate a .env file or export them before running deploy.js');
-    process.exit(1);
-  }
-
-  const wordCount = process.env.DEPLOYER_MNEMONIC.trim().split(/\s+/).length;
+function validateMnemonic(mnemonic) {
+  const wordCount = mnemonic.trim().split(/\s+/).length;
   if (wordCount !== 24) {
-    console.error(`DEPLOYER_MNEMONIC must be a 24-word BIP-39 phrase (got ${wordCount} words)`);
-    process.exit(1);
-  }
-
-  if (!/^SP[A-Z0-9]{33,}$/.test(process.env.DEPLOYER_ADDRESS)) {
-    console.error('DEPLOYER_ADDRESS must be a valid Stacks mainnet address starting with SP');
+    console.error(`Mnemonic in settings/Mainnet.toml must be a 24-word BIP-39 phrase (got ${wordCount} words)`);
     process.exit(1);
   }
 }
@@ -89,6 +97,15 @@ async function getNonce() {
   return BigInt(data.possible_next_nonce);
 }
 
+async function isAlreadyDeployed(deployer, contractName) {
+  try {
+    const res = await fetch(`${NODE_URL}/v2/contracts/interface/${deployer}/${contractName}`);
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 async function checkTx(txId) {
   for (let i = 0; i < 60; i++) {
     await sleep(10000);
@@ -106,7 +123,15 @@ async function checkTx(txId) {
 }
 
 async function main() {
-  validateEnv();
+  validateMnemonic(MNEMONIC);
+
+  // Derive deployer address from mnemonic — do not log the mnemonic itself
+  console.log('Deriving deployer address from mnemonic...');
+  const wallet     = await generateWallet({ secretKey: MNEMONIC, password: '' });
+  const account    = wallet.accounts[0];
+  const privateKey = account.stxPrivateKey;
+  DEPLOYER         = publicKeyToAddress(AddressVersion.MainnetSingleSig, privateKeyToPublic(privateKey));
+  console.log(`  Deployer address: ${DEPLOYER}\n`);
 
   console.log('════════════════════════════════════════════════════');
   console.log('  Web3 Content Monetization — Mainnet Deployment');
@@ -114,20 +139,9 @@ async function main() {
   console.log(`  Node URL : ${NODE_URL}`);
   console.log(`  Dry Run  : ${DRY_RUN}`);
   console.log(`  Contracts: ${CONTRACTS.length}`);
+  console.log('  Order: sip-009-trait → sip-010-trait → pay-per-view →');
+  console.log('         subscription → web3content-nft → web3content-token → content-gate');
   console.log('════════════════════════════════════════════════════\n');
-
-  // Derive private key from mnemonic — do not log the mnemonic itself
-  console.log('Deriving private key from mnemonic...');
-  const wallet     = await generateWallet({ secretKey: MNEMONIC, password: '' });
-  const account    = wallet.accounts[0];
-  const privateKey = account.stxPrivateKey;
-  const derivedAddr = account.address || DEPLOYER;
-  console.log(`  Derived address: ${derivedAddr}\n`);
-
-  if (derivedAddr !== DEPLOYER) {
-    console.error(`  ✗ Address mismatch: mnemonic derives ${derivedAddr} but DEPLOYER_ADDRESS is ${DEPLOYER}`);
-    process.exit(1);
-  }
 
   let nonce = await getNonce();
   console.log(`  Starting nonce: ${nonce}\n`);
@@ -136,6 +150,13 @@ async function main() {
 
   for (const contract of CONTRACTS) {
     const codeBody = fs.readFileSync(path.join(CONTRACTS_DIR, contract.file), 'utf8');
+
+    const alreadyDeployed = await isAlreadyDeployed(DEPLOYER, contract.name);
+    if (alreadyDeployed) {
+      console.log(`Skipping ${contract.name} — already deployed on-chain`);
+      deployed++;
+      continue;
+    }
 
     console.log(`Deploying ${contract.name}... (nonce: ${nonce}, fee: ${contract.fee} µSTX)`);
 
@@ -149,14 +170,15 @@ async function main() {
     let txId;
     try {
       const tx = await makeContractDeploy({
-        contractName: contract.name,
+        contractName:      contract.name,
         codeBody,
-        senderKey:    privateKey,
-        network:      NETWORK,
+        senderKey:         privateKey,
+        network:           NETWORK,
         nonce,
-        fee:          contract.fee,
-        anchorMode:   AnchorMode.Any,
+        fee:               contract.fee,
+        anchorMode:        AnchorMode.Any,
         postConditionMode: PostConditionMode.Allow,
+        clarityVersion:    ClarityVersion.Clarity2,
       });
 
       // v7: tx.serialize() returns a hex string — convert to bytes before broadcasting
@@ -208,6 +230,8 @@ async function main() {
   console.log(`  ${deployed}/${CONTRACTS.length} contracts deployed successfully`);
   console.log(`  https://explorer.hiro.so/address/${DEPLOYER}?chain=mainnet`);
   console.log('════════════════════════════════════════════════════');
+  console.log('\n  Next step: copy your deployer address into interact-web3content.js');
+  console.log(`  CONTRACT_OWNER = '${DEPLOYER}'`);
 }
 
 main().catch(err => {

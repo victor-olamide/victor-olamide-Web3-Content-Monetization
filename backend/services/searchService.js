@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const Content = require('../models/Content');
 
 /**
@@ -14,8 +15,20 @@ const buildQuery = (params) => {
     isRemoved,
   } = params;
 
-  const contentTypeValue = typeof contentType === 'string' ? contentType.trim() : contentType;
-  const categoryValue = typeof category === 'string' ? category.trim() : category;
+  const normalizeValues = (value) => {
+    if (Array.isArray(value)) {
+      return value.map((item) => String(item).trim()).filter(Boolean);
+    }
+
+    if (typeof value === 'string') {
+      return value.split(',').map((item) => item.trim()).filter(Boolean);
+    }
+
+    return [];
+  };
+
+  const contentTypeValues = normalizeValues(contentType);
+  const categoryValues = normalizeValues(category);
   const creatorValue = typeof creator === 'string' ? creator.trim() : creator;
   const searchQuery = typeof q === 'string' ? q.trim() : q;
 
@@ -28,9 +41,11 @@ const buildQuery = (params) => {
   }
 
   // Accept `category` as an alias for contentType so clients can filter by category.
-  const contentCategory = contentTypeValue || categoryValue;
-  if (contentCategory) {
-    query.contentType = contentCategory;
+  const contentCategoryValues = [...contentTypeValues, ...categoryValues];
+  if (contentCategoryValues.length === 1) {
+    query.contentType = contentCategoryValues[0];
+  } else if (contentCategoryValues.length > 1) {
+    query.contentType = { $in: contentCategoryValues };
   }
 
   if (creatorValue) {
@@ -55,13 +70,14 @@ const buildQuery = (params) => {
  * Perform search with pagination and simple facets
  */
 const searchContent = async (params) => {
-  const page = parseInt(params.page, 10) || 1;
-  const limit = parseInt(params.limit, 10) || 20;
-  const sortBy = params.sortBy || 'createdAt';
-  const sortDir = params.sortDir === 'asc' ? 1 : -1;
+  try {
+    const page = parseInt(params.page, 10) || 1;
+    const limit = parseInt(params.limit, 10) || 20;
+    const sortBy = params.sortBy || 'createdAt';
+    const sortDir = params.sortDir === 'asc' ? 1 : -1;
 
-  const skip = (page - 1) * limit;
-  const query = buildQuery(params);
+    const skip = (page - 1) * limit;
+    const query = buildQuery(params);
 
   // Projection: if text score available include it
   const projection = {};
@@ -87,14 +103,18 @@ const searchContent = async (params) => {
     acc[f._id] = f.count; return acc;
   }, {});
 
-  return {
-    page,
-    limit,
-    total,
-    pages: Math.ceil(total / limit),
-    results,
-    facets: { contentType: formattedFacets }
-  };
+    return {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit),
+      results,
+      facets: { contentType: formattedFacets }
+    };
+  } catch (error) {
+    logger.error('Content search failed', { params, error: error.message });
+    throw new Error(`Content search failed: ${error.message}`);
+  }
 };
 
 module.exports = {

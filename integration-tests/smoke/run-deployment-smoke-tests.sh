@@ -109,7 +109,6 @@ run_smoke_tests() {
       sleep 10
     fi
 
-    # Run the smoke tests
     if DEPLOYMENT_URL="${DEPLOYMENT_URL}" NODE_ENV="${ENVIRONMENT}" node "${SMOKE_DIR}/deployment-smoke-test.js"; then
       print_success "Smoke tests passed on attempt $attempt"
       success=true
@@ -122,6 +121,14 @@ run_smoke_tests() {
 
   if [ "$success" = false ]; then
     print_error "Smoke tests failed after $max_attempts attempts"
+    return 1
+  fi
+
+  # Run deployment gate check
+  if node "${SMOKE_DIR}/check-deployment-gate.js"; then
+    print_success "Deployment gate check passed"
+  else
+    print_error "Deployment gate check failed — blocking deployment"
     return 1
   fi
 

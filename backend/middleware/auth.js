@@ -82,3 +82,9 @@ exports.authorize = (...roles) => {
 };
 
 exports.requireAdmin = exports.authorize('admin');
+
+/**
+ * Convenience middleware: protect + authorize('admin') in one step.
+ * Use as: router.use(adminOnly)
+ */
+exports.adminOnly = [exports.protect, exports.authorize('admin')];
