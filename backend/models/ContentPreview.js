@@ -26,6 +26,9 @@ const contentPreviewSchema = new mongoose.Schema({
   previewText: { type: String, trim: true, maxlength: 500 }, // Short preview text for articles
   previewImageUrl: { type: String, validate: { validator: urlValidator, message: 'Invalid previewImageUrl' } }, // Preview image for articles
   
+  // Dedicated IPFS CID for the generated preview asset (separate from full content CID)
+  previewCid: { type: String, trim: true }, // raw CID without ipfs:// prefix
+
   // Preview metadata
   previewEnabled: { type: Boolean, default: true },
   totalViews: { type: Number, default: 0, min: 0 },
