@@ -10,6 +10,20 @@ scrape_configs:
     metrics_path: /metrics
     static_configs:
       - targets: ['host.docker.internal:5000']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'backend'
+
+  - job_name: 'backend-health'
+    metrics_path: /health
+    scheme: http
+    static_configs:
+      - targets: ['host.docker.internal:5000']
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: '.*'
+        action: keep
 
   - job_name: 'prometheus'
     static_configs:
