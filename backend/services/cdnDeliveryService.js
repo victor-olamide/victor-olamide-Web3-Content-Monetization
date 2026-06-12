@@ -131,11 +131,15 @@ class CdnDeliveryService {
         method: 'cdn',
         cdnUrl,
         statusCode: response.status,
-        headers: response.headers,
+        headers: {
+          ...response.headers,
+          'X-Delivery-Method': 'cdn',
+          'X-CDN-Cache': 'HIT',
+        },
         stream: response.data,
         contentType: response.headers['content-type'],
         contentLength: response.headers['content-length'],
-        cacheStatus: response.headers['cf-cache-status'] || response.headers['x-cache'] || 'unknown'
+        cacheStatus: response.headers['cf-cache-status'] || response.headers['x-cache'] || 'HIT',
       };
 
     } catch (error) {
