@@ -119,6 +119,15 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Alias for CI/smoke test compatibility
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+  });
+});
+
 // Database health endpoints
 app.get('/health/database', databaseHealthCheck);
 app.get('/health/database/status', databaseStatusCheck);
