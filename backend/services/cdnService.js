@@ -1,8 +1,12 @@
+'use strict';
+
+// CDN Service (#197) — manages CDN cache entries, purge operations, and analytics.
+
 const logger = require('../utils/logger');
 const axios = require('axios');
-const crypto = require('crypto');
-const { cdnConfig, getProviderConfig, getContentTypeConfig, generateCdnUrl } = require('../config/cdnConfig');
+const { cdnConfig, getProviderConfig, getContentTypeConfig } = require('../config/cdnConfig');
 const { CdnCacheEntry, CdnPurgeRequest, CdnAnalytics, CdnHealthCheck } = require('../models/CdnCache');
+const { buildCacheKey, buildCdnUrl, isCacheEntryValid } = require('../utils/cdnUtils');
 
 /**
  * CDN Service - Manages Content Delivery Network operations
@@ -48,14 +52,11 @@ class CdnService {
   }
 
   /**
-   * Generate cache key for content
-   * @param {number} contentId - Content ID
-   * @param {string} contentType - Content type
-   * @returns {string} Cache key
+   * Generate a stable, deterministic cache key for contentId + contentType.
+   * (No timestamp — same content always maps to same key.)
    */
   generateCacheKey(contentId, contentType) {
-    const data = `${contentId}:${contentType}:${Date.now()}`;
-    return crypto.createHash('sha256').update(data).digest('hex').substring(0, 16);
+    return buildCacheKey(contentId, contentType);
   }
 
   /**
@@ -70,7 +71,7 @@ class CdnService {
       }
 
       const cacheKey = this.generateCacheKey(content.contentId, content.contentType);
-      const cdnUrl = generateCdnUrl(`content/${content.contentId}/${cacheKey}`);
+      const cdnUrl = buildCdnUrl(`content/${content.contentId}/${cacheKey}`, this.config);
 
       if (!cdnUrl) {
         return { success: false, reason: 'CDN URL generation failed' };
@@ -115,8 +116,6 @@ class CdnService {
    */
   async prefetchContent(cacheEntry) {
     try {
-      // This would implement provider-specific prefetch logic
-      // For now, we'll mark as cached (assuming CDN will fetch on first request)
       cacheEntry.status = 'cached';
       cacheEntry.cachedAt = new Date();
 
@@ -124,10 +123,9 @@ class CdnService {
       cacheEntry.expiresAt = new Date(Date.now() + (contentTypeConfig.cacheTtl * 1000));
 
       await cacheEntry.save();
-
-      console.log(`Content ${cacheEntry.contentId} prefetched to CDN cache`);
+      logger.info('Content prefetched to CDN cache', { contentId: cacheEntry.contentId });
     } catch (error) {
-      console.error(`Failed to prefetch content ${cacheEntry.contentId}:`, error);
+      logger.error('Failed to prefetch content to CDN', { contentId: cacheEntry.contentId, err: error });
       cacheEntry.status = 'failed';
       await cacheEntry.save();
     }
@@ -144,17 +142,26 @@ class CdnService {
     }
 
     try {
-      const cacheEntry = await CdnCacheEntry.findByContentId(contentId);
-
-      if (cacheEntry && cacheEntry.status === 'cached' && cacheEntry.expiresAt > new Date()) {
-        return cacheEntry.cdnUrl;
-      }
-
-      return null;
+      const entry = await CdnCacheEntry.findActiveByContentId(contentId);
+      return entry ? entry.cdnUrl : null;
     } catch (error) {
-      logger.error('Failed to get CDN URL', { err: error });
+      logger.error('Failed to get CDN URL', { err: error, contentId });
       return null;
     }
+  }
+
+  /**
+   * Return an existing valid CDN URL or create a new cache entry.
+   * Used by cdnMiddleware to ensure every content GET is CDN-aware.
+   * @param {Object} content  Mongoose Content document
+   * @returns {Promise<string|null>} CDN URL or null if CDN is disabled
+   */
+  async getOrCreateCdnUrl(content) {
+    const existing = await this.getCdnUrl(content.contentId);
+    if (existing) return existing;
+
+    const result = await this.addToCache(content);
+    return result.success ? result.cdnUrl : null;
   }
 
   /**
