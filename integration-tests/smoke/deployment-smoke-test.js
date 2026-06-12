@@ -13,6 +13,7 @@ const { expect } = require('chai');
 const fs = require('fs');
 const path = require('path');
 const yaml = require('js-yaml');
+const { withRetry } = require('./smoke-retry');
 
 class DeploymentSmokeTester {
   constructor(
@@ -267,18 +268,18 @@ class DeploymentSmokeTester {
 
   // ─── helpers ───────────────────────────────────────────────────────────────
 
-  async get(endpoint) {
-    return axios.get(`${this.baseUrl}${endpoint}`, {
+  async get(endpoint, retries = 2) {
+    return withRetry(() => axios.get(`${this.baseUrl}${endpoint}`, {
       timeout: this.timeout,
       validateStatus: () => true,
-    });
+    }), retries);
   }
 
-  async post(endpoint, body) {
-    return axios.post(`${this.baseUrl}${endpoint}`, body, {
+  async post(endpoint, body, retries = 2) {
+    return withRetry(() => axios.post(`${this.baseUrl}${endpoint}`, body, {
       timeout: this.timeout,
       validateStatus: () => true,
-    });
+    }), retries);
   }
 
   async runTest(name, fn, critical = true) {
