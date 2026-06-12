@@ -6,6 +6,8 @@ const ContentEncryption = require('../models/ContentEncryption');
 const encryptionService = require('../services/encryptionService');
 const { verifyContentAccess, rateLimitMiddleware } = require('../middleware/accessControl');
 const { getContentFromStorage } = require('../services/storageService');
+const { withCdnResolution } = require('../middleware/cdnMiddleware');
+const cdnDeliveryService = require('../services/cdnDeliveryService');
 
 const getMasterKey = () => {
   const masterKeyHex = process.env.CONTENT_ENCRYPTION_MASTER_KEY;
@@ -20,15 +22,22 @@ const getMasterKey = () => {
 };
 
 /**
- * Serve gated content with access verification
+ * Serve gated content with CDN-first delivery and IPFS fallback
  */
-router.get('/:contentId/stream', verifyContentAccess, rateLimitMiddleware, async (req, res) => {
+router.get('/:contentId/stream', verifyContentAccess, rateLimitMiddleware, withCdnResolution(Content), async (req, res) => {
   try {
     const { contentId } = req.params;
-    const content = await Content.findOne({ contentId: parseInt(contentId) });
+    const content = req.content || await Content.findOne({ contentId: parseInt(contentId) });
 
     if (!content) {
       return res.status(404).json({ message: 'Content not found' });
+    }
+
+    // CDN redirect: if we have a CDN URL and content is not encrypted, redirect
+    if (req.cdnResolution && req.cdnResolution.cached && !content.isEncrypted) {
+      res.setHeader('X-Delivery-Method', 'cdn');
+      res.setHeader('X-CDN-Cache', 'HIT');
+      return res.redirect(302, req.cdnResolution.url);
     }
 
     let contentData;
@@ -38,11 +47,19 @@ router.get('/:contentId/stream', verifyContentAccess, rateLimitMiddleware, async
       const masterKey = getMasterKey();
       contentData = await encryptionService.decryptFileForAuthorizedUser(ContentEncryption, parseInt(contentId), masterKey);
     } else {
-      contentData = await getContentFromStorage(content.url, content.storageType);
+      // Use IPFS fallback URL if CDN resolution provided one
+      const fallbackUrl = req.cdnResolution && req.cdnResolution.url
+        ? req.cdnResolution.url
+        : content.url;
+      const storageType = req.cdnResolution && req.cdnResolution.method === 'ipfs'
+        ? content.storageType
+        : content.storageType;
+      contentData = await getContentFromStorage(fallbackUrl.startsWith('http') ? content.url : fallbackUrl, storageType);
     }
-    
+
     res.setHeader('Content-Type', getContentType(content.contentType));
     res.setHeader('X-Access-Method', req.accessInfo.method);
+    res.setHeader('X-Delivery-Method', req.cdnResolution ? req.cdnResolution.method : 'direct');
     res.send(contentData);
   } catch (err) {
     logger.error('Content delivery error', { err });
