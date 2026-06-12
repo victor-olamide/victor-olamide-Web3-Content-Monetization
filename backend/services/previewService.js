@@ -30,6 +30,151 @@ class PreviewService {
     this.cacheExpiry = 5 * 60 * 1000; // 5 minutes cache expiry
   }
 
+  // ─── Preview Generation ────────────────────────────────────────────────
+
+  /**
+   * Generate a free video preview (first PREVIEW_LIMITS.VIDEO_SECONDS seconds).
+   * Slices the raw buffer by byte-ratio approximation when ffmpeg is absent,
+   * uploads the slice to IPFS, and returns the dedicated preview CID.
+   *
+   * @param {Buffer} videoBuffer  Full video file buffer
+   * @param {number} contentId
+   * @param {number} [totalSeconds]  Known duration; defaults to 0 → ratio capped at 1
+   * @returns {Promise<{previewCid: string, previewUrl: string, durationSeconds: number}>}
+   */
+  async generateVideoPreview(videoBuffer, contentId, totalSeconds = 0) {
+    const targetSeconds = PREVIEW_LIMITS.VIDEO_SECONDS;
+    const byteOffset = estimateByteOffsetForSeconds(
+      videoBuffer.length,
+      totalSeconds,
+      targetSeconds
+    );
+    const slice = videoBuffer.slice(0, byteOffset);
+
+    const ipfsUrl = await uploadFileToIPFS(
+      slice,
+      `video-preview-${contentId}.mp4`,
+      { metadata: { contentId: String(contentId), type: 'video-preview' } }
+    );
+
+    const previewCid = extractCid(ipfsUrl);
+    logger.info('Video preview generated', { contentId, previewCid, targetSeconds });
+    return { previewCid, previewUrl: ipfsUrl, durationSeconds: targetSeconds };
+  }
+
+  /**
+   * Generate a free document preview (first PREVIEW_LIMITS.DOCUMENT_PAGES page).
+   * For plain text/HTML, truncates to the first 50 lines and uploads to IPFS.
+   * For binary (PDF / DOCX), uploads the raw first 64 KB as a preview chunk.
+   *
+   * @param {Buffer} docBuffer   Full document file buffer
+   * @param {string} mimeType
+   * @param {number} contentId
+   * @returns {Promise<{previewCid: string, previewUrl: string, pageCount: number}>}
+   */
+  async generateDocumentPreview(docBuffer, mimeType, contentId) {
+    let previewBuffer;
+    const isText = mimeType.startsWith('text/');
+
+    if (isText) {
+      previewBuffer = truncateToFirstLines(docBuffer, 50);
+    } else {
+      // First 64 KB is a reasonable "first page" proxy for binary docs
+      previewBuffer = docBuffer.slice(0, Math.min(docBuffer.length, 64 * 1024));
+    }
+
+    const ext = isText ? 'txt' : 'bin';
+    const ipfsUrl = await uploadFileToIPFS(
+      previewBuffer,
+      `doc-preview-${contentId}.${ext}`,
+      { metadata: { contentId: String(contentId), type: 'document-preview', mimeType } }
+    );
+
+    const previewCid = extractCid(ipfsUrl);
+    logger.info('Document preview generated', { contentId, previewCid, mimeType });
+    return { previewCid, previewUrl: ipfsUrl, pageCount: PREVIEW_LIMITS.DOCUMENT_PAGES };
+  }
+
+  /**
+   * Generate a free audio preview (first PREVIEW_LIMITS.AUDIO_SECONDS seconds).
+   * Uses the same byte-ratio approximation as video.
+   *
+   * @param {Buffer} audioBuffer  Full audio file buffer
+   * @param {number} contentId
+   * @param {number} [totalSeconds]
+   * @returns {Promise<{previewCid: string, previewUrl: string, durationSeconds: number}>}
+   */
+  async generateAudioPreview(audioBuffer, contentId, totalSeconds = 0) {
+    const targetSeconds = PREVIEW_LIMITS.AUDIO_SECONDS;
+    const byteOffset = estimateByteOffsetForSeconds(
+      audioBuffer.length,
+      totalSeconds,
+      targetSeconds
+    );
+    const slice = audioBuffer.slice(0, byteOffset);
+
+    const ipfsUrl = await uploadFileToIPFS(
+      slice,
+      `audio-preview-${contentId}.mp3`,
+      { metadata: { contentId: String(contentId), type: 'audio-preview' } }
+    );
+
+    const previewCid = extractCid(ipfsUrl);
+    logger.info('Audio preview generated', { contentId, previewCid, targetSeconds });
+    return { previewCid, previewUrl: ipfsUrl, durationSeconds: targetSeconds };
+  }
+
+  /**
+   * High-level dispatcher: detect content type from MIME, generate the
+   * appropriate preview, upload to IPFS, persist the preview CID in
+   * ContentPreview, and return the preview record.
+   *
+   * @param {number} contentId
+   * @param {Buffer} fileBuffer
+   * @param {string} mimeType
+   * @param {Object} [opts]
+   * @param {number} [opts.totalSeconds]  Known video/audio duration
+   * @returns {Promise<Object>}  Saved ContentPreview document
+   */
+  async generateAndStorePreview(contentId, fileBuffer, mimeType, opts = {}) {
+    const category = mimeToContentCategory(mimeType);
+    let result;
+
+    if (category === 'video') {
+      result = await this.generateVideoPreview(fileBuffer, contentId, opts.totalSeconds || 0);
+    } else if (category === 'audio' || category === 'music') {
+      result = await this.generateAudioPreview(fileBuffer, contentId, opts.totalSeconds || 0);
+    } else {
+      // document / article / image — all handled by document preview
+      result = await this.generateDocumentPreview(fileBuffer, mimeType, contentId);
+    }
+
+    // Persist the dedicated preview CID on the ContentPreview record
+    const updateFields = {
+      previewCid: result.previewCid,
+      previewEnabled: true,
+      updatedAt: new Date(),
+    };
+
+    if (result.durationSeconds !== undefined) {
+      updateFields.trailerDuration = result.durationSeconds;
+      updateFields.trailerUrl = result.previewUrl;
+    } else {
+      updateFields.previewImageUrl = result.previewUrl;
+    }
+
+    const preview = await ContentPreview.findOneAndUpdate(
+      { contentId },
+      updateFields,
+      { upsert: true, new: true }
+    );
+
+    this.invalidatePreviewCache(contentId);
+    return preview;
+  }
+
+  // ─── Cache ──────────────────────────────────────────────────────────────
+
   /**
    * Get preview from cache or database
    * @param {Number} contentId - Content ID
