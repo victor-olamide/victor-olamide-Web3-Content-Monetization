@@ -1,8 +1,13 @@
+'use strict';
+
+// CDN Delivery Service (#197) — CDN-first delivery with IPFS fallback.
+
 const logger = require('../utils/logger');
 const cdnService = require('./cdnService');
 const { getContentFromStorage } = require('./storageService');
 const { cdnConfig, getContentTypeConfig } = require('../config/cdnConfig');
 const { CdnCacheEntry } = require('../models/CdnCache');
+const { resolveFallbackUrl } = require('./ipfsFallbackService');
 
 /**
  * CDN Delivery Service - Integrates CDN with content delivery
@@ -16,7 +21,33 @@ class CdnDeliveryService {
   }
 
   /**
-   * Deliver content with CDN optimization
+   * Resolve the best delivery URL for a content item.
+   * Priority: CDN cached URL → IPFS/Gaia gateway fallback.
+   * Also schedules a CDN cache warm-up when the CDN is enabled but has no entry.
+   *
+   * @param {Object} content  Mongoose Content document
+   * @returns {Promise<{url: string, method: 'cdn'|'ipfs'}>}
+   */
+  async resolveContentUrl(content) {
+    if (this.config.enabled && this.config.contentDelivery.enabled) {
+      const cdnUrl = await cdnService.getCdnUrl(content.contentId);
+      if (cdnUrl) {
+        return { url: cdnUrl, method: 'cdn' };
+      }
+
+      // CDN enabled but no cache entry yet — warm up asynchronously
+      setImmediate(() => cdnService.addToCache(content).catch(
+        (err) => logger.warn('CDN warm-up failed', { contentId: content.contentId, err })
+      ));
+    }
+
+    // Fallback to IPFS / Gaia
+    const fallbackUrl = await resolveFallbackUrl(content);
+    return { url: fallbackUrl, method: 'ipfs' };
+  }
+
+  /**
+   * Deliver content with CDN optimisation
    * @param {Object} content - Content object
    * @param {Object} options - Delivery options
    * @returns {Promise<Object>} Delivery result
@@ -41,7 +72,9 @@ class CdnDeliveryService {
       // If direct delivery succeeded and CDN prefetch is enabled, add to CDN cache
       if (directResult.success && this.config.performance.prefetchEnabled && !options.skipCdnCache) {
         setImmediate(() => {
-          this.cdnService.addToCache(content);
+          cdnService.addToCache(content).catch(
+            (err) => logger.warn('Background CDN cache add failed', { err })
+          );
         });
       }
 
@@ -98,15 +131,19 @@ class CdnDeliveryService {
         method: 'cdn',
         cdnUrl,
         statusCode: response.status,
-        headers: response.headers,
+        headers: {
+          ...response.headers,
+          'X-Delivery-Method': 'cdn',
+          'X-CDN-Cache': 'HIT',
+        },
         stream: response.data,
         contentType: response.headers['content-type'],
         contentLength: response.headers['content-length'],
-        cacheStatus: response.headers['cf-cache-status'] || response.headers['x-cache'] || 'unknown'
+        cacheStatus: response.headers['cf-cache-status'] || response.headers['x-cache'] || 'HIT',
       };
 
     } catch (error) {
-      console.warn(`CDN delivery failed for ${cdnUrl}:`, error.message);
+      logger.warn('CDN delivery failed, falling back to direct', { cdnUrl, err: error });
 
       // If CDN fails, try direct delivery as fallback
       if (!options.skipFallback) {
@@ -308,14 +345,14 @@ class CdnDeliveryService {
       return { success: true, message: 'CDN disabled, no purge needed' };
     }
 
-    console.log(`Handling content update for ${contentIds.length} items`);
+    logger.info('Handling content update, purging CDN cache', { count: contentIds.length });
 
     const result = await this.cdnService.purgeContent(contentIds, 'content_update');
 
     if (result.success) {
-      console.log(`Successfully purged ${result.purgedCount} items from CDN cache`);
+      logger.info('Successfully purged CDN cache', { purgedCount: result.purgedCount });
     } else {
-      logger.error('Failed to purge CDN cache:', result.error);
+      logger.error('Failed to purge CDN cache', { err: result.error });
     }
 
     return result;

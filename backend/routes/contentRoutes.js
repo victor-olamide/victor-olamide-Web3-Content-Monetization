@@ -19,6 +19,8 @@ const { initiateRefund, getPendingRefundsForCreator } = require('../services/ref
 const searchService = require('../services/searchService');
 const { validateContentBody } = require('../middleware/inputValidation');
 const { shouldEncryptContent } = require('../utils/contentUtils');
+const { withCdnResolution, enrichContentResponse } = require('../middleware/cdnMiddleware');
+const { invalidateCdnOnMutation } = require('../middleware/cdnCacheInvalidation');
 
 const { validateCidParam } = require('../middleware/cidValidation');
 
@@ -285,23 +287,12 @@ router.post('/upload-and-register', protect, requireCreator, (req, res) => {
   });
 });
 
-// Get content by IPFS CID
-router.get('/cid/:cid', validateCidParam, async (req, res) => {
+// Get single content metadata by contentId — enriched with CDN delivery URL
+router.get('/:contentId', withCdnResolution(Content), async (req, res) => {
   try {
-    const content = await Content.findOne({ cid: req.params.cid });
-    if (!content) return res.status(404).json({ message: 'Content not found for this CID' });
-    res.json(content);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
-// Get single content metadata by contentId
-router.get('/:contentId', async (req, res) => {
-  try {
-    const content = await Content.findOne({ contentId: req.params.contentId });
+    const content = req.content;
     if (!content) return res.status(404).json({ message: 'Content not found' });
-    res.json(content);
+    res.json(enrichContentResponse(content, req.cdnResolution));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -431,13 +422,13 @@ async function removeContentById(req, res) {
 }
 
 // Remove content and initiate refunds
-router.post('/:contentId/remove', protect, requireCreator, verifyCreatorOwnership, removeContentById);
+router.post('/:contentId/remove', protect, requireCreator, verifyCreatorOwnership, invalidateCdnOnMutation, removeContentById);
 
 // Delete content using the same creator ownership and removal flow
-router.delete('/:contentId', protect, requireCreator, verifyCreatorOwnership, removeContentById);
+router.delete('/:contentId', protect, requireCreator, verifyCreatorOwnership, invalidateCdnOnMutation, removeContentById);
 
 // Update content metadata and price (creators only)
-router.put('/:contentId', protect, requireCreator, verifyCreatorOwnership, validateContentBody, async (req, res) => {
+router.put('/:contentId', protect, requireCreator, verifyCreatorOwnership, invalidateCdnOnMutation, validateContentBody, async (req, res) => {
   try {
     const { contentId } = req.params;
     const content = req.content; // set by verifyCreatorOwnership
@@ -490,7 +481,7 @@ router.put('/:contentId', protect, requireCreator, verifyCreatorOwnership, valid
 });
 
 // Update content metadata and price (creators only)
-router.patch('/:contentId', protect, requireCreator, verifyCreatorOwnership, async (req, res) => {
+router.patch('/:contentId', protect, requireCreator, verifyCreatorOwnership, invalidateCdnOnMutation, async (req, res) => {
   try {
     const { contentId } = req.params;
     const content = req.content; // set by verifyCreatorOwnership
