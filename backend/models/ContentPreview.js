@@ -26,6 +26,18 @@ const contentPreviewSchema = new mongoose.Schema({
   previewText: { type: String, trim: true, maxlength: 500 }, // Short preview text for articles
   previewImageUrl: { type: String, validate: { validator: urlValidator, message: 'Invalid previewImageUrl' } }, // Preview image for articles
   
+  // Dedicated IPFS CID for the generated preview asset (separate from full content CID)
+  previewCid: { type: String, trim: true }, // raw CID without ipfs:// prefix
+
+  // Generation status and timestamp (issue #198)
+  generationStatus: {
+    type: String,
+    enum: ['pending', 'generating', 'completed', 'failed'],
+    default: 'pending',
+  },
+  generatedAt: { type: Date },      // when the preview CID was first created
+  generationError: { type: String }, // last error message if generationStatus === 'failed'
+
   // Preview metadata
   previewEnabled: { type: Boolean, default: true },
   totalViews: { type: Number, default: 0, min: 0 },
@@ -103,5 +115,6 @@ contentPreviewSchema.index({ contentId: 1 });
 contentPreviewSchema.index({ creator: 1 });
 contentPreviewSchema.index({ previewEnabled: 1 });
 contentPreviewSchema.index({ contentType: 1 });
+contentPreviewSchema.index({ previewCid: 1 }, { sparse: true }); // fast lookup by CID
 
 module.exports = mongoose.model('ContentPreview', contentPreviewSchema);

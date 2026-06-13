@@ -293,4 +293,31 @@ describe('Preview API Integration Tests', () => {
       expect(response.body.success).toBe(true);
     });
   });
+
+  describe('GET /api/preview/:contentId/serve (no access check)', () => {
+    it('should serve preview CID without authentication', async () => {
+      // Seed a preview record with a CID
+      await ContentPreview.findOneAndUpdate(
+        { contentId: testContentId },
+        { previewCid: 'QmTestPreviewCid123', previewEnabled: true },
+        { upsert: true }
+      );
+
+      const response = await request(app)
+        .get(`/api/preview/${testContentId}/serve`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.previewCid).toBe('QmTestPreviewCid123');
+      expect(response.body.data.gatewayUrl).toContain('QmTestPreviewCid123');
+    });
+
+    it('should return 404 when no generated preview exists', async () => {
+      const response = await request(app)
+        .get('/api/preview/99998/serve')
+        .expect(404);
+
+      expect(response.body.success).toBe(false);
+    });
+  });
 });
