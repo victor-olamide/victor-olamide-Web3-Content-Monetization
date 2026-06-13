@@ -64,6 +64,7 @@ const { startCacheEvictionJob } = require('./services/verificationCacheEvictionJ
 const { startIndexer, stopIndexer } = require('./services/ppvTransactionIndexer');
 const contentGateIndexer = require('./services/contentGateTransactionIndexer');
 const ppvContentRoutes = require('./routes/ppvContentRoutes');
+const { createPreviewIndexes } = require('./utils/createPreviewIndexes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -190,6 +191,13 @@ async function initializeServices() {
     logger.error('Failed to initialize pinning service', { err: error });
   }
   startCacheEvictionJob();
+
+  // Ensure preview CID indexes are present (issue #198)
+  try {
+    await createPreviewIndexes();
+  } catch (error) {
+    logger.error('Failed to create preview indexes', { err: error });
+  }
 
   const ppvIndexerIntervalMs = parseInt(process.env.PPV_INDEXER_INTERVAL_MS, 10) || 30000;
   startIndexer(ppvIndexerIntervalMs);
