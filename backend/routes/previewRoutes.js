@@ -45,6 +45,8 @@ router.get('/:contentId/serve', validateContentId, async (req, res) => {
     }
 
     const gatewayUrl = toGatewayUrl(`ipfs://${preview.previewCid}`);
+    // Public preview assets are immutable once generated — cache aggressively
+    res.set('Cache-Control', 'public, max-age=86400, immutable');
     return res.json({
       success: true,
       data: {
@@ -129,6 +131,8 @@ router.get('/cid/:cid', async (req, res) => {
       return res.status(404).json({ success: false, error: 'Preview not found for CID' });
     }
 
+    // CID-addressed resources are content-addressed and immutable
+    res.set('Cache-Control', 'public, max-age=86400, immutable');
     return res.json({
       success: true,
       data: {
