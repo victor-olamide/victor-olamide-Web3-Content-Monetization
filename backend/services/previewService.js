@@ -6,6 +6,7 @@ const Content = require('../models/Content');
 const Purchase = require('../models/Purchase');
 const Subscription = require('../models/Subscription');
 const { uploadFileToIPFS } = require('./ipfsService');
+const { generateImagePreview } = require('./previewImageService');
 const {
   PREVIEW_LIMITS,
   mimeToContentCategory,
@@ -140,12 +141,24 @@ class PreviewService {
     const category = mimeToContentCategory(mimeType);
     let result;
 
+    // Guard: reject oversized buffers before any upload
+    if (fileBuffer.length > PREVIEW_LIMITS.MAX_PREVIEW_SIZE_BYTES) {
+      logger.warn('Preview buffer exceeds max size — truncating', {
+        contentId,
+        sizeBytes: fileBuffer.length,
+        maxBytes: PREVIEW_LIMITS.MAX_PREVIEW_SIZE_BYTES,
+      });
+      fileBuffer = fileBuffer.slice(0, PREVIEW_LIMITS.MAX_PREVIEW_SIZE_BYTES);
+    }
+
     if (category === 'video') {
       result = await this.generateVideoPreview(fileBuffer, contentId, opts.totalSeconds || 0);
     } else if (category === 'audio' || category === 'music') {
       result = await this.generateAudioPreview(fileBuffer, contentId, opts.totalSeconds || 0);
+    } else if (category === 'image') {
+      result = await generateImagePreview(fileBuffer, mimeType, contentId);
     } else {
-      // document / article / image — all handled by document preview
+      // document / article
       result = await this.generateDocumentPreview(fileBuffer, mimeType, contentId);
     }
 
