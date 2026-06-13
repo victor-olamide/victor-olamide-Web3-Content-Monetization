@@ -166,6 +166,9 @@ class PreviewService {
     const updateFields = {
       previewCid: result.previewCid,
       previewEnabled: true,
+      generationStatus: 'completed',
+      generatedAt: new Date(),
+      generationError: null,
       updatedAt: new Date(),
     };
 
