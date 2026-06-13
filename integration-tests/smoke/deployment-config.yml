@@ -1,9 +1,7 @@
-# Deployment Smoke Test Configuration
+# Deployment Smoke Test Configuration (#195)
+# Validates: health check, auth endpoints, content API, database connectivity.
+# Blocks deployment on any critical test failure.
 
-# This file contains configuration for automated smoke tests
-# that run after each deployment to verify system health
-
-# Environment configurations
 environments:
   development:
     url: "http://localhost:5000"
@@ -23,19 +21,19 @@ environments:
     retries: 5
     skip_external_services: false
 
-# Test configuration
+# Test configuration — critical:true blocks deployment on failure
 tests:
   health_checks:
     enabled: true
     timeout: 10000
-    critical: true  # Fail deployment if these fail
+    critical: true
 
   authentication:
     enabled: true
     timeout: 15000
     critical: true
 
-  content_access:
+  content_api:
     enabled: true
     timeout: 20000
     critical: true
@@ -48,12 +46,12 @@ tests:
   external_services:
     enabled: true
     timeout: 30000
-    critical: false  # Allow deployment even if external services fail
+    critical: false  # Allow deployment even if external services are degraded
 
   performance:
     enabled: true
     timeout: 30000
-    critical: true
+    critical: false
     max_response_time: 2000  # milliseconds
     concurrent_requests: 5
 

@@ -5,12 +5,11 @@ const cdnService = require('../services/cdnService');
 const cdnDeliveryService = require('../services/cdnDeliveryService');
 const { CdnCacheEntry, CdnPurgeRequest, CdnAnalytics, CdnHealthCheck } = require('../models/CdnCache');
 const Content = require('../models/Content');
+const { protect } = require('../middleware/auth');
+const { requireAdmin } = require('../middleware/adminAuth');
 
-// Middleware to check admin access (simplified)
-const requireAdminAccess = (req, res, next) => {
-  // In production, implement proper admin authentication
-  next();
-};
+// All CDN management routes require authentication + admin role
+const requireAdminAccess = [protect, requireAdmin];
 
 /**
  * @route GET /api/cdn/status

@@ -4,11 +4,51 @@
  */
 
 const { MongoMemoryServer } = require('mongodb-memory-server');
-const mongoose = require('mongoose');
+const mongoose = require('../../backend/node_modules/mongoose');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { faker } = require('@faker-js/faker');
+const crypto = require('crypto');
 const axios = require('axios');
+
+const ALLOWED_CONTENT_TYPES = ['video', 'article', 'image', 'music'];
+const STX_ADDRESS_CHARS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+const randomInt = (min, max) => {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+};
+
+const randomFloat = (min, max, precision = 0.01) => {
+  const factor = 1 / precision;
+  return Math.floor((Math.random() * (max - min) + min) * factor) / factor;
+};
+
+const randomElement = (items) => items[Math.floor(Math.random() * items.length)];
+
+const randomEmail = () => `user${Date.now()}${randomInt(1000, 9999)}@example.com`;
+
+const randomSentence = () => `Test content title ${randomInt(1000, 9999)}`;
+
+const randomParagraph = () => `This is a test description ${randomInt(100000, 999999)}.`;
+
+const randomTxHex = () => '0x' + crypto.randomBytes(32).toString('hex');
+
+const generateStxAddress = () => {
+  let body = '';
+  for (let i = 0; i < 38; i++) {
+    body += STX_ADDRESS_CHARS[Math.floor(Math.random() * STX_ADDRESS_CHARS.length)];
+  }
+  return `ST${body}`;
+};
+
+const generateTxId = () => {
+  return randomTxHex();
+};
+
+const generateExpiryDate = (days = 30) => {
+  const expiry = new Date();
+  expiry.setDate(expiry.getDate() + days);
+  return expiry;
+};
 
 let mongoServer;
 
@@ -66,13 +106,12 @@ const TestUtils = {
    */
   generateUser(overrides = {}) {
     return {
-      username: faker.internet.userName(),
-      email: faker.internet.email(),
+      name: `Test User ${randomInt(1000, 9999)}`,
+      email: randomEmail(),
       password: 'TestPassword123!',
-      firstName: faker.person.firstName(),
-      lastName: faker.person.lastName(),
-      role: 'user',
+      role: 'subscriber',
       isActive: true,
+      walletAddress: generateStxAddress(),
       ...overrides,
     };
   },
@@ -80,15 +119,16 @@ const TestUtils = {
   /**
    * Generate fake content data
    */
-  generateContent(creatorId, overrides = {}) {
+  generateContent(creatorAddress, overrides = {}) {
     return {
-      title: faker.lorem.sentence(),
-      description: faker.lorem.paragraph(),
-      contentType: faker.helpers.arrayElement(['video', 'image', 'document', 'audio']),
-      price: faker.number.float({ min: 0, max: 100, precision: 0.01 }),
-      creator: creatorId,
-      tags: faker.lorem.words(3).split(' '),
-      isPublished: true,
+      contentId: randomInt(1001, 999999),
+      title: randomSentence(),
+      description: randomParagraph(),
+      contentType: randomElement(ALLOWED_CONTENT_TYPES),
+      price: randomFloat(0, 100, 0.01),
+      creator: creatorAddress || generateStxAddress(),
+      url: `https://example.com/content/${randomInt(1000, 9999)}`,
+      tokenGating: { enabled: false },
       ...overrides,
     };
   },
@@ -183,7 +223,7 @@ const TestUtils = {
     // Create test content
     const content = [];
     for (let i = 0; i < 10; i++) {
-      const contentData = this.generateContent(users[i % users.length]._id);
+      const contentData = this.generateContent(users[i % users.length].walletAddress);
       const contentItem = new Content(contentData);
       await contentItem.save();
       content.push(contentItem);
@@ -212,21 +252,57 @@ const TestUtils = {
       sendEmail: jest.fn().mockResolvedValue(true),
     }));
 
-    // Mock file upload service
-    jest.mock('../../backend/services/fileService', () => ({
-      uploadFile: jest.fn().mockResolvedValue({
-        url: 'https://example.com/test-file.jpg',
-        key: 'test-file-key',
-      }),
-      deleteFile: jest.fn().mockResolvedValue(true),
+    // Mock storage service
+    jest.mock('../../backend/services/storageService', () => ({
+      uploadToIPFS: jest.fn().mockResolvedValue('ipfs://testHash'),
+      uploadToGaia: jest.fn().mockResolvedValue('gaia://testHub/test-file.jpg'),
+      getGatewayUrl: jest.fn().mockReturnValue('https://gateway.pinata.cloud/ipfs/testHash'),
+      getContentFromStorage: jest.fn().mockResolvedValue(Buffer.from('test content')),
+      checkStorageHealth: jest.fn().mockResolvedValue(true),
     }));
 
-    // Mock payment service
-    jest.mock('../../backend/services/paymentService', () => ({
-      processPayment: jest.fn().mockResolvedValue({
+    // Mock blockchain and price services for purchase routes
+    jest.mock('../../backend/services/stacksApiService', () => ({
+      verifyTransaction: jest.fn().mockResolvedValue({
         success: true,
-        transactionId: 'test-transaction-id',
+        txId: '0x' + require('crypto').randomBytes(32).toString('hex'),
+        blockHeight: 123,
+        confirmations: 10,
+        status: 'success'
       }),
+    }));
+
+    jest.mock('../../backend/services/stxPriceService', () => ({
+      getCurrentSTXPrice: jest.fn().mockResolvedValue({
+        usd: 1.5,
+        usd_24h_vol: 1000000,
+        usd_24h_change: 0.2,
+        last_updated_at: Math.floor(Date.now() / 1000)
+      }),
+    }));
+
+    jest.mock('../../backend/services/contractService', () => ({
+      getPlatformFee: jest.fn().mockResolvedValue(2),
+      calculatePlatformFee: jest.fn().mockResolvedValue(1),
+    }));
+
+    jest.mock('../../backend/services/blockchainVerification', () => ({
+      verifyTransactionStatus: jest.fn().mockResolvedValue({
+        verified: true,
+        status: 'success',
+        confirmations: 10,
+      }),
+    }));
+
+    jest.mock('../../backend/services/transactionHistoryService', () => ({
+      recordTransaction: jest.fn().mockResolvedValue({}),
+    }));
+
+    jest.mock('../../backend/services/royaltyService', () => ({
+      calculatePlatformFee: jest.fn().mockResolvedValue(1),
+      calculateCreatorAmount: jest.fn().mockReturnValue(1),
+      distributePurchaseRoyalties: jest.fn().mockResolvedValue([]),
+      distributeSubscriptionRoyalties: jest.fn().mockResolvedValue([]),
     }));
   },
 
@@ -234,7 +310,7 @@ const TestUtils = {
    * Setup test server
    */
   async setupTestServer() {
-    const app = require('../../backend/app');
+    const app = require('../../backend/server');
     const http = require('http');
 
     return new Promise((resolve, reject) => {
@@ -259,5 +335,7 @@ const TestUtils = {
     });
   },
 };
+
+TestUtils.mockExternalServices();
 
 module.exports = TestUtils;

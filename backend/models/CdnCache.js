@@ -225,8 +225,21 @@ cdnCacheEntrySchema.statics.findExpired = function() {
   });
 };
 
+// Find the most recent cache entry for a content ID (any status)
 cdnCacheEntrySchema.statics.findByContentId = function(contentId) {
-  return this.findOne({ contentId });
+  return this.findOne({ contentId }).sort({ createdAt: -1 });
+};
+
+/**
+ * Find a valid (cached + non-expired) CDN entry for a content ID.
+ * Returns null when no valid entry exists — caller should fall back to IPFS.
+ */
+cdnCacheEntrySchema.statics.findActiveByContentId = function(contentId) {
+  return this.findOne({
+    contentId,
+    status: 'cached',
+    expiresAt: { $gt: new Date() },
+  }).sort({ expiresAt: -1 });
 };
 
 cdnCacheEntrySchema.statics.updateAccessStats = function(cacheKey, bytesServed, region) {

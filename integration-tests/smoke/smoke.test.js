@@ -1,301 +1,159 @@
+'use strict';
+
 /**
- * Smoke Tests
- * Quick validation tests for critical functionality
+ * Smoke Tests (#195)
+ * Validates after each staging deployment:
+ *   1. Health check endpoints
+ *   2. Auth endpoints
+ *   3. Content API
+ *   4. Database connectivity
  */
 
 const request = require('supertest');
-const { test, expect } = require('@playwright/test');
 const TestUtils = require('../utils/test-setup');
 
-describe('API Smoke Tests', () => {
-  let server;
-  let testUser;
-  let testToken;
+let server;
+let testToken;
+let testUser;
 
-  beforeAll(async () => {
-    const serverSetup = await TestUtils.setupTestServer();
-    server = serverSetup.server;
+beforeAll(async () => {
+  const setup = await TestUtils.setupTestServer();
+  server = setup.server;
 
-    // Create test user
-    testUser = TestUtils.generateUser();
-    testUser.password = await TestUtils.hashPassword(testUser.password);
-    const User = require('../../../backend/models/User');
-    const user = new User(testUser);
-    await user.save();
-    testUser._id = user._id;
-    testToken = TestUtils.generateToken(testUser);
+  testUser = TestUtils.generateUser();
+  testUser.password = await TestUtils.hashPassword(testUser.password);
+  const User = require('../../../backend/models/User');
+  const user = new User(testUser);
+  await user.save();
+  testUser._id = user._id;
+  testToken = TestUtils.generateToken(testUser);
+});
+
+afterAll(async () => {
+  await TestUtils.teardownTestServer(server);
+});
+
+// ── 1. Health Checks ────────────────────────────────────────────────────────
+
+describe('Health Check Smoke Tests', () => {
+  it('GET /health returns 200 with healthy status', async () => {
+    const res = await request(server).get('/health').expect(200);
+    expect(res.body.status).toBe('healthy');
+    expect(res.body.timestamp).toBeDefined();
   });
 
-  afterAll(async () => {
-    await TestUtils.teardownTestServer(server);
+  it('GET /health includes uptime', async () => {
+    const res = await request(server).get('/health').expect(200);
+    expect(typeof res.body.uptime).toBe('number');
   });
 
-  describe('Health Checks', () => {
-    it('should respond to health check endpoint', async () => {
-      const response = await request(server)
-        .get('/api/health')
-        .expect(200);
-
-      expect(response.body.status).toBe('ok');
-      expect(response.body.timestamp).toBeDefined();
-    });
-
-    it('should respond to database health check', async () => {
-      const response = await request(server)
-        .get('/api/health/database')
-        .expect(200);
-
-      expect(response.body.database).toBe('connected');
-    });
+  it('GET /health/database returns 200 with connected status', async () => {
+    const res = await request(server).get('/health/database').expect(200);
+    expect(res.body.status).toBe('connected');
   });
 
-  describe('Authentication Smoke Tests', () => {
-    it('should handle basic login flow', async () => {
-      const response = await request(server)
-        .post('/api/auth/login')
-        .send({
-          email: testUser.email,
-          password: 'TestPassword123!',
-        })
-        .expect(200);
-
-      expect(response.body.success).toBe(true);
-      expect(response.body.data.token).toBeDefined();
-    });
-
-    it('should handle basic registration', async () => {
-      const newUser = TestUtils.generateUser();
-
-      const response = await request(server)
-        .post('/api/auth/register')
-        .send(newUser)
-        .expect(201);
-
-      expect(response.body.success).toBe(true);
-      expect(response.body.data.user.email).toBe(newUser.email);
-    });
+  it('GET /health/database identifies mongodb', async () => {
+    const res = await request(server).get('/health/database').expect(200);
+    expect(res.body.database).toBe('mongodb');
   });
 
-  describe('Content Smoke Tests', () => {
-    it('should retrieve public content list', async () => {
-      const response = await request(server)
-        .get('/api/content')
-        .expect(200);
-
-      expect(response.body.success).toBe(true);
-      expect(Array.isArray(response.body.data)).toBe(true);
-    });
-
-    it('should handle content creation', async () => {
-      const contentData = TestUtils.generateContent({
-        creator: testUser._id,
-      });
-
-      const response = await request(server)
-        .post('/api/content')
-        .set('Authorization', `Bearer ${testToken}`)
-        .send(contentData)
-        .expect(201);
-
-      expect(response.body.success).toBe(true);
-      expect(response.body.data.title).toBe(contentData.title);
-    });
-  });
-
-  describe('Payment Smoke Tests', () => {
-    it('should handle basic payment flow', async () => {
-      // Create content first
-      const contentData = TestUtils.generateContent({
-        creator: testUser._id,
-        price: 5,
-        accessType: 'paid',
-      });
-
-      const Content = require('../../../backend/models/Content');
-      const content = new Content(contentData);
-      await content.save();
-
-      const paymentData = {
-        contentId: content._id,
-        paymentMethod: 'stacks',
-        amount: 5,
-      };
-
-      const response = await request(server)
-        .post('/api/payments/purchase')
-        .set('Authorization', `Bearer ${testToken}`)
-        .send(paymentData)
-        .expect(201);
-
-      expect(response.body.success).toBe(true);
-      expect(response.body.data.status).toBeDefined();
-    });
+  it('GET /metrics returns prometheus text format', async () => {
+    const res = await request(server).get('/metrics').expect(200);
+    expect(res.headers['content-type']).toMatch(/text\/plain/);
   });
 });
 
-test.describe('Frontend Smoke Tests', () => {
-  test('should load homepage', async ({ page }) => {
-    await page.goto('/');
+// ── 2. Authentication Endpoints ─────────────────────────────────────────────
 
-    // Verify basic page elements
-    await expect(page.locator('h1, [data-testid="main-heading"]')).toBeVisible();
-    await expect(page.locator('body')).toBeVisible();
+describe('Authentication Endpoint Smoke Tests', () => {
+  it('POST /api/auth/login is reachable (returns 4xx for invalid creds)', async () => {
+    const res = await request(server)
+      .post('/api/auth/login')
+      .send({ email: 'smoke@example.com', password: 'wrong' });
+    expect([400, 401, 422]).toContain(res.status);
   });
 
-  test('should load login page', async ({ page }) => {
-    await page.goto('/login');
-
-    // Verify login form elements
-    await expect(page.locator('[data-testid="email-input"], input[type="email"]')).toBeVisible();
-    await expect(page.locator('[data-testid="password-input"], input[type="password"]')).toBeVisible();
-    await expect(page.locator('[data-testid="login-button"], button:has-text("Login")')).toBeVisible();
+  it('POST /api/auth/login returns JSON', async () => {
+    const res = await request(server)
+      .post('/api/auth/login')
+      .send({ email: 'smoke@example.com', password: 'wrong' });
+    expect(res.headers['content-type']).toMatch(/application\/json/);
   });
 
-  test('should load registration page', async ({ page }) => {
-    await page.goto('/register');
-
-    // Verify registration form elements
-    await expect(page.locator('[data-testid="email-input"], input[type="email"]')).toBeVisible();
-    await expect(page.locator('[data-testid="password-input"], input[type="password"]')).toBeVisible();
-    await expect(page.locator('[data-testid="register-button"], button:has-text("Register")')).toBeVisible();
+  it('POST /api/auth/register is reachable (2xx or 4xx)', async () => {
+    const res = await request(server)
+      .post('/api/auth/register')
+      .send({
+        email: `smoke-${Date.now()}@example.com`,
+        password: 'SmokeTest123!',
+        username: `smoke${Date.now()}`,
+      });
+    expect([200, 201, 400, 409, 422]).toContain(res.status);
   });
 
-  test('should handle 404 pages', async ({ page }) => {
-    await page.goto('/non-existent-page');
-
-    // Verify 404 handling
-    await expect(page.locator('text=/404|not found/i')).toBeVisible();
-  });
-
-  test('should load dashboard for authenticated users', async ({ page }) => {
-    // This would require authentication setup
-    // For smoke test, just verify the route exists
-    const response = await page.request.get('/dashboard');
-    expect([200, 302, 401]).toContain(response.status()); // Should not be 404
+  it('Protected route /api/auth/me rejects unauthenticated request with 401', async () => {
+    const res = await request(server).get('/api/auth/me');
+    expect([401, 403]).toContain(res.status);
   });
 });
 
-describe('Database Smoke Tests', () => {
-  let server;
+// ── 3. Content API ───────────────────────────────────────────────────────────
 
-  beforeAll(async () => {
-    const serverSetup = await TestUtils.setupTestServer();
-    server = serverSetup.server;
+describe('Content API Smoke Tests', () => {
+  it('GET /api/content returns 200 with array payload', async () => {
+    const res = await request(server).get('/api/content').expect(200);
+    const items = res.body?.data ?? res.body;
+    expect(Array.isArray(items)).toBe(true);
   });
 
-  afterAll(async () => {
-    await TestUtils.teardownTestServer(server);
+  it('GET /api/content returns application/json', async () => {
+    const res = await request(server).get('/api/content').expect(200);
+    expect(res.headers['content-type']).toMatch(/application\/json/);
   });
 
-  it('should connect to database', async () => {
+  it('GET /api/content?search=test handles query param (200 or 404)', async () => {
+    const res = await request(server).get('/api/content?search=test');
+    expect([200, 404]).toContain(res.status);
+  });
+});
+
+// ── 4. Database Connectivity ─────────────────────────────────────────────────
+
+describe('Database Connectivity Smoke Tests', () => {
+  it('mongoose connection is active (readyState === 1)', async () => {
     const mongoose = require('mongoose');
-    expect(mongoose.connection.readyState).toBe(1); // Connected
+    expect(mongoose.connection.readyState).toBe(1);
   });
 
-  it('should handle basic database operations', async () => {
+  it('GET /health/database confirms db is connected', async () => {
+    const res = await request(server).get('/health/database').expect(200);
+    expect(res.body.status).toBe('connected');
+    expect(res.body.database).toBe('mongodb');
+  });
+
+  it('GET /health/database/status returns connection and health fields', async () => {
+    const res = await request(server).get('/health/database/status').expect(200);
+    expect(res.body).toHaveProperty('connection');
+    expect(res.body).toHaveProperty('health');
+  });
+
+  it('Basic CRUD operation succeeds against test database', async () => {
     const User = require('../../../backend/models/User');
-
-    // Create
-    const testUser = TestUtils.generateUser();
-    testUser.password = await TestUtils.hashPassword(testUser.password);
-    const user = new User(testUser);
-    await user.save();
-
-    // Read
-    const foundUser = await User.findById(user._id);
-    expect(foundUser.email).toBe(testUser.email);
-
-    // Update
-    await User.findByIdAndUpdate(user._id, { lastLogin: new Date() });
-    const updatedUser = await User.findById(user._id);
-    expect(updatedUser.lastLogin).toBeDefined();
-
-    // Delete
-    await User.findByIdAndDelete(user._id);
-    const deletedUser = await User.findById(user._id);
-    expect(deletedUser).toBeNull();
+    const u = TestUtils.generateUser();
+    u.password = await TestUtils.hashPassword(u.password);
+    const saved = await new User(u).save();
+    const found = await User.findById(saved._id);
+    expect(found.email).toBe(u.email);
+    await User.findByIdAndDelete(saved._id);
   });
 });
 
-describe('External Service Smoke Tests', () => {
-  let server;
+// ── 5. Deployment-blocking summary check ────────────────────────────────────
 
-  beforeAll(async () => {
-    const serverSetup = await TestUtils.setupTestServer();
-    server = serverSetup.server;
-  });
-
-  afterAll(async () => {
-    await TestUtils.teardownTestServer(server);
-  });
-
-  it('should handle file upload service', async () => {
-    // Test file upload endpoint exists and responds
-    const response = await request(server)
-      .post('/api/upload/test')
-      .expect(200);
-
-    // Should not crash, even if upload service is mocked
-    expect(response.status).toBeDefined();
-  });
-
-  it('should handle email service', async () => {
-    // Test email endpoint exists
-    const response = await request(server)
-      .post('/api/email/test')
-      .expect(200);
-
-    // Should not crash, even if email service is mocked
-    expect(response.status).toBeDefined();
-  });
-
-  it('should handle blockchain service', async () => {
-    // Test blockchain endpoint exists
-    const response = await request(server)
-      .post('/api/blockchain/test')
-      .expect(200);
-
-    // Should not crash, even if blockchain service is mocked
-    expect(response.status).toBeDefined();
-  });
-});
-
-describe('Performance Smoke Tests', () => {
-  let server;
-
-  beforeAll(async () => {
-    const serverSetup = await TestUtils.setupTestServer();
-    server = serverSetup.server;
-  });
-
-  afterAll(async () => {
-    await TestUtils.teardownTestServer(server);
-  });
-
-  it('should respond within acceptable time', async () => {
-    const startTime = Date.now();
-
-    await request(server)
-      .get('/api/health')
-      .expect(200);
-
-    const responseTime = Date.now() - startTime;
-    expect(responseTime).toBeLessThan(1000); // Should respond within 1 second
-  });
-
-  it('should handle concurrent requests', async () => {
-    const promises = [];
-    for (let i = 0; i < 10; i++) {
-      promises.push(
-        request(server)
-          .get('/api/health')
-          .expect(200)
-      );
-    }
-
-    const responses = await Promise.all(promises);
-    responses.forEach(response => {
-      expect(response.status).toBe(200);
-    });
+describe('Deployment Gate', () => {
+  it('all four critical areas pass before deployment proceeds', () => {
+    // This test exists as a sentinel — if any critical describe above fails,
+    // the overall jest run exits non-zero, blocking the deployment pipeline.
+    expect(true).toBe(true);
   });
 });

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Menu, X, Home, LogOut } from 'lucide-react';
 import { useResponsive } from '../hooks/useResponsive';
+import WalletButton from './WalletButton';
 
 interface MobileHeaderProps {
   logo?: string;
@@ -75,20 +76,25 @@ export function MobileHeader({
           </button>
         </div>
 
-        {/* User Menu - Desktop Only */}
-        {!isMobile && userName && (
+        {/* Wallet / User Menu - Desktop Only */}
+        {!isMobile && (
           <div className="relative">
-            <button
-              onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
-                {userName.charAt(0).toUpperCase()}
-              </div>
-              <span className="text-sm font-medium text-gray-900 hidden sm:inline">
-                {userName}
-              </span>
-            </button>
+            <div className="flex items-center gap-3">
+              <WalletButton />
+              {userName && (
+                <button
+                  onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                    {userName.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="text-sm font-medium text-gray-900 hidden sm:inline">
+                    {userName}
+                  </span>
+                </button>
+              )}
+            </div>
 
             {/* User Menu Dropdown */}
             {isUserMenuOpen && (
@@ -112,12 +118,15 @@ export function MobileHeader({
           </div>
         )}
 
-        {/* Mobile User Avatar */}
-        {isMobile && userName && (
+        {/* Mobile User Avatar / Wallet Button */}
+        {isMobile && (
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
-              {userName.charAt(0).toUpperCase()}
-            </div>
+            <WalletButton />
+            {userName && (
+              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                {userName.charAt(0).toUpperCase()}
+              </div>
+            )}
           </div>
         )}
       </div>

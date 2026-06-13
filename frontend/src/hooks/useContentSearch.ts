@@ -10,6 +10,8 @@ export type ContentItem = {
   price?: number;
   creator?: string;
   contentType?: string;
+  thumbnailUrl?: string;
+  totalViews?: number;
 };
 
 export const useContentSearch = (initialQuery = '') => {
